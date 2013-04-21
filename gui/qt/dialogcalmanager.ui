@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>dialogCalManager</class>
+ <widget class="QDialog" name="dialogCalManager">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>575</width>
+    <height>620</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <widget class="QPushButton" name="Reload">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>45</y>
+     <width>100</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Re-Load File</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Save">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>75</y>
+     <width>100</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Save File</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Return">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>105</y>
+     <width>100</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Return to MSA</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="DispDefault">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>270</y>
+     <width>90</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Display Defaults</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="StartEntry">
+   <property name="geometry">
+    <rect>
+     <x>160</x>
+     <y>330</y>
+     <width>150</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Start Data Entry</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="NextPoint">
+   <property name="geometry">
+    <rect>
+     <x>275</x>
+     <y>315</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Next Point</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="PrevPoint">
+   <property name="geometry">
+    <rect>
+     <x>275</x>
+     <y>335</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Prev Point</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="EnterAll">
+   <property name="geometry">
+    <rect>
+     <x>355</x>
+     <y>315</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enter All</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Enter">
+   <property name="geometry">
+    <rect>
+     <x>355</x>
+     <y>335</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Enter</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Measure">
+   <property name="geometry">
+    <rect>
+     <x>275</x>
+     <y>330</y>
+     <width>75</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Measure</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Clean">
+   <property name="geometry">
+    <rect>
+     <x>50</x>
+     <y>270</y>
+     <width>90</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Clean Up</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="fileLabel">
+   <property name="geometry">
+    <rect>
+     <x>325</x>
+     <y>145</y>
+     <width>80</width>
+     <height>13</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Available Files</string>
+   </property>
+  </widget>
+  <widget class="QListWidget" name="pathList">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>160</y>
+     <width>120</width>
+     <height>100</height>
+    </rect>
+   </property>
+   <property name="autoScroll">
+    <bool>true</bool>
+   </property>
+   <property name="selectionBehavior">
+    <enum>QAbstractItemView::SelectRows</enum>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="te">
+   <property name="geometry">
+    <rect>
+     <x>45</x>
+     <y>45</y>
+     <width>220</width>
+     <height>220</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="teLabel">
+   <property name="geometry">
+    <rect>
+     <x>68</x>
+     <y>30</y>
+     <width>150</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Frequency Calibration Table</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="data1">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>335</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="data2">
+   <property name="geometry">
+    <rect>
+     <x>100</x>
+     <y>335</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="data3">
+   <property name="geometry">
+    <rect>
+     <x>190</x>
+     <y>335</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="Ldata1">
+   <property name="geometry">
+    <rect>
+     <x>15</x>
+     <y>323</y>
+     <width>75</width>
+     <height>13</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Point Num</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="Ldata2">
+   <property name="geometry">
+    <rect>
+     <x>105</x>
+     <y>323</y>
+     <width>75</width>
+     <height>13</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Freq (MHz)</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="Ldata3">
+   <property name="geometry">
+    <rect>
+     <x>195</x>
+     <y>309</y>
+     <width>75</width>
+     <height>26</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Measured Power (dBm)</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPlainTextEdit" name="enterInstruct">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>360</y>
+     <width>550</width>
+     <height>210</height>
+    </rect>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="Lref2">
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>288</y>
+     <width>90</width>
+     <height>13</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ref Phase(deg)</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="Lref">
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>323</y>
+     <width>100</width>
+     <height>13</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ref ADC</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="ref2">
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>300</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="Force">
+   <property name="geometry">
+    <rect>
+     <x>275</x>
+     <y>305</y>
+     <width>95</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Force Phase To</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="ForceVal">
+   <property name="geometry">
+    <rect>
+     <x>375</x>
+     <y>305</y>
+     <width>45</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="ref">
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>335</y>
+     <width>75</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

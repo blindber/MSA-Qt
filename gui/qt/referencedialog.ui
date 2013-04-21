@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>referenceDialog</class>
+ <widget class="QDialog" name="referenceDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>525</width>
+    <height>450</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Reference Line Specification</string>
+  </property>
+  <widget class="QLabel" name="A1">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>5</y>
+     <width>475</width>
+     <height>70</height>
+    </rect>
+   </property>
+   <property name="minimumSize">
+    <size>
+     <width>0</width>
+     <height>70</height>
+    </size>
+   </property>
+   <property name="text">
+    <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;You may create reference lines from fixed values, the current data, or by simulating an RLC circuit.&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:8pt;&quot;&gt;You may select to graph the reference and the input data, or to graph the result of adding or subtracting them.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="colorLabel1">
+   <property name="geometry">
+    <rect>
+     <x>25</x>
+     <y>230</y>
+     <width>75</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Color</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="width1">
+   <property name="geometry">
+    <rect>
+     <x>90</x>
+     <y>245</y>
+     <width>50</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="widthLabel1">
+   <property name="geometry">
+    <rect>
+     <x>95</x>
+     <y>230</y>
+     <width>70</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Width</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="valLabel1">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>230</y>
+     <width>75</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ref Val</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="val1">
+   <property name="geometry">
+    <rect>
+     <x>165</x>
+     <y>245</y>
+     <width>80</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="RLCInfo">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>105</y>
+     <width>340</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>(R=; L=; C=; TL=)</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="NoUpdate">
+   <property name="geometry">
+    <rect>
+     <x>35</x>
+     <y>365</y>
+     <width>130</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>No Update</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="OK">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>365</y>
+     <width>130</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Close</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Cancel">
+   <property name="geometry">
+    <rect>
+     <x>325</x>
+     <y>365</y>
+     <width>130</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Cancel</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="Clear">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>80</y>
+     <width>140</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>No Reference Lines</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="UseData">
+   <property name="geometry">
+    <rect>
+     <x>170</x>
+     <y>80</y>
+     <width>135</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Use Current Data</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="UseFixed">
+   <property name="geometry">
+    <rect>
+     <x>310</x>
+     <y>80</y>
+     <width>150</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Use Fixed Value</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="UseRLC">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>105</y>
+     <width>120</width>
+     <height>19</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Use RLC Circuit</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="t1">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>210</y>
+     <width>160</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Do Trace for Left Axis</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="t2">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>140</y>
+     <width>160</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Do Trace for Right Axis</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="smith">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>280</y>
+     <width>180</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Do Trace for Smith Chart</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="colorLabel2">
+   <property name="geometry">
+    <rect>
+     <x>25</x>
+     <y>160</y>
+     <width>75</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Color</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="colorLabelSmith">
+   <property name="geometry">
+    <rect>
+     <x>25</x>
+     <y>300</y>
+     <width>75</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Color</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="widthLabel2">
+   <property name="geometry">
+    <rect>
+     <x>95</x>
+     <y>160</y>
+     <width>70</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Width</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="width2">
+   <property name="geometry">
+    <rect>
+     <x>90</x>
+     <y>175</y>
+     <width>50</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="widthLabelSmith">
+   <property name="geometry">
+    <rect>
+     <x>95</x>
+     <y>300</y>
+     <width>70</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Width</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="widthSmith">
+   <property name="geometry">
+    <rect>
+     <x>90</x>
+     <y>315</y>
+     <width>50</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="valLabel2">
+   <property name="geometry">
+    <rect>
+     <x>180</x>
+     <y>160</y>
+     <width>75</width>
+     <height>15</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ref Val</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="val2">
+   <property name="geometry">
+    <rect>
+     <x>165</x>
+     <y>175</y>
+     <width>80</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="both">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>160</y>
+     <width>125</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Data and Ref</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="add">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>180</y>
+     <width>87</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Data + Ref</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="sub">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>200</y>
+     <width>87</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Data - Ref</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="reverseSub">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>220</y>
+     <width>87</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ref - Data</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="mathOnDB">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>250</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Do math on input dBm values.</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="mathOnGraph">
+   <property name="geometry">
+    <rect>
+     <x>300</x>
+     <y>270</y>
+     <width>200</width>
+     <height>18</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Do math on graph values.</string>
+   </property>
+  </widget>
+  <widget class="QListWidget" name="color1">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>245</y>
+     <width>40</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QListWidget" name="color2">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>175</y>
+     <width>40</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QListWidget" name="colorSmith">
+   <property name="geometry">
+    <rect>
+     <x>20</x>
+     <y>315</y>
+     <width>40</width>
+     <height>20</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QLabel" name="smithInst">
+   <property name="geometry">
+    <rect>
+     <x>200</x>
+     <y>280</y>
+     <width>280</width>
+     <height>80</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Smith Chart reference lines are always drawn from S11 values without addition or subtraction,
+and may not be drawn from fixed value references.</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

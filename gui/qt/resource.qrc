@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/res">
+        <file alias="res_file">resource.rc</file>
+    </qresource>
+    <qresource prefix="/icons">
+        <file>msa.ico</file>
+    </qresource>
+</RCC>
