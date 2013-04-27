@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>dialogChoosePrimaryAxis</class>
+ <widget class="QDialog" name="dialogChoosePrimaryAxis">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>465</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <widget class="QLabel" name="primaryaxis">
+   <property name="geometry">
+    <rect>
+     <x>5</x>
+     <y>5</y>
+     <width>451</width>
+     <height>81</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Your may choose either the left axis (axis Y1) or the right axis (axis Y2) to be the primary axis. When starting up or changing modes, magnitude will be graphed on the primary axis. Certain analyses, such as Filter and Crystal Analysis, require dB to be graphed on the primary axis.
+You must Restart after changing the primary axis.</string>
+   </property>
+   <property name="wordWrap">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label">
+   <property name="geometry">
+    <rect>
+     <x>130</x>
+     <y>122</y>
+     <width>124</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Choose Primary Axis</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="Y1">
+   <property name="geometry">
+    <rect>
+     <x>145</x>
+     <y>147</y>
+     <width>111</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Left Axis (Y1)</string>
+   </property>
+  </widget>
+  <widget class="QRadioButton" name="Y2">
+   <property name="geometry">
+    <rect>
+     <x>145</x>
+     <y>177</y>
+     <width>111</width>
+     <height>25</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Right Axis (Y2)</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Done">
+   <property name="geometry">
+    <rect>
+     <x>35</x>
+     <y>217</y>
+     <width>100</width>
+     <height>35</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Done</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="Cancel">
+   <property name="geometry">
+    <rect>
+     <x>245</x>
+     <y>217</y>
+     <width>100</width>
+     <height>35</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Cancel</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -27,8 +27,8 @@ public:
 
   //====================START INTERPOLATION ROUTINES==========================
   //Variables for interpolation routines
-  Q2DintVector intSrc, intDest; //Data for InterpolateTableToTable (freq, real, imag); first index runs from 1
-  Q2DintVector intSrcCoeff;   //Cubic coefficents (A,B,C,D) for interpolating real and imag parts from intSrc()
+  Q2DfloatVector intSrc, intDest; //Data for InterpolateTableToTable (freq, real, imag); first index runs from 1
+  Q2DfloatVector intSrcCoeff;   //Cubic coefficents (A,B,C,D) for interpolating real and imag parts from intSrc()
   int intSrcPoints, intDestPoints, intMaxPoints;
 
   //------------------Data access routines--------------------
@@ -37,7 +37,7 @@ public:
   void intClearSrc();
   void intClearDest();
   void intAddSrcEntry(int f, int r, int im);
-  void intAddDestFreq(int f);
+  void intAddDestFreq(float f);
   void intGetSrc(int num, int &f, int &r, int &im);
   int intSrcFreq(int num);
   void intGetDest(int num, int &f, int &r, int &im);

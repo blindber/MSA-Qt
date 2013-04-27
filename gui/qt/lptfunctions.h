@@ -28,7 +28,7 @@ public:
   void Read12Bitmag();
   void Read12Bitpha();
   void Process16MagPha();
-  void Process16Mag();
+  int Process16Mag();
   void Process22MagPha();
   void Process22Mag();
   void CommandPLLorig();

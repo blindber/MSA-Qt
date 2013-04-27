@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>dialogCrystal</class>
+ <widget class="QDialog" name="dialogCrystal">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>550</width>
+    <height>350</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Crystal Analysis</string>
+  </property>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

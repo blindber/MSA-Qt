@@ -29,9 +29,9 @@ public:
 
   Q2DfloatVector uWorkArray; //Initially 800 points with up to 9 (0...8) data items per point
 
-  unsigned int uWorkMaxPoints, uWorkNumPoints;   //max points and actual used points in uWorkArray
+  int uWorkMaxPoints, uWorkNumPoints;   //max points and actual used points in uWorkArray
 
-  unsigned int uWorkMaxPerPoint, uWorkNumPerPoint; //max and actual number of data items per entry of uWorkArray
+  int uWorkMaxPerPoint, uWorkNumPerPoint; //max and actual number of data items per entry of uWorkArray
   QVector<QString> uWorkFormats;    //Format strings for each data item, in form suitable for "using" function,
                           //or blank to cause str$() function to be used.
   QString uTextPointArray[4105];

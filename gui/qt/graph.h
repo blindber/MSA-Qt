@@ -18,23 +18,62 @@
 #define GRAPH_H
 
 #include <QGraphicsScene>
+#include "dialogvnacal.h"
 #include "interpolation.h"
 #include "dialoggridappearance.h"
 #include "msautilities.h"
 #include "globalvars.h"
 #include "dialogconfigman.h"
 #include "uwork.h"
-#include "dialogvnacal.h"
+#include "twoport.h"
+#include "hwdinterface.h"
 
-class msagraph
+
+
+class msagraph  : public QObject
 {
+   Q_OBJECT
 public:
-  msagraph();
+  msagraph(QWidget *parent);
+  ~msagraph();
   void setGlobalVars(globalVars *newVars);
   void setActiveConfig(msaConfig *newActiveConfig);
   void setUwork(cWorkArray *newuWork);
   void setVna(dialogVNACal *newVnaCal);
+  void setHwdIf(hwdInterface *newHwdIf);
   void setAppearance(dialogGridappearance *newGridappearance);
+
+  void gInitFirstUse(QGraphicsView *view, int winWidth, int winHt, int marLeft, int marRight, int marTop, int marBot);
+  void gInitDynamicDraw();
+  QString TraceContext();
+  QString RestoreTraceContext(QString s, int &startPos, int isValidation);
+  QString RestoreGridContext(QString s, int &startPos, int isValidation);
+  QString GridContext();
+  void GraphDataContextToFile(QStringList &fHndl);
+  void UpdateGraphDataFormat(int doTwoPort);
+  void DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QString &yLabel, int &yIsPhase, QString &yForm);
+  void PlotDataToScreen();
+  void mMarkToCenter();
+  void Expand();
+  void RedrawGraph(int restoreErase);
+  void RememberState();
+  void ToggleTransmissionReflection();
+  void gSetMarkerNum(int markNum, int pointNum, QString ID, QString trace, QString style);
+  void mUserMarkSelect(QString btn);
+
+  void ResizeGraphHandler();
+
+  int mMarkerNum(QString markID);
+  void mDeleteMarker(QString markID);
+  void mAddMarker(QString markID, int pointNum, QString trace);
+  void mAddMarkerAndRedraw(QString markID, int ptNum, int traceNum);
+  void mAddMarkerFromKeyboard();
+  void mClearMarkers();
+
+  void DetectChanges();
+  void DetectChanges(int doRestart);
+
+
 
   void gSetYAxisRange(int axisNum, int yMin, int yMax);
   void gGetYAxisRange(int axisNum, int &yMin, int &yMax);
@@ -120,7 +159,7 @@ public:
   void gConvertXToPix(float &x);
   void gConvertY1ToPix(float &y1);
   void gConvertY2ToPix(float &y2);
-  float gNormalizePhase(float p);
+
   float gAdjustPhaseToDisplay(int axisNum, int pointNum, int useWorkArray);
   int gNumDynamicSteps();
   void gSetNumDynamicSteps(int nSteps);
@@ -147,20 +186,12 @@ public:
   void gUpdateMarkerXVal();
   void gRecalcPix(int calcXPix);
   void RefreshGraph(int restoreErase);
+  void gRecreateTraces(bool doDraw);
   void PerformAutoScale();
   void DrawSetupInfo();
   void PrintMessage();
   QString gSweepContext();
   void gGetMarkerByNum(int markNum, int &pointNum, QString &ID, QString &trace, QString &style);
-  void gUsePresetColors(QString btn);
-  void gUseCustomPresetColors(int N);
-  void gSetCustomPresetColors(int N, QString grid, QString bounds, QString back, QString gridText
-                              ,QString XText, QString Y1Text, QString Y2Text, QString trace1
-                              ,QString trace2,QString trace1A, QString trace2A, QString trace1B, QString trace2B);
-  void gGetCustomPresetColors(int N, QString &grid,QString &bounds,QString &back,QString &gridText,QString &XText
-                              ,QString &Y1Text,QString &Y2Text, QString &trace1, QString &trace2
-                              , QString &trace1A, QString &trace2A, QString &trace1B, QString &trace2B);
-  void gInitCustomColors();
   void gUsePresetText(QString btn);
   void gDrawMarkerInfo();
   void PrintReferenceHeading();
@@ -174,21 +205,34 @@ public:
 
   void CreateReferenceSource();
   void CreateReferenceTransform();
-  void CalcReferencesWholeStep(int stepNum, int &ref1, int &ref2);
+  void CalcReferencesWholeStep(int stepNum, float &ref1, float &ref2);
   void CalcReferences();
   QString CreateReferenceTraces(QString tCol, int tSize, int traceNum, QPainterPath *path);
   QString PrivateCreateReferenceTrace(int traceNum, int startPoint, int endPoint, QPainterPath *path);
 
-  void CalcGraphData(int currStep, int &y1, int &y2, int useWorkArray);
-  void CalcGraphDataType(int currStep, int dataType1, int dataType2, int &y1, int &y2, int useWorkArray);
+  void CalcGraphData(int currStep, float &y1, float &y2, int useWorkArray);
+  void CalcGraphDataType(int currStep, int dataType1, int dataType2, float &y1, float &y2, int useWorkArray);
   void CalcReflectDerivedData(int currStep);
-  void CalcReflectGraphData(int currStep, int &y1, int &y2, int useWorkArray);
+  void CalcReflectGraphData(int currStep, float &y1, float &y2, int useWorkArray);
   void SetStartStopFreq(float startF, float stopF);
   void gDrawMarkers();
   void gEraseMarkers();
   void gDrawMarkerPix(QString style, QString markLabel, float x, float y);
   void gRefreshTraces();
   void gRefreshGridLinesOnly();
+  void ImplementDisplayModes();
+  void UpdateGraphParams();
+  void InitGraphParams();
+  void SetYAxes(int data1, int top1, int bot1, int auto1, int data2, int top2, int bot2, int auto2);
+  void SetDefaultGraphData();
+  void SetCenterSpanFreq(float cent, float span);
+  void mEnterMarker(QString btn);
+  void mDisplaySelectedMarker();
+  QString mMarkerContext();
+  QString  mRestoreMarkerContext(QString s, int &startPos, int isValidation);
+  QString gRestoreSweepContext(QString &s, int &startPos, int isValidation);
+
+
 
   QGraphicsScene *getScene() { return graphScene; }
 
@@ -226,7 +270,7 @@ public:
   //If referenceDoMath=2 then math is done on the current graph values (e.g. capacitance)
   int referenceDoMath, referenceOpA, referenceOpB; //ver114-7b
   int autoScaleY1, autoScaleY2; //=1 to autoscale the axes
-  int thispointy1, thispointy2;
+  float thispointy1, thispointy2;
 
   //------SEWgraph globals for graph params
   int firstScan;   //Set to 1 for first scan after background grid for graph is drawn
@@ -265,8 +309,8 @@ public:
   int gNumPoints;   //Number of points actually entered in gGraphVal
   int gDynamicSteps;  //Number of steps (number of points-1) in a complete sweep; for dynamic graphing
   //QVector<QString> gTrace1, gTrace2; //Array of accumulated draw commands, one per point ver114-6a
-  QVector<QPoint> gTrace1;
-  QVector<QPoint> gTrace2;
+  QVector<QPointF> gTrace1;
+  QVector<QPointF> gTrace2;
   int  gDoHist;  //=1 to graph as histogram; 0 for normal trace
   int gGraphY1, gGraphY2;     //=1 to cause Y1 and Y2 to be graphed ver114-5L
   //gXIsLinear, gYIsLinear = 1 for linear graph, = for log. If value being graphed
@@ -303,7 +347,12 @@ public:
   QString axisPrefHandle;  //handle variable for axis preference window; non-blank when window is open
   QString TwoPortGraphBox;     //Handle to graph box for two-port graphs, or blank if no window open ver116-1b
 
+  Q2DfloatVector gGraphVal;      //Can be used to hold graph. frequency(0), Y1(1), Y2(2)
+
+
 private:
+  QGraphicsScene *graphScene;
+  QGraphicsView *graphicsView;
   interpolation inter;
   dialogGridappearance *gridappearance;
   msaUtilities util;
@@ -311,11 +360,33 @@ private:
   msaConfig *activeConfig;
   cWorkArray *uWork;
   dialogVNACal *vnaCal;
+  twoPortModule twoPort;
+  hwdInterface *hwdIf;
 
-  void CalcTransmitGraphData(int currStep, int &y1, int &y2, int useWorkArray);
+  void CalcTransmitGraphData(int currStep, float &y1, float &y2, int useWorkArray);
+  QString gRestoreTraceContext(QString &s, int &startPos, int isValidation);
+  QString gGridContext();
+  QString gTraceContext();
+  QString gRestoreGridContext(QString &s, int &startPos, int isValidation);
+
+  int GraphDataContextAsTextArray();
+  QString GraphDataContext();
+  void RestoreGraphDataContext(QString &s, int &startPos, int doTitle);
+  void GetGraphDataContextFromFile(QFile *fHndl, int doTitle);
 
 
-  QGraphicsScene *graphScene;
+
+
+
+  void GetDefaultGraphData(int axisNum, int &axisType, int &axisMin, int &axisMax);
+
+  int y1IsPhase, y2IsPhase;
+  QString yAxisLabel;
+  QString y1AxisLabel;
+  QString y2AxisLabel;
+  QString yLabel, y1Label, y2Label;
+
+
 
   int  gMarkerInfoTop;      //Y pixel coord of top of area for marker info; calculated from gMarginBot
   int  gMarkerInfoLeft;     //Y pix coord of left of marker info area; calculated at initialization
@@ -352,8 +423,7 @@ private:
   //gGraphVal can be used to hold a graph info, or the user can just call
   //the point-by-point routines. Second dimension specifies X(0), Y1(1) and Y2(2).
   //Points are numbered 1 ...gDynamicSteps+1
-  Q2DintVector gGraphVal;      //Can be used to hold graph. frequency(0), Y1(1), Y2(2)
-  Q2DintVector gGraphPix;  //Pix values for previous draw at this point: X(0), Y1(1) and Y2(2)
+  Q2DfloatVector gGraphPix;  //Pix values for previous draw at this point: X(0), Y1(1) and Y2(2)
 
 
 
@@ -388,7 +458,9 @@ private:
 
 
 
-
+signals:
+  void ChangeMode();
+  void RequireRestart();
 
 
 };

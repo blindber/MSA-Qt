@@ -23,9 +23,15 @@
 #include <QtWidgets>
 #endif
 
-msagraph::msagraph()
+#include "constants.h"
+
+msagraph::msagraph(QWidget *parent)
 {
   graphScene = new QGraphicsScene();
+
+  connect(this, SIGNAL(ChangeMode()), parent, SLOT(ChangeMode()));
+  connect(this, SIGNAL(RequireRestart()), parent, SLOT(RequireRestart()));
+
 
 //****************************
 // clear all variables because thats what Liberty basic did
@@ -142,12 +148,34 @@ msagraph::msagraph()
   referenceOpA = 0;
   referenceOpB = 0;
 
+
+  interpolateMarkerClicks = 0;
+
+  markerIDs[0] = "1"; markerIDs[1] = "2"; markerIDs[2] = "3"; markerIDs[3] = "4";
+  markerIDs[4] = "5"; markerIDs[5] = "6"; markerIDs[6] = "L"; markerIDs[7] = "R";
+  markerIDs[8] = "P+"; markerIDs[9] = "P-";
+
+  refreshOnHalt=1;     //We normally redraw the graph when we halt.
+  refreshEachScan=1;
+  smithLastWindowHeight=430 ;
+  smithLastWindowWidth=400;
+  graphMarLeft=70;
+  graphMarRight=180;
+  graphMarTop=55;
+  graphMarBot=140;   //Graph margins from edge of graphicbox
+
+
+}
+
+msagraph::~msagraph()
+{
 }
 
 void msagraph::setGlobalVars(globalVars *newVars)
 {
   vars = newVars;
   inter.setGlobalVars(newVars);
+  gSetNumDynamicSteps(vars->steps);
 }
 
 void msagraph::setActiveConfig(msaConfig *newActiveConfig)
@@ -271,15 +299,17 @@ void msagraph::gSetAxisLabels(QString xLabel, QString y1Label, QString y2Label)
 void msagraph::gGetAxisLabels(QString &xLabel, QString &y1Label, QString &y2Label)
 {
   //Get labels to print below x axis and above y axes ver116-4h
-  xLabel=gXAxisLabel; y1Label=gY1AxisLabel; y2Label=gY2AxisLabel;
+  xLabel=gXAxisLabel;
+  y1Label=gY1AxisLabel;
+  y2Label=gY2AxisLabel;
 }
 QString msagraph::gGetTitleLine(int N)
 {
   //Return one of 4 lines of title to print above top grid line. Numbered 1,2,3,4. Only 3 are to print
-  if (N<0)
-    N=0;
-  else if (N>3)
-    N=3;    //ver114-5m
+  if (N<1)
+    N=1;
+  else if (N>4)
+    N=4;
   return gTitle[N];
 }
 void msagraph::gSetTitleLine(int N, QString t)
@@ -366,8 +396,14 @@ int msagraph::gGetPrimaryAxis()
 void msagraph::gActivateGraphs(int graphY1, int graphY2)
 {
   //If doYn=1, turn on the corresponding graph
-  if (gDoY1==0) gGraphY1=0; else gGraphY1=graphY1;
-  if (gDoY2==0) gGraphY2=0; else gGraphY2=graphY2;
+  if (gDoY1==0)
+    gGraphY1=0;
+  else
+    gGraphY1=graphY1;
+  if (gDoY2==0)
+    gGraphY2=0;
+  else
+    gGraphY2=graphY2;
 }
 
 void msagraph::gGetActiveGraphs(int &graphY1, int &graphY2)
@@ -382,36 +418,39 @@ void msagraph::gGetPointVal(int N, int &x, int &y1, int &y2)
   //N may have a fractional part, so we do linear interpolation
   if (N>=0 && N<=gDynamicSteps)
   {
-   int whole=(int)(N); float fract=N-whole;
-   x=gGraphVal[whole][0];y1=gGraphVal[whole][1];y2=gGraphVal[whole][2];
-   //Note that angles in the main program are kept in the range -180 to +180, but
-   //in gGraphVal they have been adjusted to fit graph range
-   if (fract>0)
-   {
-       x=x+fract*(gGraphVal[whole+1][0]-x);
-       if (gY1IsPhase)
-       {
-           //ver114-7d created special interpolation for angles to deal with wrap-around
-           y1=inter.intLinearInterpolateDegrees(fract, y1, gGraphVal[whole+1][1], gY1AxisMin, gY1AxisMax);   //ver116-4k
-       }
-       else
-       {
-           y1=y1+fract*(gGraphVal[whole+1][1]-y1);
-       }
-       if (gY2IsPhase)
-       {
-           //ver114-7d created special interpolation for angles to deal with wrap-around
-           y2=inter.intLinearInterpolateDegrees(fract, y2, gGraphVal[whole+1][2], gY2AxisMin, gY2AxisMax);   //ver116-4k
-       }
-       else
-       {
-           y2=y2+fract*(gGraphVal[whole+1][2]-y2);
-       }
-   }
+    int whole=(int)(N);
+    float fract=N-whole;
+    x=gGraphVal[whole][0];
+    y1=gGraphVal[whole][1];
+    y2=gGraphVal[whole][2];
+    //Note that angles in the main program are kept in the range -180 to +180, but
+    //in gGraphVal they have been adjusted to fit graph range
+    if (fract>0)
+    {
+      x=x+fract*(gGraphVal[whole+1][0]-x);
+      if (gY1IsPhase)
+      {
+        //ver114-7d created special interpolation for angles to deal with wrap-around
+        y1=inter.intLinearInterpolateDegrees(fract, y1, gGraphVal[whole+1][1], gY1AxisMin, gY1AxisMax);   //ver116-4k
+      }
+      else
+      {
+        y1=y1+fract*(gGraphVal[whole+1][1]-y1);
+      }
+      if (gY2IsPhase)
+      {
+        //ver114-7d created special interpolation for angles to deal with wrap-around
+        y2=inter.intLinearInterpolateDegrees(fract, y2, gGraphVal[whole+1][2], gY2AxisMin, gY2AxisMax);   //ver116-4k
+      }
+      else
+      {
+        y2=y2+fract*(gGraphVal[whole+1][2]-y2);
+      }
+    }
   }
   else
   {
-   x=-1;y1=0;y2=0;
+    x=-1;y1=0;y2=0;
   }
 }
 
@@ -457,9 +496,13 @@ int msagraph::gGetPointXVal(float N)
   //N may have a fractional part, so we do linear interpolation
   if (N>0 && N<=gMaxPoints)
   {
-    int whole=int(N); float fract=N-whole;
+    int whole=int(N);
+    float fract=N-whole;
     x=gGraphVal[whole][0];
-    if (fract>0) x=x+fract*(gGraphVal[whole+1][0]-x);
+    if (fract>0)
+    {
+      x=x+fract*(gGraphVal[whole+1][0]-x);
+    }
   }
   else
   {
@@ -477,7 +520,8 @@ float msagraph::gGetPointXPix(float N)
   //N may have a fractional part, so we do linear interpolation
   if (N>0 && N<=gMaxPoints)
   {
-    int whole=(int)N; float fract=N-whole;
+    int whole=(int)N;
+    float fract=N-whole;
     x=gGraphPix[whole][0];
     if (fract>0) x=x+fract*(gGraphPix[whole+1][0]-x);
   }
@@ -490,15 +534,21 @@ float msagraph::gGetPointXPix(float N)
 void msagraph::gSetNumPoints(int nPts)
 {
   //Set number of points to be considered valid. Does not affect values ver116-1b
-  if (nPts < 0) nPts=0;
-  if (nPts >= gMaxPoints) gSetMaxPoints(nPts);
+  if (nPts < 0)
+    nPts=0;
+  if (nPts >= gMaxPoints)
+    gSetMaxPoints(nPts);
   gNumPoints=nPts;
 }
 
 void msagraph::gClearYValues()
 {
   //Zero Y values of gNumPoints points
-  for (int i=1; i <= gNumPoints;i++) { gGraphVal[i][1]=0; gGraphVal[i][2]= 0; }
+  for (int i=1; i <= gNumPoints;i++)
+  {
+    gGraphVal[i][1]=0;
+    gGraphVal[i][2]= 0;
+  }
 }
 int msagraph::gPointCount()
 {
@@ -509,19 +559,24 @@ void msagraph::gChangePoints(int pNum, int y1, int y2)
 {
   //change points at pNum, values y1, y2; keep old x
   if (pNum<0 || pNum>gDynamicSteps)
+  {
     QMessageBox::warning(0,"Error", QString("Invalid point number: %1").arg(pNum));    //debugging
-
-  gGraphVal[pNum][1]=y1; gGraphVal[pNum][2]=y2;
+  }
+  gGraphVal[pNum][1]=y1;
+  gGraphVal[pNum][2]=y2;
 }
 
 int msagraph::gAddPoints(float x, float y1, float y2)
 {
   //Add points to end. Must be done with non-decreasing x
   //return 1 if too many points
-  if (gNumPoints>=gMaxPoints) return 1;
+  if (gNumPoints>=gMaxPoints)
+    return 1;
   gNumPoints=gNumPoints+1;
   //enter new point
-  gGraphVal[gNumPoints][0]=x; gGraphVal[gNumPoints][1]=y1; gGraphVal[gNumPoints][2]=y2;
+  gGraphVal[gNumPoints][0]=x;
+  gGraphVal[gNumPoints][1]=y1;
+  gGraphVal[gNumPoints][2]=y2;
   return 0;
 }
 void msagraph::gGenerateXValues(int numValidPoints)
@@ -536,64 +591,96 @@ void msagraph::gGenerateXValues(int numValidPoints)
   //If user specifies a zero endpoint, it gets changed to a small value.
   int numPoints=gDynamicSteps+1;    //ver114-1f
   //X axis starts at gXAxisMin and ends at gXAxisMax
-  int pixStart=gMarginLeft; int pixEnd=gMarginLeft+gGridWidth;
-  int pixInterval=(pixEnd-pixStart)/(numPoints-1);
-  int xInterval;
+  float pixStart=gMarginLeft;
+  float pixEnd=gMarginLeft+gGridWidth;
+  float pixInterval=(pixEnd-pixStart)/(numPoints-1);
+  float xInterval;
   if (gXIsLinear==1)
   {
-      //Set up for even spacing
-      xInterval=(gXAxisMax-gXAxisMin)/(numPoints-1); //Add to one x value to get the next
+    //Set up for even spacing
+    xInterval=(gXAxisMax-gXAxisMin)/(numPoints-1); //Add to one x value to get the next
   }
   else
   {
-      //Here for log X sweep.
-      xInterval=pow((gXAxisMax/gXAxisMin),(1/(numPoints-1)));    //multiply times one x value to get next
+    //Here for log X sweep.
+    xInterval=pow((gXAxisMax/gXAxisMin),(1/(numPoints-1)));    //multiply times one x value to get next
   }
-  int x=gXAxisMin; int xPix=pixStart;
+  float x=gXAxisMin;
+  float xPix=pixStart;
   for (int i=1; i <= numPoints; i++)
   {
-      if (i==numPoints)
-      {
-          gGraphVal[i][0]=gXAxisMax;
-          gGraphPix[i][0]=pixEnd;  //to get it exact; ver114-4m
-      }
-      else    //ver114-4k
-      {
-          if (x>0)
-            gGraphVal[i][0]=((int)(1000000*x+0.5))/1000000 ;
-          else
-            gGraphVal[i][0]=0-((int)(1000000*(0-x)+0.5))/1000000;    //Round to nearest Hz ver114-4k
-              //We round pixels to the nearest tenth
-          gGraphPix[i][0]=((int)(10*xPix+0.5))/10;
-      }
-      xPix=xPix+pixInterval;
-      if (gXIsLinear)
-        x=x+xInterval;
+    if (i==numPoints)
+    {
+      gGraphVal[i][0]=gXAxisMax;
+      gGraphPix[i][0]=pixEnd;  //to get it exact; ver114-4m
+    }
+    else    //ver114-4k
+    {
+      if (x>0)
+        gGraphVal[i][0]=((int)(1000000*x+0.5))/1000000 ;
       else
-        x=x*xInterval;
+        gGraphVal[i][0]=0-((int)(1000000*(0-x)+0.5))/1000000;    //Round to nearest Hz ver114-4k
+      //We round pixels to the nearest tenth
+      gGraphPix[i][0]=((int)(10*xPix+0.5))/10;
+    }
+    xPix=xPix+pixInterval;
+    if (gXIsLinear)
+      x=x+xInterval;
+    else
+      x=x*xInterval;
   }
   gNumPoints=numValidPoints;
 }
 
 void msagraph::gFindMinMax()
-{
-  /*
-  sub gFindMinMax   'find min and max x and y values in gGraphVal ver115-1d deleted arguments
-      'must call gCalcGraphParams after this
-      call gGetMinMaxPointNum pMin, pMax    'ver114-6d
-      for i=pMin to pMax    'ver114-6d
-          x=gGraphVal(i, 0):y1=gGraphVal(i,1):y2=gGraphVal(i,2)
-          if i=1 then
-              gXAxisMin=x : gXAxisMax=x
-              gY1AxisMin=y1 : gY1AxisMax=y1 :gY2AxisMin=y2 : gY2AxisMax=y2
-          else
-              if x<gXAxisMin then gXAxisMin=x else if x>gXAxisMax then gXAxisMax=x
-              if y1<gY1AxisMin then gY1AxisMin=y1 else if y1>gY1AxisMax then gY1AxisMax=y1
-              if y2<gY2AxisMin then gY2AxisMin=y2 else if y2>gY2AxisMax then gY2AxisMax=y2
-          end if
-      next i
-  end sub
-      */
+{  
+  //find min and max x and y values in gGraphVal ver115-1d deleted arguments
+  //must call gCalcGraphParams after this
+  int pMin, pMax;
+  gGetMinMaxPointNum(pMin, pMax);
+  for (int i=pMin; i <= pMax; i++)
+  {
+    int x=gGraphVal[i][0];
+    int y1=gGraphVal[i][1];
+    int y2=gGraphVal[i][2];
+    if (i==1)
+    {
+      gXAxisMin=x;
+      gXAxisMax=x;
+      gY1AxisMin=y1;
+      gY1AxisMax=y1;
+      gY2AxisMin=y2;
+      gY2AxisMax=y2;
+    }
+    else
+    {
+      if (x<gXAxisMin)
+      {
+        gXAxisMin=x;
+      }
+      else if (x>gXAxisMax)
+      {
+        gXAxisMax=x;
+      }
+      if (y1<gY1AxisMin)
+      {
+        gY1AxisMin=y1;
+      }
+      else if (y1>gY1AxisMax)
+      {
+        gY1AxisMax=y1;
+      }
+
+      if (y2<gY2AxisMin)
+      {
+        gY2AxisMin=y2;
+      }
+      else if (y2>gY2AxisMax)
+      {
+        gY2AxisMax=y2;
+      }
+    }
+  }
 }
 void msagraph::gGetMinMaxPointNum(int &minNum, int &maxNum)
 {
@@ -671,14 +758,17 @@ void msagraph::gGetGridCorner(QString corner, float &xPix, float &yPix)
 }
 void msagraph::gGetGraphicsSize(int &width, int &height)
 {
-  //'Get pixel pixel size of entire graphics window
+  //Get pixel pixel size of entire graphics window
   height=gWindowHeight;
   width=gWindowWidth;
 }
 void msagraph::gGetMargins(int &marLeft, int &marRight, int &marTop, int &marBot)
 {
   //Get graph margins
-  marLeft=gMarginLeft; marRight=gMarginRight; marTop=gMarginTop; marBot=gMarginBot;
+  marLeft=gMarginLeft;
+  marRight=gMarginRight;
+  marTop=gMarginTop;
+  marBot=gMarginBot;
 }
 
 int msagraph::gGetMarkerInfoTop()
@@ -695,8 +785,14 @@ int msagraph::gGetMarkerInfoRight()
 void msagraph::gSetIsPhase(int y1, int y2)
 {
   //Set flags to indicate whether y1, y2 contain phase data
-  if (y1==1) gY1IsPhase=1; else gY1IsPhase=0;
-  if (y2==1) gY2IsPhase=1; else gY2IsPhase=0;
+  if (y1==1)
+    gY1IsPhase=1;
+  else
+    gY1IsPhase=0;
+  if (y2==1)
+    gY2IsPhase=1;
+  else
+    gY2IsPhase=0;
 }
 void msagraph::gGetIsPhase(int &y1, int &y2)
 {
@@ -717,12 +813,12 @@ void msagraph::gSetDoAxis(int doY1, int doY2)
   {
     if (doY1==0)
     {
-      gTrace1[i]= QPoint(0,0);  //"down";
+      gTrace1[i]= QPointF(0,0);  //"down";
       gGraphVal[i][1]=0;
     }
     if (doY2==0)
     {
-      gTrace2[i]= QPoint(0,0);  //"down";
+      gTrace2[i]= QPointF(0,0);  //"down";
       gGraphVal[i][2]=0;
     }
   }
@@ -733,14 +829,14 @@ void msagraph::gInitDefaults()
   gXIsLinear=1;
   gY1IsLinear=1;
   gY2IsLinear=1;
-  gY1IsPhase=1;  //ver114-5e
-  gY2IsPhase=0;    //ver114-6f
+  gY1IsPhase=1;
+  gY2IsPhase=0;
   gActivateGraphs(1,1);
   gHorDiv=10; gVertDiv=10;
-  gUsePresetColors("LIGHT");   //ver115-3c
+  gridappearance->gUsePresetColors("LIGHT", gPrimaryAxis);
   gUsePresetText("BasicText");
   gDoHist=0;
-  gPrimaryAxis=1;  //ver115-3c
+  gPrimaryAxis=1;
   gSetGridStyles("ENDSANDCENTER", "All", "All"); //Label these grid lines ver114-5f
 }
 void msagraph::gSetSweepDir(int dir)
@@ -748,23 +844,28 @@ void msagraph::gSetSweepDir(int dir)
   //sub gSetSweepDir dir    //Set sweep direction to 1 or -1
   if (dir==1)
   {
-      gSweepDir=1; //Forward
-          //make erase lead sign match direction sign
-      if (gEraseLead<0) gEraseLead=0-gEraseLead;
-      gSweepStart=1; gSweepEnd=gDynamicSteps+1; //ver114-5e
+    gSweepDir=1; //Forward
+    //make erase lead sign match direction sign
+    if (gEraseLead<0)
+      gEraseLead=0-gEraseLead;
+    gSweepStart=1;
+    gSweepEnd=gDynamicSteps+1; //ver114-5e
   }
   else
   {
-      gSweepDir=-1; //Reverse
-          //make erase lead sign match direction sign
-      if (gEraseLead>0) gEraseLead=0-gEraseLead;
-      gSweepStart=gDynamicSteps+1; gSweepEnd=1; //ver114-5e
+    gSweepDir=-1; //Reverse
+    //make erase lead sign match direction sign
+    if (gEraseLead>0)
+      gEraseLead=0-gEraseLead;
+    gSweepStart=gDynamicSteps+1;
+    gSweepEnd=1; //ver114-5e
   }
 }
 
 void msagraph::gGetSweepStartAndEndPointNum(int &pStart, int &pEnd)
 {
-  pStart=gSweepStart; pEnd=gSweepEnd;
+  pStart=gSweepStart;
+  pEnd=gSweepEnd;
 }
 int msagraph::gGetSweepDir()
 {
@@ -777,18 +878,18 @@ void msagraph::gUpdateGraphObject(int winWidth, int winHt, int marLeft, int marR
   //of the graphic box.
   //set up Grid parameters. Parameters get assigned directly to our variables,
   //so the parameters can be identified by the variable to which they are assigned
-  gWindowHeight=winHt; gWindowWidth=winWidth;
-  gMarginLeft=marLeft; gMarginRight=marRight;
-  gMarginTop=marTop; gMarginBot=marBot;
+  gWindowHeight=winHt;
+  gWindowWidth=winWidth;
+  gMarginLeft=marLeft;
+  gMarginRight=marRight;
+  gMarginTop=marTop;
+  gMarginBot=marBot;
 
   //set the size of the area we are going to be drawing in
   graphScene->clear();
   graphScene->addRect(0, 0, winWidth, winHt, QPen(QColor(Qt::magenta)));
   //graphScene->addRect(0, 0, ui->graphicsView->width(), ui->graphicsView->height(), QPen(QColor(Qt::magenta)));
   graphScene->setSceneRect(graphScene->itemsBoundingRect());
-
-
-
 
   //Calculate a couple of additional parameters from those above
   gGridHeight=gWindowHeight-gMarginTop-gMarginBot;     //height of graph grid
@@ -812,12 +913,12 @@ void msagraph::gDrawReferences()
     //QString t=gRefTrace[i];
     if (i == 1)
     {
-      Pen.setBrush(QColor(referenceColor1));
+      Pen.setBrush(QColor(util.fixColor(referenceColor1)));
       Pen.setWidth(referenceWidth1);
     }
     else if (i == 2)
     {
-      Pen.setBrush(QColor(referenceColor2));
+      Pen.setBrush(QColor(util.fixColor(referenceColor2)));
       Pen.setWidth(referenceWidth2);
     }
     graphScene->addPath(refLine[i],Pen);
@@ -934,7 +1035,7 @@ void msagraph::gPrintMessage(QString msg)
   gPrintText(util.Space(140), x, y);   //note spaces are smaller than letters ver116-4j
   if (msg!="")
   {
-    gPrintText("MESSAGE: "+msg.left(75), x, y);
+    gPrintText("MESSAGE: "+msg.left(75), x, y,textColor);
   } //don't print if blank
 }
 int msagraph::gDoPrintLabel(QString style, int num, int nLines)
@@ -981,6 +1082,7 @@ void msagraph::gPrintGridLabels()
   {
     //    #gGraphHandle$, "font "; gXAxisFont$     //sets font
     //Note grid line  locations are in gXGridLines() and labels are in gXGridLabels$()
+    // fix me check index
     for (int i=0; i <= gHorDiv+1; i++)
     {
       thisLabel = gXGridLabels[i];
@@ -1020,8 +1122,6 @@ void msagraph::gPrintGridLabels()
     }
   }
 }
-
-
 
 void msagraph::gPrintTitle(int doClear)
 {
@@ -1077,6 +1177,7 @@ void msagraph::gPrintAxisLabels()
 
 void msagraph::gPrintSupplementalAxisLabels(int nSupp, int axisNum, QString col, QString lab)
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
   'Print supplemental axis labels above the main labels ver116-4b
       'nSupp is the supplement number. 1 goes right above main label. 2 goes above 1. No room for more
@@ -1100,8 +1201,10 @@ void msagraph::gPrintAxisAnnotation(int axisNum, QString annotText, QString anno
   //#gGraphHandle$, "font "; gXAxisFont$;";color "; gXTextColor$
   gPrintTextCentered(gXAxisLabel, gMarginLeft+gGridWidth/2, gOriginY+45, gridappearance->gXTextColor);
   //#gGraphHandle$, "font "; annotFont$
-  if (axisNum==1) gPrintTextCentered(annotText, gMarginLeft-15, gMarginTop-30, annotColor);
-  if (axisNum==2) gPrintTextCentered(annotText, gMarginLeft+gGridWidth+15, gMarginTop-30, annotColor);
+  if (axisNum==1)
+    gPrintTextCentered(annotText, gMarginLeft-15, gMarginTop-30, annotColor);
+  if (axisNum==2)
+    gPrintTextCentered(annotText, gMarginLeft+gGridWidth+15, gMarginTop-30, annotColor);
 }
 void msagraph::gInitGraphRange(float minX, float maxX, float minY1, float maxY1, float minY2, float maxY2)
 {
@@ -1395,7 +1498,8 @@ void msagraph::gCalcGraphParams()
   //Will force any axis scale to linear if log is inappropriate for some reason.
   //Also calculates grid line locations and labels
 
-  gHorDiv=qMax(1,gHorDiv);gVertDiv=qMax(1,gVertDiv);
+  gHorDiv=qMax(1,gHorDiv);
+  gVertDiv=qMax(1,gVertDiv);
 
   //gCalcAxis may change gXIsLinear and gHorDiv
   //fix me
@@ -1472,8 +1576,11 @@ int msagraph::gPixIsInGrid(int xPix, int yPix)
 {
   //Return 1 if (xPix, yPix) is within grid bounds; otherwise 0
   //We allow an extra pixel boundary to be part of the grid
-  if (xPix < gMarginLeft-1 || xPix > gMarginLeft+gGridWidth+1) return 0;
-  if (yPix < gMarginTop-1 || yPix > gOriginY+1) return 0;
+  if (xPix < gMarginLeft-1 || xPix > gMarginLeft+gGridWidth+1)
+    return 0;
+  if (yPix < gMarginTop-1 || yPix > gOriginY+1)
+    return 0;
+
   return 1;
 }
 void msagraph::gFindClickedPoint(int xPix, int &yPix, int &pointNum, int &traceNum)
@@ -1516,7 +1623,8 @@ float msagraph::gPointNumOfX(int x)
   //Note this can yield point numbers above or below the actual graph range, for x values outside that range
   int pMin, pMax;
   gGetMinMaxPointNum(pMin, pMax);    //ver114-6d
-  if (gXAxisMin==gXAxisMax) return (pMin+pMax)/2;   //All have same X value; use middle one
+  if (gXAxisMin==gXAxisMax)
+    return (pMin+pMax)/2;   //All have same X value; use middle one
 
   if (gXIsLinear==1)
   {
@@ -1571,11 +1679,11 @@ void msagraph::gConvertXToPix(float &x)
     float pixDist=util.uSafeLog10(ratio)*gXScale; //Num of pixels from start to value x
     if (gXAxisMin>0) //all positive values with grid starting at left
     {
-        x=pixDist+gMarginLeft;
+      x=pixDist+gMarginLeft;
     }
     else //all negative values with grid starting at right
     {
-        x=gGridWidth-pixDist+gMarginLeft;
+      x=gGridWidth-pixDist+gMarginLeft;
     }
   }
   x=((int)(x*10+0.5))/10;    //Round to tenth of a pixel    //ver116-4b*/
@@ -1585,50 +1693,63 @@ void msagraph::gConvertY1ToPix(float &y1)
 {
   //Convert Y1 numeric values to pixel coordinates. Y values should already be in bounds
   //Modified by ver116-4k to allow negative values in log sweeps
-  if (gDoY1==0) { y1=-10; return;}
+  if (gDoY1==0)
+  {
+    y1=-10;
+    return;
+  }
   if (gY1IsLinear==1)
   {
-      y1=(y1-gY1AxisMin)*gY1Scale+gOriginY;
+    y1=(y1-gY1AxisMin)*gY1Scale+gOriginY;
   }
   else
   {
-      if (gY1AxisMin<0 && gY1AxisMax>0)  //axis crosses zero
+    if (gY1AxisMin<0 && gY1AxisMax>0)  //axis crosses zero
+    {
+      if (y1>=0-gY1BlackHoleRadius && y1<=gY1BlackHoleRadius)
       {
-          if (y1>=0-gY1BlackHoleRadius && y1<=gY1BlackHoleRadius)
-          {
-                  y1=gOriginY+int(gY1BlackHoleRadius*10+0.5)/10;
-                  return; //within black hole
-          }
-          if (y1>=gY1BlackHoleRadius)
-          {
-              y1=util.uSafeLog10((y1-gY1BlackHoleRadius)/gY1BlackHoleRadius)*gY1Scale
-                  +gY1BlackHolePix+gOriginY;
-          }
-          else
-          {
-              y1=gY1BlackHolePix-util.uSafeLog10((gY1BlackHoleRadius-y1)/gY1BlackHoleRadius)*gY1Scale+gOriginY;
-          }
-          y1=((int)(y1*10+0.5))/10;
-          return;  //Round to tenth and exit
+        y1=gOriginY+int(gY1BlackHoleRadius*10+0.5)/10;
+        return; //within black hole
       }
-      //Here for no zero crossing. If all positive, axis starts at gXGridStart; if all negative it ends at gXGridStart.
-      float gridStart;
-      if (gY1AxisMin<0) gridStart=gY1AxisMax; else gridStart=gY1AxisMin;
-      float ratio=(y1-gridStart)/gridStart;
-      if (ratio<0) { y1=-1; return;}  //y is out of bounds; return pixel=-1 ver116-4k
-      float pixDist=util.uSafeLog10(ratio)*gY1Scale; //Num of pixels from start to value y
-      if (gY1AxisMin>0)  //all positive values with grid starting at bottom
+      if (y1>=gY1BlackHoleRadius)
       {
-          y1=pixDist+gOriginY;
+        y1=util.uSafeLog10((y1-gY1BlackHoleRadius)/gY1BlackHoleRadius)*gY1Scale
+            +gY1BlackHolePix+gOriginY;
       }
-      else //all negative values with grid starting at top
+      else
       {
-          y1=gGridHeight-pixDist+gOriginY;
+        y1=gY1BlackHolePix-util.uSafeLog10((gY1BlackHoleRadius-y1)/gY1BlackHoleRadius)*gY1Scale+gOriginY;
       }
+      y1=((int)(y1*10+0.5))/10;
+      return;  //Round to tenth and exit
+    }
+    //Here for no zero crossing. If all positive, axis starts at gXGridStart; if all negative it ends at gXGridStart.
+    float gridStart;
+    if (gY1AxisMin<0)
+      gridStart=gY1AxisMax;
+    else
+      gridStart=gY1AxisMin;
+    float ratio=(y1-gridStart)/gridStart;
+    if (ratio<0)
+    {
+      y1=-1;
+      return;
+    }  //y is out of bounds; return pixel=-1 ver116-4k
+    float pixDist=util.uSafeLog10(ratio)*gY1Scale; //Num of pixels from start to value y
+    if (gY1AxisMin>0)  //all positive values with grid starting at bottom
+    {
+      y1=pixDist+gOriginY;
+    }
+    else //all negative values with grid starting at top
+    {
+      y1=gGridHeight-pixDist+gOriginY;
+    }
   }
   y1=((int)(y1*10+0.5))/10;    //Round to tenth of a pixel    //ver116-4b
-  if (y1<gMarginTop) y1=gMarginTop; //don//t let it go off the top
-  if (y1>gOriginY) y1=gOriginY;     //don//t let it go off the bottom
+  if (y1<gMarginTop)
+    y1=gMarginTop; //don//t let it go off the top
+  if (y1>gOriginY)
+    y1=gOriginY;     //don//t let it go off the bottom
 }
 
 void msagraph::gConvertY2ToPix(float &y2)
@@ -1662,90 +1783,151 @@ void msagraph::gConvertY2ToPix(float &y2)
     }
     //Here for no zero crossing. If all positive, axis starts at gXGridStart; if all negative it ends at gXGridStart.
     float gridStart;
-    if (gY2AxisMin<0) gridStart=gY2AxisMax; else gridStart=gY2AxisMin;
+    if (gY2AxisMin<0)
+      gridStart=gY2AxisMax;
+    else
+      gridStart=gY2AxisMin;
     float ratio=(y2-gridStart)/gridStart;
-    if (ratio<0) { y2=-1; return;}  //y is out of bounds; return pixel=-1 ver116-4k
+    if (ratio<0)
+    {
+      y2=-1;
+      return;
+    }  //y is out of bounds; return pixel=-1 ver116-4k
     float pixDist=util.uSafeLog10(ratio)*gY2Scale; //Num of pixels from start to value y
     if (gY2AxisMin>0) //all positive values with grid starting at bottom
     {
-        y2=pixDist+gOriginY;
+      y2=pixDist+gOriginY;
     }
     else //all negative values with grid starting at top
     {
-        y2=gGridHeight-pixDist+gOriginY;
+      y2=gGridHeight-pixDist+gOriginY;
     }
   }
   y2=((int)(y2*10+0.5))/10;    //Round to tenth of a pixel    //ver116-4b
-  if (y2<gMarginTop) y2=gMarginTop; //don//t let it go off the top
-  if (y2>gOriginY) y2=gOriginY;     //don//t let it go off the bottom
-}
-float msagraph::gNormalizePhase(float p)
-{
-  //Return phase in range -180<phase<=180
-  while (p>180) { p=p-360; }
-  while (p<=-180) { p=p+360; }
-  return p;
+  if (y2<gMarginTop)
+    y2=gMarginTop; //don//t let it go off the top
+  if (y2>gOriginY)
+    y2=gOriginY;     //don//t let it go off the bottom
 }
 
 float msagraph::gAdjustPhaseToDisplay(int axisNum, int pointNum, int useWorkArray)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  'Adjust phase of point pointNum and return
-    'Assumes axis axisNum is phase. Returns the adjusted phase.
-    'if useWorkArray=1, the phase is taken from uWorkArray(); otherwise from gGraphVal()
-    'Adjust the phase as follows: first, if possible put it within the bounds
-    'of gAxisYNMin and gAxisYNMax. Second, if gAxisYNMax-gAxisYNMin is more than a 360 degree range, there may
-    'be more than one possible value. Choose the one that is closest to the previous point's phase (previous based
-    'on gSweepDir).
-    'The idea is that a continuous sweep should normally have continuous phase. If our axes allow a range
-    'from 0 to 1000 degrees and the measured phase moves from 350 at one point to 10 at the next point,
-    'the best guess as to the true phase change is 20 degrees, and we should display 370 degrees.
-    if axisNum=1 then
-        axisMax=gY1AxisMax : axisMin=gY1AxisMin
-    else
-        axisMax=gY2AxisMax : axisMin=gY2AxisMin
-    end if
-    phaseSpan=axisMax-axisMin
-    if phaseSpan<0 then gAdjustPhaseToDisplay=0 : exit function   'Error if negative span ver116-1b
-    if useWorkArray then phase=uWorkArray(pointNum, axisNum) else phase=gGraphVal(pointNum, axisNum)
-    origPhase=phase
-    'Put phase in bounds from gY1AxisMin to gY1AxisMax. In general case, phase can
-    'equal either bounds.
-        'Add or Subtract 360 until phase becomes in range
-    if phase>axisMax then
-        while phase>axisMax : phase=phase-360 : wend
-    else
-        while phase<axisMin : phase=phase+360 : wend
-    end if
+  //Adjust phase of point pointNum and return
+  //Assumes axis axisNum is phase. Returns the adjusted phase.
+  //if useWorkArray=1, the phase is taken from uWorkArray(); otherwise from gGraphVal()
+  //Adjust the phase as follows: first, if possible put it within the bounds
+  //of gAxisYNMin and gAxisYNMax. Second, if gAxisYNMax-gAxisYNMin is more than a 360 degree range, there may
+  //be more than one possible value. Choose the one that is closest to the previous point//s phase (previous based
+  //on gSweepDir).
+  //The idea is that a continuous sweep should normally have continuous phase. If our axes allow a range
+  //from 0 to 1000 degrees and the measured phase moves from 350 at one point to 10 at the next point,
+  //the best guess as to the true phase change is 20 degrees, and we should display 370 degrees.
+  float axisMin;
+  float axisMax;
+  if (axisNum==1)
+  {
+    axisMax=gY1AxisMax;
+    axisMin=gY1AxisMin;
+  }
+  else
+  {
+    axisMax=gY2AxisMax;
+    axisMin=gY2AxisMin;
+  }
+  float phaseSpan=axisMax-axisMin;
+  if (phaseSpan<0)
+  {
+    return 0;
+    //Error if negative span ver116-1b
+  }
+  float phase;
+  if (useWorkArray)
+  {
+    phase=uWork->uWorkArray[pointNum][axisNum];
+  }
+  else
+  {
+    phase=gGraphVal[pointNum][axisNum];
+  }
+  float origPhase=phase;
+  //Put phase in bounds from gY1AxisMin to gY1AxisMax. In general case, phase can
+  //equal either bounds.
+  //Add or Subtract 360 until phase becomes in range
+  if (phase>axisMax)
+  {
+    while (phase>axisMax)
+    {
+      phase=phase-360;
+    }
+  }
+  else
+  {
+    while (phase<axisMin)
+    {
+      phase=phase+360;
+    }
+  }
 
-    if phase<axisMin or phase>axisMax then
-        'Couldn't find in-bounds value; put in normal range. Can happen only if phaseRange<360
-        phase=origPhase    'ver114-5o
-        while phase>180 : phase=phase-360 : wend    'ver115-1d
-        while phase<=-180 : phase=phase+360 : wend    'ver115-1d
+  if (phase<axisMin || phase>axisMax)
+  {
+    //Couldn//t find in-bounds value; put in normal range. Can happen only if phaseRange<360
+    phase=origPhase;    //ver114-5o
+    while (phase>180)
+    {
+      phase=phase-360;
+    }
+    while (phase<=-180)
+    {
+      phase=phase+360;
+    }
+  }
+  else
+  {
+    //Found in-bounds value; maybe there is more than one in-bounds value (if phaseSpan>=360)
+    //If this is the first point, we just go with the angle as is
+    float lastPhase;
+    if (useWorkArray)
+    {
+      lastPhase=uWork->uWorkArray[pointNum-gSweepDir][axisNum];
+    }
     else
-            'Found in-bounds value; maybe there is more than one in-bounds value (if phaseSpan>=360)
-            'If this is the first point, we just go with the angle as is
-        if useWorkArray then lastPhase=uWorkArray(pointNum-gSweepDir, axisNum) else lastPhase=gGraphVal(pointNum-gSweepDir, axisNum)
-        if pointNum<>gSweepStart and phaseSpan>=360 then
-            if lastPhase<phase then
-                while phase>lastPhase and phase>=axisMin : phase=phase-360 : wend
-                'If phase is in bounds then phase and phase+360 now bracket lastPhase
-                'In that case, use the closest value. If phase is now out-of-bounds,
-                'use the last in-bounds value
-                if phase<axisMin or lastPhase-phase>180 then phase=phase+360
-            else
-                while phase<lastPhase and phase<=axisMax : phase=phase+360 : wend
-                'If phase is in bounds then phase and phase-360 now bracket lastPhase
-                'In that case, use the closest value. If phase is now out-of-bounds,
-                'use the last in-bounds value
-                if phase>axisMax or phase-lastPhase>180 then phase=phase-360
-            end if
-        end if
-    end if
-    gAdjustPhaseToDisplay=phase 'Return adjusted phase*/
-  return 0;
+    {
+      lastPhase=gGraphVal[pointNum-gSweepDir][axisNum];
+    }
+    if (pointNum!=gSweepStart && phaseSpan>=360)
+    {
+      if (lastPhase<phase)
+      {
+        while (phase>lastPhase && phase>=axisMin)
+        {
+          phase=phase-360;
+        }
+        //If phase is in bounds then phase and phase+360 now bracket lastPhase
+        //In that case, use the closest value. If phase is now out-of-bounds,
+        //use the last in-bounds value
+        if (phase<axisMin || lastPhase-phase>180)
+        {
+          phase=phase+360;
+        }
+      }
+      else
+      {
+        while (phase<lastPhase && phase<=axisMax)
+        {
+          phase=phase+360;
+        }
+        //If phase is in bounds then phase and phase-360 now bracket lastPhase
+        //In that case, use the closest value. If phase is now out-of-bounds,
+        //use the last in-bounds value
+        if (phase>axisMax || phase-lastPhase>180)
+        {
+          phase=phase-360;
+        }
+      }
+    }
+  }
+  return phase; //Return adjusted phase*/
+
 }
 int msagraph::gNumDynamicSteps()
 {
@@ -1756,9 +1938,11 @@ void msagraph::gSetNumDynamicSteps(int nSteps)
 {
   //Set number of steps in dynamic graph
   //if (nSteps<=2) nSweepPoints=2;
-  gDynamicSteps=nSteps ; int nPoints=nSteps+1;
+  gDynamicSteps=nSteps ;
+  int nPoints=nSteps+1;
   //Our existing points probably aren//t any good anyway, but in case they get graphed...
-  if (gNumPoints>nSteps+1) gNumPoints=nSteps+1; //ver114-6d
+  if (gNumPoints>nSteps+1)
+    gNumPoints=nSteps+1; //ver114-6d
   gSetMaxPoints(nPoints);  //Be sure we have room
   gSetSweepDir(gSweepDir);  //ver114-5e To set sweep start and end point numbers
 }
@@ -1767,9 +1951,16 @@ void msagraph::gSetErasure(int doErase1, int doErase2, int nEraseLead)
   //Set erasure parameters
   //nEraseLead specifies the number of points by which the erasure leads the drawing.
   //doEraseN indicates whether trace N should be erased as it is redrawn.
-  if (doErase1==0) gDoErase1=0; else gDoErase1=1;
-  if (doErase2==0) gDoErase2=0; else gDoErase2=1;
-  if (nEraseLead<=0) nEraseLead=0-nEraseLead;   //make it positive
+  if (doErase1==0)
+    gDoErase1=0;
+  else
+    gDoErase1=1;
+  if (doErase2==0)
+    gDoErase2=0;
+  else
+    gDoErase2=1;
+  if (nEraseLead<=0)
+    nEraseLead=0-nEraseLead;   //make it positive
   gEraseLead=nEraseLead*gSweepDir;   //Set its sign based on sweep direction
   gInitDraw();  //Creates draw and erase prefixes
 }
@@ -1777,7 +1968,9 @@ void msagraph::gSetErasure(int doErase1, int doErase2, int nEraseLead)
 void msagraph::gGetErasure(int &doErase1, int &doErase2, int &nEraseLead)
 {
   //Get erasure parameters
-  doErase1=gDoErase1; doErase2=gDoErase2; nEraseLead=gEraseLead;
+  doErase1=gDoErase1;
+  doErase2=gDoErase2;
+  nEraseLead=gEraseLead;
 }
 
 void msagraph::gPauseDynamicScan()
@@ -2014,11 +2207,11 @@ int msagraph::gCanUseExpeditedDraw()
   int retVal;
 
   retVal =(gGraphY2==1
-                        && gTrace2Width!=0
-                        && gDoY1==0
-                        && gY2IsLinear==1
-                        && gDoHist==0
-                        && gY2IsPhase==0);
+      && gTrace2Width!=0
+      && gDoY1==0
+      && gY2IsLinear==1
+      && gDoHist==0
+      && gY2IsPhase==0);
   return retVal;
 }
 
@@ -2085,22 +2278,22 @@ void msagraph::gDrawSingleTrace()
   //3. Draw the new Segments
   //3A. Save Y and convert to pixel coord
   gGraphVal[currPoint][2]=thispointy2; //save new y values
-  int yPix=(thispointy2-gY2AxisMin)*gY2Scale+gOriginY;
+  float yPix=(thispointy2-gY2AxisMin)*gY2Scale+gOriginY;
   if (yPix<gMarginTop)
     yPix=gMarginTop; //don//t let it go off the top
   if (yPix>gOriginY)
     yPix=gOriginY;     //don//t let it go off the bottom
   //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
-  yPix=((int)(10*yPix+0.5))/10;
+  //yPix=((int)(10*yPix+0.5))/10;
   gGraphPix[currPoint][2]=yPix;  //save y pixel coords
 
   //3B. Construct total draw command as one string and send it
   //ver114-4d modified the following to set the first point
-  int xPix=gGraphPix[currPoint][0]; //ver114-4k
+  float xPix=gGraphPix[currPoint][0]; //ver114-4k
   //ver114-4n We set a point by drawing the line backward; except first point of non-histo is directly set.
   //For wide traces, "set" can create artifacts, but they are OK on first point.
-  int lastX=gGraphPix[prevPoint][0];
-  int lastY2=gGraphPix[prevPoint][2];
+  float lastX=gGraphPix[prevPoint][0];
+  float lastY2=gGraphPix[prevPoint][2];
   //The "line" command does not draw the full final endpoint of the line, which normally
   //gets drawn as the start point of the next line anyway. But for the last point or histo or for
   //any point at which a halt occurs, the final pixel does not get drawn.
@@ -2115,7 +2308,7 @@ void msagraph::gDrawSingleTrace()
   {
     //   thisCmd$="line ";lastX; " ";lastY2;" "; xPix;" ";yPix;"line ";xPix;" ";yPix;" ";lastX; " ";lastY2
 
-    QPen pen(QColor(gridappearance->gTrace2Color));
+    QPen pen(QColor(util.fixColor(gridappearance->gTrace2Color)));
     pen.setWidth(gTrace2Width);
 
     graphScene->addLine(lastX, lastY2, xPix, yPix,pen);
@@ -2123,7 +2316,7 @@ void msagraph::gDrawSingleTrace()
 
   //ver114-6d permanently enable accum
   //      gTrace2[currPoint]=thisCmd;
-  gTrace2[currPoint] = QPoint(xPix, yPix);
+  gTrace2[currPoint] = QPointF(xPix, yPix);
   //cmd$=gDraw2$;thisCmd$
   //#graphBox$, cmd$   //Draw lines
   gPrevPointNum=currPoint;
@@ -2240,12 +2433,12 @@ void msagraph::gDrawNextPoint()
   else
     isFinalPoint=0;
 
-  int x=gGraphPix[currPoint][0];
-  int y1=gGraphPix[currPoint][1];
-  int y2=gGraphPix[currPoint][2];
-  int lastX;
-  int lastY1;
-  int lastY2;
+  float x=gGraphPix[currPoint][0];
+  float y1=gGraphPix[currPoint][1];
+  float y2=gGraphPix[currPoint][2];
+  float lastX;
+  float lastY1;
+  float lastY2;
   if (gDoHist==1)   //For histogram draw vertical line
   {
     lastX=x;
@@ -2293,7 +2486,7 @@ void msagraph::gDrawNextPoint()
     }
     if (gIsDynamic==1)
     {
-      gTrace1[currPoint]=QPoint(x,y1);
+      gTrace1[currPoint]=QPointF(x,y1);
     }
     if (gGraphY1 && gTrace1Width!=0)
     {
@@ -2313,7 +2506,7 @@ void msagraph::gDrawNextPoint()
 
     if (gIsDynamic==1)
     {
-      gTrace2[currPoint]=QPoint(x,y2);
+      gTrace2[currPoint]=QPointF(x,y2);
     }
     if (gGraphY2 && gTrace2Width!=0)
     {
@@ -2625,7 +2818,7 @@ void msagraph::RefreshGraph(int restoreErase)
   gPauseDynamicScan();  //Keeps the trace redraws from accumulating
   if (refreshTracesDirty==1 || refreshRedrawFromScratch)
   {
-    //gRecreateTraces(1);   //Recreate and draw trace draw commands //ver114-6e //ver114-7e
+    gRecreateTraces(1);   //Recreate and draw trace draw commands //ver114-6e //ver114-7e
   }
   else
   {
@@ -2673,6 +2866,53 @@ void msagraph::RefreshGraph(int restoreErase)
   refreshMarkersDirty=0;
   refreshAutoScale=0;      //ver114-7b
   refreshRedrawFromScratch=0;
+}
+
+void msagraph::gRecreateTraces(bool doDraw)
+{
+  //Recreate gTrace1) and gTrace2 from raw Y values; do not draw unless doDraw=1 ver114-7e
+  if (gNumPoints==0)
+  {
+    return;
+  }
+  int pMin, pMax;
+  gGetMinMaxPointNum(pMin, pMax);
+  //saveGraph$=gGraphHandle$
+  int saveDyn=gIsDynamic;
+  int saveFirst=gIsFirstDynamicScan;
+  int savePrev=gPrevPointNum;
+  gIsDynamic=1;    //Signal to accumulate drawing commands
+  gIsFirstDynamicScan=1;
+  gPrevPointNum=0;
+  gInitDraw();
+  if (doDraw==0)
+  {
+    qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+    //no code seems to call with doDraw = 1
+
+    // gGraphHandle$=""    //Suppresses actual drawing ver114-7e
+  }
+  if (gSweepDir==1)
+  {
+    for (int i=pMin; i<= pMax; i++)
+    {
+      //create segment from prior point to this point, for both y1 and y2 as appropriate
+      gDrawNextPointValue(gGraphVal[i][1], gGraphVal[i][2]);   //create command for this draw
+    }
+  }
+  else
+  {
+    for (int i=pMax; i!= pMin; i--)
+    {
+      //create segment from prior point to this point, for both y1 and y2 as appropriate
+      gDrawNextPointValue(gGraphVal[i][1], gGraphVal[i][2]);   //create command for this draw
+    }
+  }
+  //gGraphHandle$=saveGraph$
+  gIsDynamic=saveDyn;
+  gIsFirstDynamicScan=saveFirst;
+  gPrevPointNum=savePrev;
+
 }
 void msagraph::PerformAutoScale()
 {
@@ -2780,7 +3020,7 @@ void msagraph::DrawSetupInfo()
     //Print stepfreq as Hz, KHz, etc. with up to 3 whole places, max 4 decimals
     //and max 5 total significant digits. We don't do this for log sweeps because
     //the freq/step is not constant
-    float stepfreq=(vars->endfreq-vars->startfreq)/vars->globalSteps;    //stepfreq is only calculated for printing ver115-1b
+    float stepfreq=(vars->endfreq - vars->startfreq)/vars->globalSteps;    //stepfreq is only calculated for printing ver115-1b
     QString stepSize = util.uFormatted(1000000*stepfreq,"3,4,5//UseMultiplier//suffix=Hz");
     gPrintText(util.uCompact(stepSize)+"/Step", InfoX, InfoY,textColor); InfoY=InfoY+16;
         //Print Freq/div. also done only for linear sweep
@@ -2876,197 +3116,18 @@ void msagraph::gGetMarkerByNum(int markNum, int &pointNum, QString &ID, QString 
   //markNum is the ordinal
   //Get info for marker at entry number entryNum (1...)
   //Return negative pointNum if none found
-  if (markNum<0 || markNum>gNumMarkers) {pointNum=-1; ID=""; return;}
-  pointNum=gMarkerPoints[markNum][0];
-  ID=gMarkers[markNum][0];
-  trace=gMarkers[markNum][1]; style=gMarkers[markNum][2];
-}
-void msagraph::gUsePresetColors(QString btn)
-{
-
-  //ver116-4b added extra trace colors
-  //Light, Dark and Sepia are hard-wired. In addition, 5 custom colors may be used, and referred to as Custom1, ....
-  //btn$ specifies the preset to be used. It may be in the form of a
-  //button handle, so we drop everything before the period, if there is one.
-  int pos=btn.indexOf(".");
-  if (pos>-1) btn=btn.mid(pos+1);
-  if (btn.left(6).toUpper()=="CUSTOM")   //ver115-2a
+  if (markNum<0 || markNum>gNumMarkers)
   {
-      //We need to use a numbered custom color set. btn$ is in the form "CustomN" where N is 1-5
-    //fix me gUseCustomPresetColors(btn.mid(7).toInt());
+    pointNum=-1;
+    ID="";
     return;
   }
-
-  gridappearance->gTrace1Color = QColor(250,40,20).name();
-  gridappearance->gTrace2Color = QColor(30,30, 230).name();
-  btn=btn.trimmed().toUpper();
-  gridappearance->gGraphColorPreset=btn;     //ver114-2a Save for later use
-  if (btn == "LIGHT")       //Black on white
-  {
-    gridappearance->gGridLineColor = QColor(200, 200, 200).name();
-    gridappearance->gGridBoundsColor=QColor(Qt::black).name();
-    gridappearance->gBackColor = QColor(Qt::white).name();
-    gridappearance->gXTextColor=QColor(Qt::black).name();
-    gridappearance->gGridTextColor=QColor(Qt::black).name();
-    if (gPrimaryAxis==1)  //ver115-3c
-    {
-      gridappearance->gTrace1Color = QColor(30, 30, 230).name();
-      gridappearance->gTrace2Color = QColor(250, 40, 20).name();   //blue, red
-      gridappearance->gTrace1AColor = QColor(20, 160, 175).name();
-      gridappearance->gTrace2AColor = QColor(230, 140, 20).name();   //dark cyan, orange
-      gridappearance->gTrace1BColor = QColor(0, 150, 50).name();
-      gridappearance->gTrace2BColor = QColor(200, 175, 20).name();   //green, gold
-    }
-    else
-    {
-      gridappearance->gTrace1Color = QColor(250, 40, 20).name();
-      gridappearance->gTrace2Color = QColor(30, 30, 230).name();   //red, blue
-      gridappearance->gTrace1AColor = QColor(230, 140, 20).name();
-      gridappearance->gTrace2AColor = QColor(20, 160, 175).name();   //orange, dark cyan
-      gridappearance->gTrace1BColor = QColor(200, 175, 20).name();
-      gridappearance->gTrace2BColor = QColor(0, 150, 50).name();   //gold, green
-    }
-    gridappearance->gY1TextColor=gridappearance->gTrace1Color;
-    gridappearance->gY2TextColor=gridappearance->gTrace2Color;
-  }
-  else if (btn == "DARK")       //White On black
-  {
-    gridappearance->gGridLineColor = QColor(150, 150, 140).name();
-    gridappearance->gGridBoundsColor = QColor(190, 190, 180).name();
-    gridappearance->gBackColor = QColor(0, 0, 0).name();
-    if (gPrimaryAxis==1)  //ver115-3c
-    {
-      gridappearance->gTrace1Color = QColor(0, 255, 255).name();
-      gridappearance->gTrace2Color = QColor(255, 200, 90).name();  //cyan,orange
-      gridappearance->gTrace1AColor = QColor(100, 190, 255).name();
-      gridappearance->gTrace2AColor = QColor(255, 50, 50).name();   //light blue, red
-      gridappearance->gTrace1BColor = QColor(0, 255, 150).name();
-      gridappearance->gTrace2BColor = QColor(255, 255, 50).name();   //green, yellow
-    }
-    else
-    {
-      gridappearance->gTrace1Color = QColor(255, 200, 90).name();
-      gridappearance->gTrace2Color = QColor(0, 255, 255).name();  //orange, cyan
-      gridappearance->gTrace1AColor = QColor(255, 50, 50).name();
-      gridappearance->gTrace2AColor = QColor(100, 190, 255).name();   //red, light blue
-      gridappearance->gTrace1BColor = QColor(255, 255, 50).name();
-      gridappearance->gTrace2BColor = QColor(0, 255, 150).name();   //yellow, green
-    }
-    gridappearance->gXTextColor = QColor(245, 245, 240).name();
-    gridappearance->gGridTextColor = QColor(245, 245, 240).name();
-    gridappearance->gY1TextColor=gridappearance->gTrace1Color;
-    gridappearance->gY2TextColor=gridappearance->gTrace2Color;
-  }
-  else if (btn == "SEPIA")    //Sepia
-  {
-    gridappearance->gGridLineColor = QColor(255, 230, 180).name();
-    gridappearance->gGridBoundsColor = QColor(115, 85, 0).name();
-    gridappearance->gBackColor = QColor(255, 255, 255).name();
-    gridappearance->gXTextColor=QColor(Qt::black).name();
-    gridappearance->gGridTextColor=QColor(Qt::black).name();
-    if (gPrimaryAxis==1)  //ver115-3c
-    {
-      gridappearance->gTrace1Color = QColor(30, 30, 230).name();
-      gridappearance->gTrace2Color = QColor(250, 40, 20).name();   //blue, red
-      gridappearance->gTrace1AColor = QColor(20, 160, 175).name();
-      gridappearance->gTrace2AColor = QColor(230, 140, 20).name();   //dark cyan, orange
-      gridappearance->gTrace1BColor = QColor(200, 175, 20).name();
-      gridappearance->gTrace2BColor = QColor(220, 220, 50).name();   //green, yellow
-    }
-    else
-    {
-      gridappearance->gTrace1Color = QColor(250, 40, 20).name();
-      gridappearance->gTrace2Color = QColor(30, 30, 230).name();   //red, blue
-      gridappearance->gTrace1AColor = QColor(230, 140, 20).name();
-      gridappearance->gTrace2AColor = QColor(20, 160, 175).name();   //orange, dark cyan
-      gridappearance->gTrace1BColor = QColor(220, 220, 50).name();
-      gridappearance->gTrace2BColor = QColor(200, 175, 20).name();   //yellow, green
-    }
-    gridappearance->gY1TextColor=gridappearance->gTrace1Color;
-    gridappearance->gY2TextColor=gridappearance->gTrace2Color;
-  }
+  pointNum=gMarkerPoints[markNum][0];
+  ID=gMarkers[markNum][0];
+  trace=gMarkers[markNum][1];
+  style=gMarkers[markNum][2];
 }
 
-void msagraph::gUseCustomPresetColors(int N)
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  sub gUseCustomPresetColors N    'Use preset color set N (1...5) 'ver116-4b added extra trace colors
-      if N<1 then N=1
-      if N>5 then N=5
-      gGridLineColor$=gCustomColors$(N,0)
-      gGridBoundsColor$=gCustomColors$(N,1)
-      gBackColor$=gCustomColors$(N,2)
-      gGridTextColor$=gCustomColors$(N,3)
-      gXTextColor$=gCustomColors$(N,4)
-      gY1TextColor$=gCustomColors$(N,5)
-      gY2TextColor$=gCustomColors$(N,6)
-      gTrace1Color$=gCustomColors$(N,7)
-      gTrace2Color$=gCustomColors$(N,8)
-      gTrace1AColor$=gCustomColors$(N,9)
-      gTrace2AColor$=gCustomColors$(N,10)
-      gTrace1BColor$=gCustomColors$(N,11)
-      gTrace2BColor$=gCustomColors$(N,12)
-      gGraphColorPreset$="Custom";N       'So we can identify what set of colors we last started with
-  end sub*/
-}
-void msagraph::gSetCustomPresetColors(int N, QString grid, QString bounds, QString back, QString gridText, QString XText, QString Y1Text, QString Y2Text, QString trace1, QString trace2, QString trace1A, QString trace2A, QString trace1B, QString trace2B)
-{
-  //Set Nth (1-5) preset color set; don't actually implement this set yet
-  if (N<1) N=1;
-  if (N>5) N=5;
-  gridappearance->gCustomColors[N][0]=grid;
-  gridappearance->gCustomColors[N][1]=bounds;
-  gridappearance->gCustomColors[N][2]=back;
-  gridappearance->gCustomColors[N][3]=gridText;
-  gridappearance->gCustomColors[N][4]=XText;
-  gridappearance->gCustomColors[N][5]=Y1Text;
-  gridappearance->gCustomColors[N][6]=Y2Text;
-  gridappearance->gCustomColors[N][7]=trace1;
-  gridappearance->gCustomColors[N][8]=trace2;
-  gridappearance->gCustomColors[N][9]=trace1A;
-  gridappearance->gCustomColors[N][10]=trace2A;
-  gridappearance->gCustomColors[N][11]=trace1B;
-  gridappearance->gCustomColors[N][12]=trace2B;
-}
-void msagraph::gGetCustomPresetColors(int N, QString &grid, QString &bounds, QString &back, QString &gridText, QString &XText, QString &Y1Text, QString &Y2Text, QString &trace1, QString &trace2, QString &trace1A, QString &trace2A, QString &trace1B, QString &trace2B)
-{
-  //Get Nth (1-5) preset color set
-  if (N<1) N=1;
-  if (N>5) N=5;
-  N = N -1;
-  grid=gridappearance->gCustomColors[N][0];
-  bounds=gridappearance->gCustomColors[N][1]; //ver116-4b fixed second index of all these
-  back=gridappearance->gCustomColors[N][2];
-  gridText=gridappearance->gCustomColors[N][3];
-  XText=gridappearance->gCustomColors[N][4];
-  Y1Text=gridappearance->gCustomColors[N][5];
-  Y2Text=gridappearance->gCustomColors[N][6];
-  trace1=gridappearance->gCustomColors[N][7];trace2=gridappearance->gCustomColors[N][8];
-  trace1A=gridappearance->gCustomColors[N][9];trace2A=gridappearance->gCustomColors[N][10];
-  trace1B=gridappearance->gCustomColors[N][11];trace2B=gridappearance->gCustomColors[N][12];
-}
-void msagraph::gInitCustomColors()
-{
-//Initialize the custom colors to default values just to be valid
-  for (int N=0; N < 5; N++)
-  {
-    //White background, dark foreground
-    gridappearance->gCustomColors[N][0]="200 200 200";   //Line
-    gridappearance->gCustomColors[N][1]="black";         //Bounds
-    gridappearance->gCustomColors[N][2]="white";         //Background
-    gridappearance->gCustomColors[N][3]="black";         //GridText
-    gridappearance->gCustomColors[N][4]="black";         //XText
-    gridappearance->gCustomColors[N][5]="250 40 20";     //Y1Text off-red
-    gridappearance->gCustomColors[N][6]="30 30 230";     //Y2Text off-blue
-    gridappearance->gCustomColors[N][7]="250 40 20";     //Trace1 off-red
-    gridappearance->gCustomColors[N][8]="30 30 230";     //Trace2 off-blue
-    gridappearance->gTrace1AColor="230 140 20";         //Trace1A orange
-    gridappearance->gTrace2AColor="20 160 175";         //Trace 2A dark cyan
-    gridappearance->gTrace1BColor="220 220 50";         //Trace1B yellow
-    gridappearance->gTrace2BColor="200 175 20";         //Trace2B green
-  }
-}
 void msagraph::gUsePresetText(QString btn)
 {
   //@gUsePresetText
@@ -3129,7 +3190,7 @@ void msagraph::RecalcYValues()
   gGetMinMaxPointNum(pMin, pMax);
   for (int i=pMin; i <= pMax; i++)
   {
-    int y1, y2;
+    float y1, y2;
     CalcGraphData(i-1, y1, y2, 0);  //i-1 to get step number from point number ver114-6h
     if (referenceDoMath==2) //ref math is to be done on graph values ver115-5d
     {
@@ -3161,10 +3222,13 @@ void msagraph::SetY2Range(int bot, int top)
 void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
 {
   //Calculate min and max for autoscaling axis axisNum
-  if (axisNum==1) componConst=vars->Y1DataType; else componConst=vars->Y2DataType;
+  if (axisNum==1)
+    componConst=vars->Y1DataType;
+  else
+    componConst=vars->Y2DataType;
   int pMin, pMax;
   gGetMinMaxPointNum(pMin, pMax);
-  if (componConst==vars->constGD)
+  if (componConst==constGD)
   {
     //For group delay, the first point is invalid so don't include it
     if (gGetSweepDir()==1) pMin=pMin+1; else pMax=pMax-1;
@@ -3173,21 +3237,21 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
   int dum1, dum2;
   gFindPeaks(axisNum, pMin, pMax, dum1, dum2, axisMin, axisMax);
 
-  if (componConst == vars->constGraphS11DB || componConst == vars->constMagDBM || componConst ==  vars->constMagDB
-      || componConst == vars->constReturnLoss || componConst == vars->constInsertionLoss) //Round db/dbm to multiple of 5 ver114-8d
+  if (componConst == constGraphS11DB || componConst == constMagDBM || componConst ==  constMagDB
+      || componConst == constReturnLoss || componConst == constInsertionLoss) //Round db/dbm to multiple of 5 ver114-8d
   {
     axisMin=util.uRoundDownToMultiple(axisMin-0.5, 5);
     axisMax=util.uRoundUpToMultiple(axisMax+0.5, 5);
   }
-  else if (componConst == vars->constGraphS11Ang || componConst == vars->constAngle || componConst == vars->constRawAngle
-           || componConst == vars->constTheta || componConst == vars->constImpedAng || componConst == vars->constAdmitAng)   //ver115-4a
+  else if (componConst == constGraphS11Ang || componConst == constAngle || componConst == constRawAngle
+           || componConst == constTheta || componConst == constImpedAng || componConst == constAdmitAng)   //ver115-4a
   {
     //Round angles to multiple of 15 ver115-1i added raw angle
     axisMin=util.uRoundDownToMultiple(axisMin-5, 15); if (axisMin<-180) axisMin=-180; //ver114-8c
     axisMax=util.uRoundUpToMultiple(axisMax+5, 15) ; if (axisMax>180) axisMax=180;
     if (axisMax-axisMin>120) { axisMin=-180 ; axisMax=180; }  //Expand to full range  //ver114-8c
   }
-  else if (componConst == vars->constSerR || componConst == vars->constParR || componConst == vars->constImpedMag)    //Round non-negative impedances to multiple of 25
+  else if (componConst == constSerR || componConst == constParR || componConst == constImpedMag)    //Round non-negative impedances to multiple of 25
   {
     if (axisMax>1000000) axisMax=1000;    //don't scale to screwy values, such as divide by zero might produce
     axisMin=util.uRoundDownToMultiple(axisMin-5, 25);
@@ -3198,7 +3262,7 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
       if (axisMax/axisMin>=2) axisMin=0; //Min is zero unless range very small ver115-4h
     }
   }
-  else if (componConst == vars->constSerReact || componConst == vars->constParReact)    //Round reactances to multiple of 25; allow negative
+  else if (componConst == constSerReact || componConst == constParReact)    //Round reactances to multiple of 25; allow negative
   {
     if (axisMax>1000000) axisMax=1000;    //don't scale to screwy values, such as divide by zero might produce
     int tentMin=util.uRoundDownToMultiple(axisMin-5, 25);
@@ -3216,14 +3280,14 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
       }
     }
   }
-  else if (componConst == vars->constMagWatts || componConst == vars->constMagRatio || componConst == vars->constMagV || componConst == vars->constRho) //Fractional values that won//t exceed 1 or be negative
+  else if (componConst == constMagWatts || componConst == constMagRatio || componConst == constMagV || componConst == constRho) //Fractional values that won//t exceed 1 or be negative
   {
     if (axisMax>1) axisMax=1;
     axisMin=util.uRoundDownToPower(axisMin, 10);
     axisMax=util.uRoundUpToPower(axisMax,10);
     if (axisMin>0) { if (axisMax/axisMin>=2) axisMin=0;}
   }
-  else if (componConst == vars->constSerC || componConst == vars->constSerL || componConst == vars->constParC || componConst == vars->constParL)     //Capacitance and Inductance
+  else if (componConst == constSerC || componConst == constSerL || componConst == constParC || componConst == constParL)     //Capacitance and Inductance
   {
     if (axisMin<0) axisMin=axisMin*1.1; else axisMin=axisMin*0.9;
     if (axisMax>0) axisMax=axisMax*1.1; else axisMax=axisMax*0.9;
@@ -3239,40 +3303,40 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
       }
     }
   }
-  else if (componConst == vars->constSWR)   //VSWR >=1 and we don't care about huge values ver114-8d
+  else if (componConst == constSWR)   //VSWR >=1 and we don't care about huge values ver114-8d
   {
     axisMin=1;
     if (axisMax<2) axisMax=2; else axisMax=(int)(axisMax)+2;
     if (axisMax>50) axisMax=50;
   }
-  else if (componConst == vars->constComponentQ)   //>=0 and we don't care about huge values ver115-2d
+  else if (componConst == constComponentQ)   //>=0 and we don't care about huge values ver115-2d
   {
     axisMin=0;
     if (axisMax<10) axisMax=10; else axisMax=(int)(axisMax)+5;
     if (axisMax>10000) axisMax=10000;
   }
-  else if (componConst == vars->constReflectPower)   //a percentage ver115-2d
+  else if (componConst == constReflectPower)   //a percentage ver115-2d
   {
     axisMin=0;
     axisMax=100;
   }
-  else if (componConst == vars->constAdmitMag)  //ver115-4a
+  else if (componConst == constAdmitMag)  //ver115-4a
   {
     axisMin=0;
     axisMax=util.uRoundUpToPower(axisMax, 10);
   }
-  else if (componConst == vars->constConductance || componConst == vars->constSusceptance)  //ver115-4a
+  else if (componConst == constConductance || componConst == constSusceptance)  //ver115-4a
   {
     if (axisMin>0) axisMin=util.uRoundDownToPower(axisMin, 10); else axisMin=util.uRoundUpToPower(axisMin, 10);
     if (axisMax>0) axisMax=util.uRoundUpToPower(axisMax, 10); else axisMax=util.uRoundDownToPower(axisMax, 10);
   }
-  else if (componConst == vars->constAux0 || componConst == vars->constAux1 || componConst == vars->constAux2
-           || componConst == vars->constAux3 || componConst == vars->constAux4 || componConst == vars->constAux5)   //ver115-4a
+  else if (componConst == constAux0 || componConst == constAux1 || componConst == constAux2
+           || componConst == constAux3 || componConst == constAux4 || componConst == constAux5)   //ver115-4a
   {
-    int auxNum=componConst-vars->constAux0;    //e.g. constAux4 produces 4
+    int auxNum=componConst-constAux0;    //e.g. constAux4 produces 4
     axisMin=vars->auxGraphDataInfo[auxNum][1]  ; axisMax=vars->auxGraphDataInfo[auxNum][2];
   }
-  else if (componConst == vars->constNoGraph)   //ver115-2c
+  else if (componConst == constNoGraph)   //ver115-2c
   {
     //Do nothing
   }
@@ -3379,7 +3443,7 @@ void msagraph::gDrawGrid()
         y=gOriginY - gY1GridLines[i];
       else
         y=gOriginY - gY2GridLines[i];
-      graphScene->addLine(gMarginLeft, y, gMarginLeft+gGridWidth, y, QPen(gridappearance->gGridLineColor));
+      graphScene->addLine(gMarginLeft, y, gMarginLeft+gGridWidth, y, QPen(util.fixColor(gridappearance->gGridLineColor)));
     }
   }
 
@@ -3391,14 +3455,14 @@ void msagraph::gDrawGrid()
       //Pixel locations are in gXGridLines
       int x=gMarginLeft+gXGridLines[i];
       //cmd$=cmd$+"line "; x; " ";gOriginY; " "; x; " ";gOriginY-gGridHeight ;";"
-      graphScene->addLine(x, gOriginY, x, gOriginY-gGridHeight, QPen(gridappearance->gGridLineColor));
+      graphScene->addLine(x, gOriginY, x, gOriginY-gGridHeight, QPen(util.fixColor(gridappearance->gGridLineColor)));
   }
 
   //#gGraphHandle$, cmd$    //Draw vertical grid lines
   //gGridString$=gGridString$+cmd$  //ver115-1b
 
   int gridRight=gMarginLeft+gGridWidth;
-  QPen pen(QColor(gridappearance->gGridBoundsColor), 3);
+  QPen pen(QColor(util.fixColor(gridappearance->gGridBoundsColor)), 3);
   graphScene->addLine(gMarginLeft, gOriginY+1, gridRight, gOriginY+1, pen);  //bottom
   graphScene->addLine(gMarginLeft-1, gMarginTop, gMarginLeft-1, gOriginY, pen); // left
   graphScene->addLine(gMarginLeft,gMarginTop-1,gridRight,gMarginTop-1,pen);  //top
@@ -3442,7 +3506,10 @@ void msagraph::CreateReferenceSource()
   {
     uWork->uSetMaxWorkPoints(gNumDynamicSteps()+1,3);
     uWork->uWorkNumPoints=gNumDynamicSteps()+1;
-    for (unsigned int i=0; i <= uWork->uWorkNumPoints; i++) {uWork->uWorkArray[i+1][0]=vars->datatable[i][1]; }   //set up for uRLCComboResponse
+    for (int i=0; i <= uWork->uWorkNumPoints; i++)
+    {
+      uWork->uWorkArray[i+1][0] = vars->datatable[i][1];
+    }   //set up for uRLCComboResponse
       //Calc response in whatever S11 or S21 setup the user has chosen
     int doSpecialR0; QString doSpecialJig;
     if (vars->msaMode=="Reflection")
@@ -3461,7 +3528,7 @@ void msagraph::CreateReferenceSource()
     //uWorkArray now contains the db, degrees response for each frequency
     //Transfer to referenceSource()
     referenceSourceNumPoints=uWork->uWorkNumPoints;
-    for (unsigned int i=1; i <= uWork->uWorkNumPoints; i++)
+    for (int i=1; i <= uWork->uWorkNumPoints; i++)
     {
       referenceSource[i][0]=uWork->uWorkArray[i][0];  //freq
       referenceSource[i][1]=uWork->uWorkArray[i][1];  //db
@@ -3489,16 +3556,16 @@ void msagraph::CreateReferenceSource()
       //ver115-7a modified this
       int source1, source2;
       referenceSourceNumPoints=gNumDynamicSteps()+1;
-      if (vars->msaMode=="SA") { source1=vars->constMagDBM; source2=vars->constNoGraph;}
-      if (vars->msaMode=="ScalarTrans") { source1=vars->constMagDB; source2=vars->constNoGraph;}
-      if (vars->msaMode=="VectorTrans") { source1=vars->constMagDB; source2=vars->constAngle;}
-      if (vars->msaMode=="Reflection") { source1=vars->constGraphS11DB; source2=vars->constGraphS11Ang;}
+      if (vars->msaMode=="SA") { source1=constMagDBM; source2=constNoGraph;}
+      if (vars->msaMode=="ScalarTrans") { source1=constMagDB; source2=constNoGraph;}
+      if (vars->msaMode=="VectorTrans") { source1=constMagDB; source2=constAngle;}
+      if (vars->msaMode=="Reflection") { source1=constGraphS11DB; source2=constGraphS11Ang;}
       for (int i=1; i <= referenceSourceNumPoints; i++)
       {
         referenceSource[i][0]=gGetPointXVal(i);   //Actual tuning freq, in MHz
         //No matter what we are doing with the reference, we save dB(m)/angle data as the "source"
         //and later do any necessary "transform".
-        int y1, y2;
+        float y1, y2;
         CalcGraphDataType(i-1, source1, source2, y1, y2,0);  //calc db/angle info
         referenceSource[i][1] = y1;   //dB or dBm
         referenceSource[i][2] = y2;    //angle or 0
@@ -3512,14 +3579,14 @@ void msagraph::CreateReferenceTransform()
 //Transform referenceSource() data into actual graph data; put it into referenceTransform
   for (int i=0; i < referenceSourceNumPoints; i++)  //iterate by step num, though referenceTransform starts at 1 (point num)
   {
-    int ref1, ref2;
+    float ref1, ref2;
     CalcReferencesWholeStep(i, ref1, ref2);
     referenceTransform[i+1][0]=referenceSource[i+1][0];  //freq
     referenceTransform[i+1][1]=ref1;  //Trace 1
     referenceTransform[i+1][2]=ref2; //Trace 2
   }
 }
-void msagraph::CalcReferencesWholeStep(int stepNum, int &ref1, int &ref2)
+void msagraph::CalcReferencesWholeStep(int stepNum, float &ref1, float &ref2)
 {
   //Calculate reference line data at whole step stepNum
   int pointNum = stepNum+1;
@@ -3612,7 +3679,7 @@ QString msagraph::CreateReferenceTraces(QString tCol, int tSize, int traceNum, Q
   }
   uWork->uSetMaxWorkPoints(referenceSourceNumPoints,3);
   uWork->uWorkNumPoints=referenceSourceNumPoints;
-  for (unsigned int i=1; i <= uWork->uWorkNumPoints; i++)
+  for (int i=1; i <= uWork->uWorkNumPoints; i++)
   {
     uWork->uWorkArray[i][0]=referenceTransform[i][0];  //freq
     uWork->uWorkArray[i][1]=referenceTransform[i][1];  //Trace 1 data
@@ -3700,7 +3767,7 @@ QString msagraph::PrivateCreateReferenceTrace(int traceNum, int startPoint, int 
   path->lineTo(lastX,lastY);
   return t;
 }
-void msagraph::CalcGraphData(int currStep, int &y1, int &y2, int useWorkArray)
+void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArray)
 {
   //Calculate y1,y2 per user request
   //If useWorkArray=1 then the data source is uWorkArray() or uWorkReflectData;
@@ -3709,13 +3776,13 @@ void msagraph::CalcGraphData(int currStep, int &y1, int &y2, int useWorkArray)
   //currStep may have a fractional part, in which case we need to interpolate.
   y1=0;
   y2=0; //ver115-4a
-  if (vars->Y1DataType>=vars->constAux0 && vars->Y1DataType<=vars->constAux5)
+  if (vars->Y1DataType>=constAux0 && vars->Y1DataType<=constAux5)
   {
-    y1=vars->auxGraphData[currStep][vars->Y1DataType-vars->constAux0];
+    y1=vars->auxGraphData[currStep][vars->Y1DataType-constAux0];
   }
-  if (vars->Y2DataType>=vars->constAux0 && vars->Y2DataType<=vars->constAux5)
+  if (vars->Y2DataType>=constAux0 && vars->Y2DataType<=constAux5)
   {
-    y2=vars->auxGraphData[currStep][vars->Y2DataType-vars->constAux0];
+    y2=vars->auxGraphData[currStep][vars->Y2DataType-constAux0];
   }
   if (vars->msaMode=="Reflection")
   {
@@ -3749,26 +3816,26 @@ void msagraph::CalcGraphData(int currStep, int &y1, int &y2, int useWorkArray)
           c=vars->Y2DataType;
         float fpow;
         float y;
-        if (c == vars->constMagDBM)
+        if (c == constMagDBM)
         {
           y=db;
         }
-        else if (c == vars->constMagWatts)
+        else if (c == constMagWatts)
         {
           fpow = pow(10,(db/10)); //ver115-9f
           y=fpow/1000;
         }
-        else if (c == vars->constMagV)
+        else if (c == constMagV)
         {
           fpow=pow(10,(db/10));  //ver115-9f
           y=sqrt(fpow/20);    //square root of 50* mw/1000
         }
-        else if (c == vars->constAux0
-                 || c == vars->constAux1
-                 || c == vars->constAux2
-                 || c == vars->constAux3
-                 || c == vars->constAux4
-                 || c == vars->constAux5)   //ver115-4a
+        else if (c == constAux0
+                 || c == constAux1
+                 || c == constAux2
+                 || c == constAux3
+                 || c == constAux4
+                 || c == constAux5)   //ver115-4a
         {
           if (i==1)
             y=y1;
@@ -3792,17 +3859,17 @@ void msagraph::CalcGraphData(int currStep, int &y1, int &y2, int useWorkArray)
     return;    //No need to interpolate; we are done
 
   //We interpolate the required data types, not the raw S21, S11, etc.
-  int nextY1;
-  int nextY2;
+  float nextY1;
+  float nextY2;
   CalcGraphData(wholeStep+1, nextY1, nextY2, useWorkArray); //Get values at next step
 
-  if (vars->Y1DataType!=vars->constNoGraph)
+  if (vars->Y1DataType!=constNoGraph)
     y1=inter.LinearInterpolateDataType(vars->Y1DataType, fract, y1, nextY1);
 
-  if (vars->Y2DataType!=vars->constNoGraph)
+  if (vars->Y2DataType!=constNoGraph)
     y2=inter.LinearInterpolateDataType(vars->Y2DataType, fract, y2, nextY2);
 }
-void msagraph::CalcGraphDataType(int currStep, int dataType1, int dataType2, int &y1, int &y2, int useWorkArray)
+void msagraph::CalcGraphDataType(int currStep, int dataType1, int dataType2, float &y1, float &y2, int useWorkArray)
 {
   //Calculate specified data type (constRho, etc.) for step currStep
   //This just calls CalcGraphData, after forcing data types to the dataTypes we want.
@@ -3818,7 +3885,6 @@ void msagraph::CalcGraphDataType(int currStep, int dataType1, int dataType2, int
   vars->Y2DataType=saveY2DataType;   //Restore
 }
 
-
 void msagraph::setUwork(cWorkArray *newuWork)
 {
   uWork = newuWork;
@@ -3829,10 +3895,56 @@ void msagraph::setVna(dialogVNACal *newVnaCal)
   vnaCal = newVnaCal;
 }
 
+void msagraph::setHwdIf(hwdInterface *newHwdIf)
+{
+  hwdIf = newHwdIf;
+}
+
 void msagraph::setAppearance(dialogGridappearance *newGridappearance)
 {
   gridappearance = newGridappearance;
 }
+void msagraph::gInitFirstUse(QGraphicsView *view, int winWidth, int winHt, int marLeft, int marRight, int marTop, int marBot)
+{
+  graphicsView = view;
+  gNumMarkers=20;  //ver114-4d Some may not be in use at any given time
+  gSetMaxPoints(800);
+  gUpdateGraphObject(winWidth, winHt, marLeft, marRight, marTop, marBot);
+  graphicsView->fitInView(graphScene->sceneRect());
+  gInitDefaults();
+  gClearMarkers();
+  gIsFirstDynamicScan=0;
+  gIsDynamic=0;
+  gGridString="";
+  gGridBmp="";
+  gridappearance->gInitCustomColors(); //Initialize custom color sets ver116-4b
+}
+void msagraph::gInitDynamicDraw()
+{
+  //Initialize to commence dynamic draw process
+  //nEraseLead specifies the number of points by which the erasure leads the drawing.
+  //doEraseN indicates whether trace N should be erased as it is redrawn.
+  //A dynamic draw involves erasing prior lines while drawing new ones.
+  //As each trace in a dynamic graph is drawn, it is necessary to "discard" occasionally to
+  //clear accumulated graphics info. To avoid affecting user drawn graphics somehow, we start
+  //with a flush which avoids discarding that prior graphics.
+  //#gGraphHandle$, "flush"
+  gIsDynamic=1;    //Signal to accumulate drawing commands
+  gIsFirstDynamicScan=1;
+  gNumPoints=0;        //Clear existing points
+
+  gSetErasure(1,1,1);  //Default values. also calls gInitDraw   ver114-6e
+  gPrevPointNum=0; //ver114-6d
+  //gTrace1$=gDraw1$
+  //gTrace2$=gDraw2$
+  //Start over accumulating draw commands. We use "down" as the empty command
+  for (int i=1; i <= gDynamicSteps+1; i++)
+  {
+    gTrace1[i]=QPointF(0,0);
+    gTrace2[i]=QPointF(0,0);
+  }
+}
+
 void msagraph::CalcReflectDerivedData(int currStep)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
@@ -3914,7 +4026,7 @@ void msagraph::CalcReflectDerivedData(int currStep)
     end if
     */
 }
-void msagraph::CalcReflectGraphData(int currStep, int &y1, int &y2, int useWorkArray)
+void msagraph::CalcReflectGraphData(int currStep, float &y1, float &y2, int useWorkArray)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -4105,7 +4217,7 @@ void msagraph::gRefreshTraces()  //Redraw traces from gTrace1$() and gTrace2$()
     {
       trace2.lineTo(gTrace2.at(j));
     }
-    pen.setBrush(QColor(gridappearance->gTrace2Color));
+    pen.setBrush(QColor(util.fixColor(gridappearance->gTrace2Color)));
     pen.setWidth(gTrace2Width);
 
     graphScene->addPath(trace2,pen);
@@ -4121,72 +4233,2512 @@ void msagraph::gRefreshGridLinesOnly()   //Redraw grid lines but no text, withou
     #gGraphHandle$, gGridString$    'Draws the grid lines
 */
 }
-void msagraph::CalcTransmitGraphData(int currStep, int &y1, int &y2, int useWorkArray)
+void msagraph::CalcTransmitGraphData(int currStep, float &y1, float &y2, int useWorkArray)
+{
+
+  //Calculate y1,y2 per user request
+  //If useWorkArray=1 then the data source is uWorkArray(); otherwise it is S21DataArray()
+  //ver116-1b deleted calc of trueFreq, which was incorrect and not needed
+  float db;
+  float ang;
+  if (useWorkArray)
+  {
+    db=uWork->uWorkArray[currStep+1][1];
+    ang=uWork->uWorkArray[currStep+1][2];
+  }
+  else
+  {
+    db=vars->S21DataArray[currStep][1];
+    ang=vars->S21DataArray[currStep][2];
+  }
+  //ver115-1e deleted impedance transform for transmission mode
+  int componConst;
+  for (int dataNum=1; dataNum <= 2;dataNum++)
+  {
+    if (dataNum==1)
+    {
+      componConst=vars->Y1DataType;
+    }
+    else
+    {
+      componConst=vars->Y2DataType;
+    }
+    float y;
+    switch(componConst)
+    {
+    case constMagDB:
+      y=db;
+      break;
+    case constMagDBM:    //This gives raw data before cal was applied
+      //Used for transmission mode only
+      if (vnaCal->applyCalLevel==0)
+      {
+        y=db;
+      }
+      else
+      {
+        y=db+vars->lineCalArray[currStep][1];
+      }
+      break;
+    case constMagRatio:
+      y=pow(10,(db/20));
+      break;
+    case constInsertionLoss:
+      y=0-db;
+      break;
+    case constAngle:
+      //Source data is raw
+      y=ang;
+      break;
+    case constRawAngle:  // raw phase before cal. Used for transmission mode only
+      if (vnaCal->applyCalLevel==0)
+      {
+        y=ang;
+      }
+      else
+      {
+        y=util.NormalizePhase(ang+vars->lineCalArray[currStep][2]);
+      }
+      break;
+
+    case constGD:    //calc group delay
+      if (vars->startfreq==vars->endfreq)
+      {
+
+        vars->message= "Can't calculate Group Delay with zero sweep width.";
+        PrintMessage();
+        y=-1;
+      }
+      else
+      {
+        int pStart, pEnd;
+        gGetSweepStartAndEndPointNum(pStart, pEnd);
+        int dir=gGetSweepDir();  //1 or -1
+        if (currStep==pStart-1)
+        {
+          y=-1;  //Need two points; only have one at first point
+        }
+        else
+        {
+          if (useWorkArray)
+          {
+            y=(uWork->uWorkArray[currStep+1][2]-uWork->uWorkArray[currStep+1-dir][2])/360;
+          }
+          else
+          {
+            y=(vars->S21DataArray[currStep][2]-vars->S21DataArray[currStep-dir][2])/360;
+          }//delta phase in cycles  ver116-1b
+          if (y>0.5)
+          {
+            y=y-1;
+          }
+          else if (y<-0.5)
+          {
+            y=y+1; //Deal with wraparound ver114-6k
+          }
+          float deltaF;
+          if (useWorkArray)
+          {
+            deltaF=1000000*(uWork->uWorkArray[currStep+1][0]-uWork->uWorkArray[currStep+1-dir][0]);
+          }
+          else
+          {
+            deltaF=1000000*(vars->S21DataArray[currStep][0]-vars->S21DataArray[currStep-dir][0]); //delta freq, cycles per second ver116-1b
+          }
+          y=0-y/deltaF;   //negative of delta phase over delta freq
+        }
+      }
+      break;
+    case constAux0:
+    case constAux1:
+    case constAux2:
+    case constAux3:
+    case constAux4:
+    case constAux5:
+      if (dataNum==1)
+      {
+        y=y1;
+      }
+      else
+      {
+        y=y2;  //Auxiliary data has already been calculated, so keep it
+      }
+      break;
+    default:
+      y=0;    //invalid data, or None
+    }
+    if (dataNum==1)  //Put data into y1 or y2
+    {
+      y1=y;
+    }
+    else
+    {
+      y2=y;
+    }
+  }
+
+}
+QString msagraph::gRestoreTraceContext(QString &s, int &startPos, int isValidation)
+{
+  //Restore context info on trace graphing
+  //Return error message if error; otherwise "". We ignore data prior to startPos.
+  //startPos is updated to one past the last line we process (normally EndContext or end of string)
+  //successive lines are separated by chr$(13)
+  //If isValidation=1, then we just run through the data for error checking, without changing anything.
+  //We don't save/restore gDoErase1, gDoErase2, gEraseLead because user will reset them in gInitDynamicDraw
+  QString newLine="\r";
+  QString aSpace=" ";
+  QString sep=";;"; //Used to separate text items
+  QString nonTextDelims=" ,\t";    //space, comma and tab are delimiters
+     //Get next line and increment startPos to start of the following line
+  QString tLine=util.uGetLine(s, startPos);
+  QString tag;
+  while (tLine!="")
+  {
+    QString origLine=tLine; //ver115-1b
+    if (tLine.left(10).toUpper()=="ENDCONTEXT") break;
+    int isErr=0;
+    int equalPos=tLine.indexOf("=");     //equal sign marks end of tag
+    if (equalPos==-1)
+    {
+      tag=""; //We will skip this line; it does not have a tag
+    }
+    else
+    {
+      tag=tLine.left(equalPos).toUpper();  //tag is stuff before equal sign
+      tLine=tLine.mid(equalPos+1).trimmed();  //contents is stuff after equal sign
+    }
+    //Each tag represents one or several data items. These are retrieved one at a time,
+    //and as each is retrieved it is deleted from tLine$. Numeric items are delimited
+    //by spaces, tabs or commas. Text items are delimited by the double character
+    //contained in sep$, because they may contain spaces or commas. If this is just
+    //a validation run, we do not enter any of the retrieved data into our variables.
+    float v1, v2, v3;
+    if (tag == "DOHIST")
+    {
+      isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);
+      if (isValidation==0) gDoHist=v1;
+    }
+    else if (tag == "ACTIVEGRAPHS")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      int graphY1=v1; int graphY2=v2;
+      if (isValidation==0) gGraphY1=graphY1; gGraphY2=graphY2;  //ver115-1a
+    }
+    else if (tag == "TRACEWIDTHS")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      if (isValidation==0) gTrace1Width=v1; gTrace2Width=v2;
+    }
+    else if (tag == "TRACECOLORS")
+    {
+      QString t1=util.uExtractTextItem(tLine,sep);
+      QString t2=util.uExtractTextItem(tLine,sep);
+      if (t1=="" || t2=="") isErr=1;
+      //It was originally intended that trace colors and their grid labels be independent in the graph module,
+      //but that is not how we use it, and the independence makes it awkward if the chosen Appearance has
+      //one trace/label color and the preference file has a different trace color. So we tie them together.
+      if (isValidation==0)
+      {
+        gridappearance->gTrace1Color=t1;
+        gridappearance->gTrace2Color=t2;
+        gridappearance->gY1TextColor=t1;
+        gridappearance->gY2TextColor=t2; } //ver116-4L
+    }
+    else
+    {
+      //Unrecognized tag. Skip it
+    }
+    if (isErr)
+    {
+      return "Trace Context Error in: " + origLine;
+    }
+    //Get next line and increment startPos to start of the following line
+    tLine=util.uGetLine(s, startPos);
+  }
+  return "";
+}
+QString msagraph::TraceContext()
+{
+  //Return trace context as string
+  //successive lines are separated by chr$(13)
+  //First include variables used outside the graph module
+  QString s1= "RefreshEachScan="+QString::number(refreshEachScan);
+  s1= s1+"\rTraceModes="+QString::number(vars->Y1DisplayMode)+","+QString::number(vars->Y2DisplayMode);
+  if (vars->doCycleTraceColors)
+  {
+    vars->cycleNumber=1;
+    gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[1], gridappearance->cycleColorsAxis2[1]);
+  } //ver116-4s to save basic trace color
+  return s1+"\r"+gTraceContext();   //Add items from graph module
+}
+QString msagraph::RestoreTraceContext(QString s, int &startPos, int isValidation)
+{
+  //Restore sweep context
+  //Returns error message if error; otherwise 0. Ignores data prior to startPos.
+  //startPos is updated to one past the last line we process (normally EndContext or end of string)
+  //if isValidation=1, we merely check for errors
+  //sep$ is a possibly multi-character separator to delimit text items on one line
+  //successive lines are separated by chr$(13)
+  //QString newLine="\r";
+  //QString aSpace=" ";
+  //QString sep$=";;"; //Used to separate text items
+  QString nonTextDelims=" ,\t";    //space, comma and tab are delimiters
+    //Get next line and increment startPos to start of the following line
+  int oldStartPos=startPos;
+  QString tLine=util.uGetLine(s, startPos);
+  QString errMsg;
+  oldStartPos=startPos;
+  while (tLine!="")
+  {
+    QString tag;
+    QString origLine=tLine;
+    if (tLine.toUpper().left(10)=="ENDCONTEXT") break;
+    int isErr=0;
+    int equalPos=tLine.indexOf("=");     //equal sign marks end of tag
+    if (equalPos==-1)
+    {
+      isErr=1; break;
+    }
+    else
+    {
+      tag=tLine.left(equalPos).toUpper();  //tag is stuff before equal sign
+      tLine=tLine.mid(equalPos+1).trimmed();  //contents is stuff after equal sign
+    }
+    if (tag == "REFRESHEACHSCAN")
+    {
+      if (isValidation==0) refreshEachScan=tLine.toInt();
+    }
+    else if (tag == "TRACEMODES")
+    {
+      float v1, v2, v3;
+      isErr=util.uExtractNumericItems(2, tLine, nonTextDelims, v1, v2, v3);
+      if (isValidation==0 && isErr==0) vars->Y1DisplayMode=v1; vars->Y2DisplayMode=v2;
+    }
+    else
+    {
+      //Unrecognized tag. Must belong to the graph module, so we end here
+      startPos=oldStartPos;    //reset to beginning of this line
+      break;
+    }
+    if (isErr)
+    {
+      return "Trace Context Error in: "+ origLine;
+    } //ver115-1b
+    //Get next line and increment startPos to start of the following line
+    oldStartPos=startPos;
+    tLine=util.uGetLine(s, startPos);
+  }
+  //If no error so far, process the data for the graph module
+  errMsg = gRestoreTraceContext(s, startPos, isValidation);
+  gridappearance->SetCycleColors();     //Set trace colors for color cycling ver116-4s
+  return errMsg;
+}
+QString msagraph::RestoreGridContext(QString s, int &startPos, int isValidation)
+{
+  //Restore grid context
+  //Returns error message if error; otherwise 0. Ignores data prior to startPos.
+  //startPos is updated to one past the last line we process (normally EndContext or end of string)
+  //if isValidation=1, we merely check for errors
+
+  //Return error message if error
+  //startPos=0;
+  QString tLine=util.uGetLine(s, startPos);
+  int oldStartPos=startPos;
+  //QString contextVersion="A";
+  while (tLine!="")
+  {
+    QString tag;
+    //QString origLine=tLine; //ver115-1b
+    if (tLine.left(10).toUpper()=="ENDCONTEXT")
+      break;
+    int isErr=0;
+    int equalPos=tLine.indexOf("=");     //equal sign marks end of tag
+    if (equalPos==-1)
+    {
+       isErr=1;
+       break;
+    }
+    else
+    {
+       tag=tLine.left(equalPos).toUpper();   //tag is stuff before equal sign
+       tLine=tLine.mid(equalPos+1).trimmed();  //contents is stuff after equal sign
+    }
+
+    if (tag == "CUSTOMNAMES")  //List of custom color preset names
+    {
+      if (isValidation==0)
+      {
+        for (int i=1; i <= 5; i++)
+        {
+          gridappearance->customPresetNames[i]=util.uExtractTextItem(tLine, ";:");   //5 items,separated by ";:"
+        }
+      }
+    }
+    else
+    {
+       //Unrecognized tag. Must belong to the graph module, so we end here
+       startPos=oldStartPos;    //reset to beginning of this line
+       break;
+    }
+    //Get next line and increment startPos to start of the following line
+    oldStartPos=startPos;
+    tLine=util.uGetLine(s, startPos);
+  }
+
+   //process the data for the graph module
+  int oldWidth, oldHeight;
+  gGetGraphicsSize(oldWidth, oldHeight);   //save so we can restore
+  QString errMsg=gRestoreGridContext(s, startPos, isValidation);
+
+  if (errMsg!="" || isValidation==1) return errMsg;
+  vars->primaryAxisNum=gGetPrimaryAxis(); //ver115-3c
+  gGetMargins(graphMarLeft, graphMarRight, graphMarTop, graphMarBot);  //Get graph margins
+  //We may need to resize the graph window to match the dimensions just retrieved
+  //For now, we restore the previous size with the possibly new margins
+  gUpdateGraphObject(oldWidth, oldHeight, graphMarLeft, graphMarRight, graphMarTop, graphMarBot);
+  graphicsView->fitInView(getScene()->sceneRect());
+  QString referenceColor1, referenceColor2, dum1, dum2;
+  gridappearance->gGetSupplementalTraceColors(referenceColor1, referenceColor2, dum1, dum2); //ver116-4b
+  if (vars->primaryAxisNum==1)
+    referenceColorSmith=referenceColor1;
+  else
+    referenceColorSmith=referenceColor2;  //ver116-4b
+
+  return errMsg;
+}
+QString msagraph::gGridContext()
+{
+  //Return string with context info on grid size and appearance
+  //successive lines are separated by chr(13)
+  QString newLine="\r";
+  QString aSpace=" ";
+  QString sep=";;";   //delimits text items on one line
+
+  QString s1= "WindowSize="+ QString::number(gWindowWidth)+ aSpace+ QString::number(gWindowHeight);
+  s1= s1+ newLine+ "Margins="+ QString::number(gMarginLeft)+ aSpace+ QString::number(gMarginRight)+
+                        aSpace+ QString::number(gMarginTop)+ aSpace+ QString::number(gMarginBot);
+  s1= s1+ newLine+ "GridDivisions="+ QString::number(gHorDiv)+ aSpace+ QString::number(gVertDiv);
+  s1= s1+ newLine+ "PrimaryAxis="+ QString::number(gPrimaryAxis);
+  s1= s1+ newLine+ "AxisLabels="+ gXAxisLabel+ sep+ gY1AxisLabel+ sep+ gY2AxisLabel;
+
+  QString s2= "AxisTextColors="+ gridappearance->gXTextColor+ sep+ gridappearance->gY1TextColor+ sep+ gridappearance->gY2TextColor;
+  s2= s2+ newLine+ "AxisFonts="+ gridappearance->gXAxisFont+ sep+ gridappearance->gY1AxisFont+ sep+ gridappearance->gY1AxisFont;
+  s2= s2+ newLine+ "BackColor="+ gridappearance->gBackColor;
+  s2= s2+ newLine+ "GridTextColor="+ gridappearance->gGridTextColor;
+  s2= s2+ newLine+ "GridFont="+ gridappearance->gGridFont;
+  s2= s2+ newLine+ "GridLineColor="+ gridappearance->gGridLineColor;
+  s2= s2+ newLine+ "GridBoundsColor="+ gridappearance->gGridBoundsColor;
+  s2= s2+ newLine+ "GridStyles="+ gXGridStyle+ sep+ gY1GridStyle+ sep+ gY2GridStyle;
+  s2= s2+ newLine+ "AxisFormats="+ gXAxisForm+ sep+ gY1AxisForm+ sep+ gY2AxisForm;
+
+  for (int i=1; i<= 5; i++)    //custom colors. One line per color set. Start with set number, then list of colors ver115-2a
+  {
+    QString s3="CustomColors="+QString::number(i)+",";
+
+    QString grid, bounds, back, gridText, XText, Y1Text, Y2Text, trace1, trace2, trace1A, trace2A, trace1B, trace2B;
+    gridappearance->gGetCustomPresetColors( i, grid,bounds,back,gridText,XText,Y1Text,Y2Text, trace1, trace2,
+            trace1A, trace2A, trace1B, trace2B);
+
+    s3=s3+grid+sep+bounds+sep+back+sep+ gridText+sep+XText+sep+Y1Text+sep+
+                Y2Text+sep+trace1+sep+trace2+sep+trace1A+sep+trace2A+sep+trace1B+sep+trace2B+sep;
+
+    s2=s2+newLine+s3; //Append this line to s1
+  }
+  return s1+ newLine+ s2+ newLine+ "LastPresets=" + gridappearance->gGraphColorPreset+ sep+ gridappearance->gGraphTextPreset;
+}
+
+QString msagraph::gTraceContext()
+{
+  //Return string with context info on trace graphing
+  //successive lines are separated by chr$(13)
+  //We don't save/restore gDoErase1, gDoErase2, gEraseLead because user will reset them in gInitDynamicDraw
+  QString newLine="\r";
+  QString aSpace=" ";
+  QString sep=";;";   //delimits text items on one line
+  QString s1= newLine+ "ActiveGraphs="+ QString::number(gGraphY1)+ aSpace+ QString::number(gGraphY2);
+  s1="DoHist="+ QString::number(gDoHist);
+  s1= s1+ newLine+ "TraceWidths="+ QString::number(gTrace1Width)+ aSpace+ QString::number(gTrace2Width); //ver114-4d eliminated typo
+  s1= s1+ newLine+ "TraceColors="+ gridappearance->gTrace1Color+ sep+ gridappearance->gTrace2Color;
+  return s1;
+}
+
+QString msagraph::GridContext()
+{
+  //Get grid context as string
+  QString s="CustomNames=";
+  for (int i=1; i <= 5; i++)
+  {
+    s=s+gridappearance->customPresetNames[i]+";:";   //use a goofy separator so user won't have used it
+  }
+  return s+"\r"+gGridContext();    //ver116-1b
+}
+QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidation)
+{
+  //Restore info on grid size and appearance from string s$
+  //If isValidation=1, then we just run through the data for error checking, without changing anything.
+  //Return error message if error; otherwise "". We ignore data prior to startPos.
+  //startPos is updated to one past the last line we process (normally EndContext or end of string)
+  //successive lines are separated by chr$(13)
+  //CalcGraphParams MUST BE CALLED at some point after this routine to adjust to the margins
+  //and hor/vert divisions. This can be done by a subsequent call of gRestoreSweepContext or
+  //by a direct call.
+  QString newLine="\r";
+  QString aSpace=" ";
+  QString sep=";;"; //Used to separate text items
+  QString nonTextDelims=" ,\t";    //space, comma and tab are delimiters
+  //Get next line and increment startPos to start of the following line
+  QString tLine=util.uGetLine(s, startPos);
+  float v1, v2, v3;
+  QString t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13;
+  while (tLine!="")
+  {
+    QString origLine=tLine;  //ver115-1b
+    if (tLine.left(10).toUpper()=="ENDCONTEXT") break;
+    int isErr=0;
+    int equalPos=tLine.indexOf("=");     //equal sign marks end of tag
+    QString tag;
+    if (equalPos==-1)
+    {
+      tag=""; //We will skip this line; it does not have a tag
+    }
+    else
+    {
+      tag=tLine.left(equalPos).toUpper();  //tag is stuff before equal sign
+      tLine=tLine.mid(equalPos+1).trimmed();  //contents is stuff after equal sign
+    }
+
+    //Each tag represents one or several data items. These are retrieved one at a time,
+    //and as each is retrieved it is deleted from tLine$. Numeric items are delimited
+    //by spaces, tabs or commas. Text items are delimited by the double character
+    //conotained in sep$, because they may contain spaces or commas. If this is just
+    //a validation run, we do not enter any of the retrieved data into our variables.
+    //ver114-3f deleted Context Version and Title. Title is now part of Data context
+    if (tag == "WINDOWSIZE")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      if (isValidation==0)
+      {
+        gWindowWidth=v1;
+        gWindowHeight=v2;
+      }
+    }
+    else if (tag == "MARGINS")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      if (isValidation==0)
+      {
+        gMarginLeft=v1;
+        gMarginRight=v2;
+      }
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      if (isValidation==0)
+      {
+        gMarginTop=v1;
+        gMarginBot=v2;
+      }
+    }
+    else if (tag == "PRIMARYAXIS")  //ver115-3b
+    {
+      isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);
+      if (v1!=1 && v1!=2) isErr=1;
+      if (isValidation==0 && isErr==0)
+      {
+        gSetPrimaryAxis(v1);
+      }
+    }
+    else if (tag == "AXISTEXTCOLORS")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      t2=util.uExtractTextItem(tLine,sep);
+      t3=util.uExtractTextItem(tLine,sep);
+      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gXTextColor=t1;
+        gridappearance->gY1TextColor=t2;
+        gridappearance->gY2TextColor=t3;
+      }
+    }
+    else if (tag == "AXISFONTS")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      t2=util.uExtractTextItem(tLine,sep);
+      t3=util.uExtractTextItem(tLine,sep);
+      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gXAxisFont=t1;
+        gridappearance->gY1AxisFont=t2;
+        gridappearance->gY2AxisFont=t3;
+      }
+    }
+    else if (tag == "AXISLABELS")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      t2=util.uExtractTextItem(tLine,sep);
+      t3=util.uExtractTextItem(tLine,sep);
+      if (isValidation==0)
+      {
+        gXAxisLabel=t1;
+        gY1AxisLabel=t2;
+        gY2AxisLabel=t3;
+      }
+    }
+    else if (tag == "BACKCOLOR")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      if (t1=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gBackColor=t1;
+      }
+    }
+    else if (tag == "GRIDTEXTCOLOR")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      if (t1=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gGridTextColor=t1;
+      }
+    }
+    else if (tag == "GRIDFONT")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      if (t1=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gGridFont=t1;
+      }
+    }
+    else if (tag == "GRIDLINECOLOR")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      if (t1=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gGridLineColor=t1;
+      }
+    }
+    else if (tag == "GRIDBOUNDSCOLOR")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      if (t1=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gGridBoundsColor=t1;
+      }
+    }
+    else if (tag == "GRIDDIVISIONS")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      if (isValidation==0)
+      {
+        gHorDiv=v1;
+        gVertDiv=v2;
+      }
+    }
+    else if (tag == "GRIDSTYLES")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      t2=util.uExtractTextItem(tLine,sep);
+      t3=util.uExtractTextItem(tLine,sep);
+      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (isValidation==0)
+      {
+        gXGridStyle=t1;
+        gY1GridStyle=t2;
+        gY2GridStyle=t3;
+      }
+    }
+    else if (tag == "AXISFORMATS")
+    {
+      t1=util.uExtractTextItem(tLine,sep);
+      t2=util.uExtractTextItem(tLine,sep);
+      t3=util.uExtractTextItem(tLine,sep);
+      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (isValidation==0)
+      {
+        gXAxisForm=t1;
+        gY1AxisForm=t2;
+        gY2AxisForm=t3;
+      }
+    }
+    else if (tag == "CUSTOMCOLORS") //ver115-2a
+    {
+      isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);    //Get preset number
+      if (v1<1 || v1>5) isErr=1;
+      //Get the colors
+      t1=util.uExtractTextItem(tLine,sep);
+      t2=util.uExtractTextItem(tLine,sep);
+      t3=util.uExtractTextItem(tLine,sep);
+      t4=util.uExtractTextItem(tLine,sep);
+      t5=util.uExtractTextItem(tLine,sep);
+      t6=util.uExtractTextItem(tLine,sep);
+      t7=util.uExtractTextItem(tLine,sep);
+      t8=util.uExtractTextItem(tLine,sep);
+      t9=util.uExtractTextItem(tLine,sep);
+      //ver116-4b added colors for traces 1A, 1B, 2A and 2B. If not present, duplicate the 1 and 2 colors
+      if (tLine=="")
+      {
+        t10=t8 ; t11=t9 ; t12=t8 ; t13=t9;
+      }
+      else
+      {
+        t10=util.uExtractTextItem(tLine,sep);
+        t11=util.uExtractTextItem(tLine,sep);
+        t12=util.uExtractTextItem(tLine,sep);
+        t13=util.uExtractTextItem(tLine,sep);
+      }
+      if (isErr==0 && isValidation==0)
+        gridappearance->gSetCustomPresetColors(v1,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13); //ver116-4b
+    }
+    else if (tag == "LASTPRESETS")
+    {
+      t1=util.uExtractTextItem(tLine,sep) ;
+      t2=util.uExtractTextItem(tLine,sep);
+      if (t1=="" || t2=="") isErr=1;
+      if (isValidation==0)
+      {
+        gridappearance->gUsePresetColors(t1, gPrimaryAxis);
+        gUsePresetText(t2);
+        gridappearance->SetCycleColors(); //ver116-4s
+      }
+    }
+    else
+    {
+      //Unrecognized tag. Skip it
+    }
+    if (isErr)
+      return "Grid Context Error in: " + origLine;
+    //Get next line and increment startPos to start of the following line
+    tLine=util.uGetLine(s, startPos);
+
+    //Calculate some variables from those just restored ver114-3a
+  }
+  gUpdateGraphObject(gWindowWidth, gWindowHeight, gMarginLeft
+                           , gMarginRight, gMarginTop, gMarginBot);
+  graphicsView->fitInView(graphScene->sceneRect());
+  return "";
+}
+
+int msagraph::GraphDataContextAsTextArray()
+{
+  //Put graph data points into uTextPointArray, with header info
+   //return number of lines placed into uTextPointArray
+   //First 3 lines are title, each preceded by !
+   //Next line is sweep info
+   //Next is Touchstone options line
+   //Next is comment data headings
+   //Then comes each point as its own string
+   uWork->uTextPointArray[1]="!"+gGetTitleLine(1);
+   uWork->uTextPointArray[2]="!"+gGetTitleLine(2);
+   uWork->uTextPointArray[3]="!"+gGetTitleLine(3);
+   uWork->uTextPointArray[4]="!"+gGetTitleLine(4);  //This line has sweep info set by user+ not printed as part of title ver114-5m
+   uWork->uTextPointArray[5]="# MHz S DB R 50";   //Freq in MHz, data in DB/angle format
+   uWork->uTextPointArray[6]="! MHz  S21_DB  S21_Degrees";
+   //We save frequency plus two data per point even if we only have one trace.
+   QString aSpace=" ";
+   int pMin, pMax;
+   gGetMinMaxPointNum(pMin, pMax);    //ver114-6d
+   int minStep=pMin-1 ; int maxStep=pMax-1;
+   for (int i=minStep; i < maxStep;i++)    //ver114-6d
+   {
+     int f, y1, y2;
+     gGetPointVal(i+1, f, y1, y2);    //point num is one more than step num.
+     uWork->uTextPointArray[i+7]=QString::number(f)+aSpace+QString::number(y2)+aSpace+QString::number(y1);  //Save freq, Y2, Y1
+   }
+   return maxStep+7;
+}
+QString msagraph::GraphDataContext()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
-  sub CalcTransmitGraphData currStep, byref y1, byref y2, useWorkArray  'Calculate y1,y2 per user request
-      'If useWorkArray=1 then the data source is uWorkArray(); otherwise it is S21DataArray()
-          'ver116-1b deleted calc of trueFreq, which was incorrect and not needed
-      if useWorkArray then
-          db=uWorkArray(currStep+1,1)
-          ang=uWorkArray(currStep+1,2)
-      else
-          db=S21DataArray(currStep,1)     'ver115-2b
-          ang=S21DataArray(currStep,2)     'ver115-2b
-      end if
-          'ver115-1e deleted impedance transform for transmission mode
-      for dataNum=1 to 2  'ver115-3b
-          if dataNum=1 then
-              graph.componConst=Y1DataType
-          else
-              graph.componConst=Y2DataType
-          end if
-          select graph.componConst
-              case constMagDB
-                  y=db
-              case constMagDBM    'This gives raw data before cal was applied
-                    'Used for transmission mode only
-                  if applyCalLevel=0 then y=db else y=db+lineCalArray(currStep,1)
-              case constMagRatio
-                  y=10^(db/20)
-              case constInsertionLoss
-                  y=0-db
-              case constAngle
-                  'Source data is raw
-                  y=ang
-              case constRawAngle  ' raw phase before cal. Used for transmission mode only
-                  if applyCalLevel=0 then y=ang else y=gNormalizePhase(ang+lineCalArray(currStep,2)) 'ver116-4b
+function GraphDataContext$()    'Return data points as string, with title in first 3 lines
+    'We do not include !StartContext or !EndContext lines
+    nLines=GraphDataContextAsTextArray()   'Assemble strings into uTextPointArray$
+    GraphDataContext$=uTextArrayToString$(1,nLines) 'Assemble array of strings into one string
+end function
+*/
+  return "fix me";
+}
+void msagraph::GraphDataContextToFile(QStringList &fHndl)
+{
+  //save data points to file
+  //We do not include StartContext or EndContext lines
+  //fHndl$ is the handle of an already open file. We output our data
+  //but do not close the file.
+  int nLines=GraphDataContextAsTextArray();   //Assemble strings into uTextPointArray$
+  for (int i=1; i<= nLines;i++)
+  {
+    fHndl.append(uWork->uTextPointArray[i]);
+  }
+}
+void msagraph::RestoreGraphDataContext(QString &s, int &startPos, int doTitle)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+function RestoreGraphDataContext(byref s$, byref startPos, doTitle)   'Restore data points from s$
+    'Return number of points; -1 if error
+    'Restore data; restore title only if doTitle=1
+    'We ignore data prior to startPos. We update startPos to the start of the next line after
+    'the point data, per uArrayFromString
 
-              case constGD    'calc group delay
-                  if startfreq=endfreq then
-                      message$= "Can't calculate Group Delay with zero sweep width." : call PrintMessage
-                      y=-1
-                  else
-                      call gGetSweepStartAndEndPointNum pStart, pEnd
-                      dir=gGetSweepDir()  '1 or -1
-                      if currStep=pStart-1 then
-                          y=-1  'Need two points; only have one at first point
-                      else
-                          if useWorkArray then y=(uWorkArray(currStep+1,2)-uWorkArray(currStep+1-dir,2))/360 _
-                                  else y=(S21DataArray(currStep,2)-S21DataArray(currStep-dir,2))/360  'delta phase in cycles  ver116-1b
-                          if y>0.5 then y=y-1 else if y<-0.5 then y=y+1     'Deal with wraparound ver114-6k
-                          if useWorkArray then deltaF=1000000*(uWorkArray(currStep+1,0)-uWorkArray(currStep+1-dir,0)) _
-                                  else deltaF=1000000*(S21DataArray(currStep,0)-S21DataArray(currStep-dir,0)) 'delta freq, cycles per second ver116-1b
-                          y=0-y/deltaF   'negative of delta phase over delta freq
-                      end if
-                  end if
-              case constAux0, constAux1, constAux2, constAux3, constAux4, constAux5   'ver115-4a
-                  if dataNum=1 then y=y1 else y=y2  'Auxiliary data has already been calculated, so keep it
-              case else
-                  y=0    'invalid data, or None
-          end select
-          if dataNum=1 then  'Put data into y1 or y2
-              y1=y
-          else
-              y2=y
-          end if
-      next dataNum
-  end sub
+    isErr=uArrayFromString(s$, 1, startPos, 3)   'Get data into uWorkArray; 3 data per line (freq+mag+phase)
+    if isErr then RestoreGraphDataContext=-1 : exit function
+
+        'Now transfer retrieved data from uWorkArray() to gGraphVal().
+        'TO DO--This resizing does not help other arrays, and to resize them we would need to erase them.
+        'If we don't have room, we should notify the user that he needs to do a sweep with more points.
+    if uWorkNumPoints>gMaxNumPoints() then call ResizeArrays uWorkNumPoints
+    call gSetNumDynamicSteps uWorkNumPoints-1
+    call gSetNumPoints 0
+    for i=1 to uWorkNumPoints
+        overflow=gAddPoints(uWorkArray(i, 0), uWorkArray(i, 2), uWorkArray(i, 1)) 'Freq, Phase, Mag
+    next i
+    if doTitle then
+        for i=1 to 4
+            call gSetTitleLine i, uWorkTitle$(i)  'Save title, which uArrayFromString retrieved ver114-5i
+        next i
+    end if
+    'Note title line 4 has info on linear/log. We don't change to match, so on a Restart we will
+    'not conform. But that should be taken care of in restoring the sweep context. Likewise with path info.
+    'Note we do not call gSetNumDynamicSteps; that must be set elsewhere.
+    'Caller must also separately conform datatable() with the graph data
+    RestoreGraphDataContext=uWorkNumPoints
+    prevDataChanged=1
+end function
+*/
+}
+void msagraph::GetGraphDataContextFromFile(QFile *fHndl, int doTitle)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+function GetGraphDataContextFromFile(fHndl$, doTitle)   'get points from file; return number of points or -1 if error
+    'Restore data; restore title only if doTitle=1
+    'fHndl$ is the handle of an already open file. We read our data
+    'but do not close the file. The last line we read will be "!EndContext"
+    isErr=uArrayFromFile(fHndl$,3) 'Get data, 3 per line
+    if isErr then GetGraphDataContextFromFile=-1 : exit function
+        'Move the data from uWorkArray to gGraphVal
+    if uWorkNumPoints>gMaxNumPoints() then call ResizeArrays uWorkNumPoints   'Make sure we have enough room
+    call gSetNumPoints 0
+    for i=1 to uWorkNumPoints
+        overflow=gAddPoints(uWorkArray(i, 0), uWorkArray(i, 2), uWorkArray(i, 1)) 'Freq, Phase, Mag
+    next i
+    if doTitle then
+        for i=1 to 4
+            call gSetTitleLine i, uWorkTitle$(i)  'Save title, which uArrayFromString retrieved ver114-5i
+        next i
+    end if
+    'Note title line 4 has info on linear/log. We don't change to match, so on a Restart we will
+    'not conform. But that should be taken care of in restoring the sweep context. Likewise with path info.
+    'Note we do not call gSetNumDynamicSteps; that must be set elsewhere.
+    'Caller must also separately conform datatable() with the graph data
+    GetGraphDataContextFromFile=uWorkNumPoints
+    prevDataChanged=1
+end function
+*/
+}
+
+
+void msagraph::ImplementDisplayModes()
+{
+  int doErase1, doErase2, eraseLead;
+  //calculate the various items from Y1DisplayMode and Y2DisplayMode
+  //Y1DisplayMode, Y2DisplayMode: 0=off  1=NormErase  2=NormStick  3=HistoErase  4=HistoStick
+  //ver115-2c added checks for constNoGraph
+  if ((vars->Y1DataType!=constNoGraph && (vars->Y1DisplayMode==2 || vars->Y1DisplayMode==4))
+    || (vars->Y2DataType!=constNoGraph && (vars->Y2DisplayMode==2 || vars->Y2DisplayMode==4)))
+  {
+    vars->isStickMode=1;
+  }
+  else
+  {
+    vars->isStickMode=0;
+  }
+  gSetDoAxis(vars->Y1DataType!=constNoGraph, vars->Y2DataType!=constNoGraph); //Turn graph data on or off ver115-3b
+    //Note that gActivateGraphs won//t activate a graph if we just set its data existence to zero ver115-3b
+  gActivateGraphs(vars->Y1DisplayMode!=0,vars->Y2DisplayMode!=0);   //Turn actual graphing on or off ver115-3b
+  if ((vars->Y1DataType!=constNoGraph && vars->Y1DisplayMode>2) || (vars->Y2DataType!=constNoGraph && vars->Y2DisplayMode>2))
+  {
+    gSetDoHist(1);
+  }
+  else
+  {
+    gSetDoHist(0);  //Set histogram or normal trace ver115-3b
+  }
+  int t1Width, t2Width;
+  gGetTraceWidth(t1Width, t2Width);
+    //ver114-4n Erase eraseLead points ahead of drawing. The more steps, the larger eraseLead
+  if (vars->globalSteps<=50) //ver114-4n reduced eraseLead
+  {
+    eraseLead=1;
+  }
+  else
+  {
+    eraseLead=2+int(vars->steps/400);
+    if (((vars->Y1DataType!=constNoGraph && t1Width>2) || (vars->Y2DataType!=constNoGraph && t2Width>2)) && vars->globalSteps > 200)
+    {
+        eraseLead=eraseLead+1;
+    }
+  }
+  if (vars->Y2DisplayMode!=1 && vars->Y2DisplayMode!=3)
+    doErase2=0;
+  else
+    doErase2=1;
+  if (vars->Y1DisplayMode!=1 && vars->Y1DisplayMode!=3)
+    doErase1=0;
+  else
+    doErase1=1;
+  gSetErasure(doErase1, doErase2, eraseLead);
+}
+void msagraph::UpdateGraphParams()
+{
+  //added UpdateGraphParams; ver114-4n made it a gosub to allow use of non-globals
+  //Set up graphs for drawing, but don't draw anything
+  if (vars->alternateSweep) {vars->sweepDir=1; gSetSweepDir(1);}      //Start out forward if alternating ver114-5a
+  int sweepDir=gGetSweepDir();  //ver114-4k
+  if (sweepDir==1)   //ver114-4k added this if... block
+  {
+    //Forward direction
+    vars->sweepStartStep=0; vars->sweepEndStep=vars->steps;
+  }
+  else
+  {
+    //Reverse direction
+    vars->sweepStartStep=vars->steps; vars->sweepEndStep=0;
+  }
+
+  gInitGraphRange(vars->startfreq, vars->endfreq, vars->Y1Bot, vars->Y1Top, vars->Y2Bot, vars->Y2Top);  //min and max values for x, y1 and y2; calls gCalcGraphParams
+  gCalcGraphParams();   //Calculate new scaling. May change min or max.
+  float xMin, xMax;
+  gGetXAxisRange(xMin, xMax);   //in case gCalcGraphParams changed axis limits ver116-4k
+  if (vars->startfreq != xMin || vars->endfreq != xMax) SetStartStopFreq(xMin, xMax);
+  //ver114-5f moved the following here from step 12
+  gGenerateXValues(0);   //Precalculate x values for steps+1 points; reset number of points to 0; ver114-1f deleted parameter
+  UpdateGraphDataFormat(0);
+}
+
+void msagraph::UpdateGraphDataFormat(int doTwoPort)
+{
+  //Update graph module for the type of data we are graphing, and set data source and component
+  //If doTwoPort, we are dealing with two-port graphs ver116-1b
+  gSetGridStyles("ENDSANDCENTER", "All", "All");
+  //For linear sweep we display frequency in MHz; for log we do 1, 1 K, 1 M, or 1 G
+  QString xForm, yForm, y1Form, y2Form;
+  if (gGetXIsLinear())     //ver114-6d modified this block to use startfreq/endfreq for log sweeps
+    xForm= "4,6,9//suffix= M";
+  else
+    xForm= "3,4,5//UseMultiplier//DoCompact//Scale=1000000";    //ver115-1e
+
+
+  //ver115-2c caused the full procedure to be executed for both dataNum.
+  //Also eliminated default setting of yForm$
+  //ver115-3a moved the select block to DetermineGraphDataFormat so others can use it
+  for (int dataNum=1; dataNum <= 2;dataNum++)
+  {
+    if (doTwoPort) //ver116-1b
+    {
+      if (dataNum==1)
+        componConst=twoPort.TwoPortGetY1Type();
+      else
+        componConst=twoPort.TwoPortGetY2Type();
+    }
+    else
+    {
+      if (dataNum==1) componConst=vars->Y1DataType; else componConst=vars->Y2DataType;
+    }
+
+    int doData;
+    if (componConst==constNoGraph)
+    {
+      doData=0; //Indicates whether there is a graph ver115-2c
+      yAxisLabel ="None";
+      yLabel="None";
+      yForm="####.##";    //Something valid, in case it gets mistakenly used
+      if (dataNum==1)
+      {
+        y1AxisLabel="None";
+        y1Label="None";
+        y1Form="####.##";    //Something valid, in case it gets mistakenly used
+      }
+      else
+      {
+        y2AxisLabel="None";
+        y2Label="None";
+        y2Form="####.##";    //Something valid, in case it gets mistakenly used
+      }
+    }
+    else
+    {
+      doData=1;
+      if (dataNum==1)
+      {
+        if (doTwoPort)
+        {
+          twoPort.TwoPortDetermineGraphDataFormat(componConst, y1AxisLabel,y1Label, y1IsPhase,y1Form);
+        }
+        else
+        {
+          DetermineGraphDataFormat(componConst, y1AxisLabel,y1Label, y1IsPhase, y1Form);
+        }
+      }
+      else
+      {
+        if (doTwoPort)
+        {
+          twoPort.TwoPortDetermineGraphDataFormat(componConst, y2AxisLabel,y2Label, y2IsPhase,y2Form);
+        }
+        else
+        {
+          DetermineGraphDataFormat(componConst, y2AxisLabel,y2Label, y2IsPhase,y2Form);
+        }
+      }
+    }
+    if (dataNum==1)
+      gDoY1=doData;
+    else
+      gDoY2=doData;
+  }
+
+  gSetIsPhase(y1IsPhase, y2IsPhase);   //Tell graph module whether data is phase
+  gSetAxisFormats(xForm, y1Form, y2Form);   //Formats for displaying the data values
+  gSetAxisLabels("", y1AxisLabel, y2AxisLabel);    //Labels for the axes; No label for freq
+  gSetDataLabels(y1Label, y2Label);      //Shorter labels for marker info
+  if (doTwoPort) //ver116-1b
+  {
+    //gSetDoAxis specifies whether data for the axis even exists. gActivateGraphs specifies whether
+    //to actually graph the data, based on display mode, which for two port is always On.
+    gSetDoAxis(twoPort.TwoPortGetY1Type()!=constNoGraph, twoPort.TwoPortGetY2Type()!=constNoGraph); //Turn graph data on or off ver115-3b
+    //Note that gActivateGraphs won//t activate a graph if we just set its data existence to zero ver115-3b
+    gActivateGraphs(1, 1);   //Turn actual graphing on
+  }
+  else
+  {
+    ImplementDisplayModes();  //give effect to Y2DisplayMode and Y1DisplayMode
+  }
+}
+
+void msagraph::DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QString &yLabel, int &yIsPhase, QString &yForm)
+{
+  //Return format info
+  //componConst indicates the data type. We return
+  //yAxisLabel$  The label to use at the top of the Y axis
+  //yLabel$   A typically shorter label for the marker info table
+  //yIsPhase$ =1 if the value represents phase. This indicates whether we have wraparound issues.
+  //yForm$    A formatting string to send to uFormatted$() to format the data
+  //
+  //ver116-1b added code to display S12 or S22 instead of S21 or S11 when DUT is reversed.
+  QString Sref, Strans;
+  if (vars->switchFR==0)
+  {
+    Sref="S11";
+    Strans="S21"; //Forward DUT
+  }
+  else
+  {
+    Sref="S22";
+    Strans="S12";  //ReverseDUT
+  }
+  yIsPhase=0;  //Default, since most are not phase
+  //select case componConst //ver116-4b shortened some labels
+  if (componConst == constGraphS11DB)
+  {
+    yAxisLabel=Sref+" Mag(dB)";
+    yLabel=Sref+" dB";
+    yForm="####.###";   //ver115-5d
+  }
+  else if (componConst == constRawAngle) //Used for transmission mode only  //added by ver115-1i
+  {
+    yAxisLabel="Raw Deg";
+    yLabel="Raw Deg";
+    yIsPhase=1;
+    yForm="#####.##";
+  }
+  else if (componConst == constAngle || componConst == constGraphS11Ang || componConst == constTheta || componConst == constImpedAng)
+  {
+    if (componConst==constAngle)
+    {
+      yAxisLabel=Strans+" Deg";
+      yLabel=Strans+" Deg";
+    }
+    if (componConst==constTheta)
+    {
+      yAxisLabel="Theta";
+      yLabel="Theta";
+    }
+    if (componConst==constGraphS11Ang)
+    {
+      yAxisLabel=Sref+" Deg";
+      yLabel=Sref+" Deg";
+    }
+    if (componConst==constImpedAng)
+    {
+      yAxisLabel="Z Deg";
+      yLabel="Z Deg";
+    }
+    yIsPhase=1;
+    yForm="#####.##";     //ver115-5d
+  }
+  else if (componConst == constGD)    //calc group delay
+  {
+    yAxisLabel="Grp Delay (sec)";
+    yLabel="G.D.";
+    yForm="3,2,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constSerReact)
+  {
+    yAxisLabel="Xs";
+    yLabel="Xs";
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+  }
+  else if (componConst == constParReact)
+  {
+    yAxisLabel="Xp";
+    yLabel="Xp";
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+  }
+  else if (componConst == constImpedMag)
+  {
+    yAxisLabel="Z ohms";
+    yLabel="Z ohms";
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+  }
+  else if (componConst == constSerR)
+  {
+    yAxisLabel="Rs" ; yLabel="Rs";
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+  }
+  else if (componConst == constParR)
+  {
+    yAxisLabel="Rp" ; yLabel="Rp";
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+  }
+  else if (componConst == constSerC)
+  {
+    yAxisLabel="Cs" ; yLabel="Cs";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constParC)
+  {
+    yAxisLabel="Cp" ; yLabel="Cp";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constSerL)
+  {
+    yAxisLabel="Ls" ; yLabel="Ls";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constParL)
+  {
+    yAxisLabel="Lp" ; yLabel="Lp";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constMagDBM)
+  {
+    if (vars->msaMode=="SA")
+    {
+      yAxisLabel="Magnitude (dBm)" ; yLabel="dBm";
+    }
+    else
+    {
+      yAxisLabel="Power (dBm)" ; yLabel="dBm"; //ver115-1i
+    }
+    yForm="####.###";    //ver115-5d
+  }
+  else if (componConst == constMagWatts)
+  {
+    yAxisLabel="Magnitude (Watts)" ; yLabel="Watts";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constMagDB)         //Only done for Transmission
+  {
+    if (vars->msaMode=="ScalarTrans")  //ver115-1a
+    {
+      yAxisLabel="Transmission (dB)"  ; yLabel="dB";
+    }
+    else
+    {
+      yAxisLabel=Strans+" dB"  ; yLabel=Strans+" dB";
+    }
+    yForm="####.###";    //ver115-1e
+  }
+  else if (componConst == constMagRatio)  //Only done for TG mode transmission
+  {
+    if (vars->msaMode=="ScalarTrans")   //ver115-4f
+    {
+      yAxisLabel="Trans (Ratio)" ; yLabel="Ratio";
+    }
+    else
+    {
+      yAxisLabel="Mag (Ratio)" ; yLabel="Ratio";
+    }
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+  }
+  else if (componConst == constMagV)
+  {
+    yAxisLabel="Mag (Volts)"  ; yLabel="Volts";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constRho)
+  {
+    yAxisLabel="Rho"  ;
+    yLabel="Rho";
+    yForm="#.###";
+  }
+  else if (componConst == constReturnLoss) //ver114-8d
+  {
+    yAxisLabel="RL"  ;
+    yLabel="RL";
+    yForm="###.###";    //ver115-1e
+  }
+  else if (componConst == constInsertionLoss)  //ver114-8d
+  {
+    yAxisLabel="Insertion Loss(dB)"  ; yLabel="IL";
+    yForm="###.###";    //ver115-1e
+  }
+  else if (componConst == constReflectPower)  //ver115-2d
+  {
+    yAxisLabel="Reflect Pow(%)"  ; yLabel="Ref%";
+    yForm="###.##";
+  }
+  else if (componConst == constComponentQ)     //ver115-2d
+  {
+    yAxisLabel="Component Q"  ; yLabel="Q";
+    yForm="#####.#";
+  }
+  else if (componConst == constSWR)  //ver114-8d
+  {
+    yAxisLabel="SWR"  ; yLabel="SWR";
+    yForm="####.##";
+  }
+  else if (componConst == constAdmitMag)  //ver115-4a
+  {
+    yAxisLabel="Admit. (S)" ; yLabel="Y";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constAdmitAng)   //ver115-4a
+  {
+    yAxisLabel="Admit Deg" ; yLabel="Admit Deg";
+    yIsPhase=1;
+    yForm="#####.##";
+  }
+  else if (componConst == constConductance)  //ver115-4a
+  {
+    yAxisLabel="Conduct. (S)" ; yLabel="Conduct";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constSusceptance)  //ver115-4a
+  {
+    yAxisLabel="Suscep. (S)" ; yLabel="Suscep";
+    yForm="3,3,4//UseMultiplier//DoCompact";
+  }
+  else if (componConst == constNoGraph)   //ver115-2c
+  {
+    yAxisLabel="None"  ; yLabel="None";
+    yForm="####.##";    //Something valid, in case it gets mistakenly used
+  }
+  else if (componConst == constAux0 || componConst == constAux1 || componConst == constAux2
+           || componConst == constAux3 || componConst == constAux4 || componConst == constAux5)
+  {
+    int auxNum=componConst-constAux0;    //e.g. constAux4 produces 4
+    yAxisLabel=vars->auxGraphDataFormatInfo[auxNum][2]  ; yLabel=vars->auxGraphDataFormatInfo[auxNum][3];
+    yForm=vars->auxGraphDataFormatInfo[auxNum][1];
+  }
+  else
+  {
+    yForm="###.##";
+    yAxisLabel="Invalid"  ; yLabel="Invalid";
+  }
+
+}
+void msagraph::InitGraphParams()
+{
+  //added InitGraphParams; ver114-4n made it a gosub to allow use of non-globals
+  //Initial setup for graphs
+  //This is called one time early on, or to re-initialize default values
+  //The following intialize a lot of variables that the user may subsequently override
+  vars->wate=0 ;
+  vars->offset=0 ;
+  vars->sgout=10;
+  vars->gentrk=0 ;
+  vars->normrev=0;
+  vars->msaMode="SA";
+  vars->primaryAxisNum=2;   //Primary Y axis. Eg. on restart in SA mode, mag dBm goes here moved ver116-4m
+  SetDefaultGraphData();    //ver115-3b
+  vnaCal->S21JigAttach="Series";  //ver115-1b
+  vnaCal->S21JigR0=50 ; vnaCal->S21JigShuntDelay=0;
+  vnaCal->S11BridgeR0=50 ; vnaCal->S11GraphR0=50;
+  vnaCal->S11JigType="Reflect";   //ver115-1b
+  UpdateGraphDataFormat(0);  //Updates from graphDataType$
+  vars->planeadj=0;    //ver 114-4k
+  //freqBand=1      //delver116-1b this is done elsewhere on startup
+  //call gSetMode msaMode$ delver116-1b
+  SetCenterSpanFreq(0, activeConfig->finalbw/100); //Note finalbw is in kHz, others are in MHz
+  gSetNumDivisions(10,10); //Number of Hor and Vert divisions
+  gSetTraceWidth(1, 1);     //Set width of both graph traces
+  gridappearance->gUsePresetColors("DARK", gPrimaryAxis);    //Activate the appearance ver114-3c
+  gSetIsLinear(1, 1, 1);     //default is linear sweep ver114-3c
+  gSetNumDynamicSteps(vars->globalSteps);
+  vars->alternateSweep=0; vars->sweepDir=1;
+  gSetSweepDir(1);   //set sweep to forward and set start/end point nums
+  vars->specialOneSweep=0;   //No special sweep in progress
+  doGraphMarkers=1;
+  refreshEachScan=1;
+  referenceTrace=3;
+  QString dum1, dum2;
+  gridappearance->gGetSupplementalTraceColors(referenceColor1, referenceColor2, dum1, dum2);
+  referenceWidth1=1;
+  referenceWidth2=1;
+  referenceWidthSmith=1;
+  referenceColorSmith=referenceColor2;
+  vars->lineCalThroughDelay=0;
+  for (int i=1; i <= 5; i++)    //clear custom names
+  {
+    gridappearance->customPresetNames[i]="Empty";
+  }
+  gridappearance->FillAppearancesArray();
+  gSetPrimaryAxis(vars->primaryAxisNum);
+  UpdateGraphParams();
+
+}
+
+void msagraph::SetYAxes(int data1, int top1, int bot1, int auto1, int data2, int top2, int bot2, int auto2)
+{
+  //Set datatypes, axis top and bottom, and autoscale //ver116-1b
+  //Note gCalcGraphParams must be called to fully update graph module
+  autoScaleY1=auto1;
+  autoScaleY2=auto2;
+  vars->Y1DataType=data1;
+  vars->Y2DataType=data2;
+  SetY1Range(bot1, top1);
+  SetY2Range(bot2, top2);
+  vars->Y1DisplayMode=1;
+  vars->Y2DisplayMode=1; //ver115-4e
+  gSetDoAxis((vars->Y1DataType!=constNoGraph), (vars->Y2DataType!=constNoGraph));  //Tell graph module whether we have graphs ver115-2c
+  ImplementDisplayModes();
+
+}
+void msagraph::SetDefaultGraphData()
+{
+//  Set data type and range for default data, and Y2DisplayMode and Y1DisplayMode based on msaMode$
+//  mod by 116-4h
+  autoScaleY1=0;
+  autoScaleY2=0;
+  int min1, max1, min2, max2;
+  GetDefaultGraphData(1, vars->Y1DataType, min1, max1);
+  GetDefaultGraphData(2, vars->Y2DataType, min2, max2);
+  SetY1Range(min1, max1);
+  SetY2Range(min2, max2);
+  vars->Y1DisplayMode=1;
+  vars->Y2DisplayMode=1; //ver115-4e
+  ImplementDisplayModes();
+
+}
+void msagraph::SetCenterSpanFreq(float cent, float span)
+{
+
+  //Use Center/Span to determine centfreq, sweepwidth, startfreq, endfreq
+  //A centralized routine is used so all these related variables can be kept in sync.
+  //Note gCalcGraphParams must be called to fully update graph module
+  vars->centfreq=cent;
+  vars->sweepwidth=span;
+  if (vars->sweepwidth<0)
+    vars->sweepwidth=0-vars->sweepwidth;
+  vars->startfreq=(util.usingF("####.######",vars->centfreq-vars->sweepwidth/2)).toFloat(); //ver114-5n
+  vars->endfreq=(util.usingF("####.######",vars->centfreq+vars->sweepwidth/2)).toFloat(); //ver114-5n
+  //ver115-1b deleted calc of stepfreq
+  gSetXAxisRange(vars->startfreq, vars->endfreq);  //ver114-6d
+
+}
+
+void msagraph::GetDefaultGraphData(int axisNum, int &axisType, int &axisMin, int &axisMax)
+{
+  //get axis default data type and range for this mode ver116-4h
+  if (vars->msaMode== "Reflection")
+  {
+    if (vars->primaryAxisNum==axisNum)
+    {
+      axisType=constGraphS11DB ; axisMin=-100 ; axisMax=0;
+    }
+    else
+    {
+      axisType=constGraphS11Ang ; axisMin=-180 ; axisMax=180;
+    }
+  }
+  else if (vars->msaMode== "ScalarTrans")
+  {
+    if (vars->primaryAxisNum==axisNum)
+    {
+      axisType=constMagDB ; axisMin=-100 ; axisMax=0;
+    }
+    else
+    {
+      axisType=constNoGraph ; axisMin=-180 ; axisMax=180;
+    }
+  }
+  else if (vars->msaMode== "VectorTrans")
+  {
+    if (vars->primaryAxisNum==axisNum)
+    {
+      axisType=constMagDB ; axisMin=-100 ; axisMax=0;
+    }
+    else
+    {
+      axisType=constAngle ; axisMin=-180 ; axisMax=180;
+    }
+  }
+  else   // "SA"
+  {
+    if (vars->primaryAxisNum==axisNum)
+    {
+      axisType=constMagDBM ; axisMin=-100 ; axisMax=0;
+    }
+    else
+    {
+      axisType=constNoGraph ; axisMin=-1 ; axisMax=0;
+    }
+  }
+}
+
+void msagraph::PlotDataToScreen()
+{
+  //heavily revised PlotDataToScreen to utilize new graphing module.
+  //Initialization for a series of sweeps is done in the sweep loop. During the first scan we draw traces.
+  //At the start of each subsequent scan we call gStartNextDynamicScan which prepares for the erase-and-draw.
+  //At the end of each scan, if the user so selects, the screen is "refreshed", meaning that is quickly redrawn
+  //from strings or "flush" segments saved during the drawing process. However, if there are more than 1200 steps,
+  //the refresh is actually a complete redraw from scratch, because it is too time consuming to accumulate the large
+  //strings needed for the refresh procedure. Repeatedly adding short segments to very large strings is time consuming.
+  //When the scan is halted, the screen is redrawn
+  //from scratch using draw commands saved from the scans. However, redrawing and refreshing does not occur
+  //if we are graphing in one of the "stick" modes. At the end of each sweep we also figure out where the markers go,
+  //draw them, and display their info below the graph. The user has the option not to show the markers on the
+  //graph, in which case their info is still displayed. Data for the first, last and center points is displayed
+  //below the frequency axis (no center point for log sweeps), but those are not considered "markers".
+  //Data values, and their pixel coordinates, are saved in the
+  //graphing module. The same values are also saved in the arrays used in software versions prior to the graphing module.
+  //Pixel coordinates are no longer saved in those pre-existing arrays, but the slots where the pixels were saved
+  //still exist.
+  //Trace segments are discarded at the end of a scan, and also every time 1000 have accumulated. Traces are not
+  //"flushed" until the graph is redrawn upon halting.
+
+
+  CalcGraphData(vars->thisstep, thispointy1, thispointy2, 0);   //0 means use regular data arrays ver114-7f
+  if (referenceDoMath==2) //ref math is to be done on graph values ver115-5d
+  {
+    if (referenceTrace & 1)
+      thispointy1=referenceOpA*referenceTransform[vars->thisstep+1][1]+referenceOpB*thispointy1;
+    if (referenceTrace & 2)
+      thispointy2=referenceOpA*referenceTransform[vars->thisstep+1][2]+referenceOpB*thispointy2;
+  }
+  //We draw a point after erasing a point (if required).
+  //We also saves the data to gGraphVal() and the pixel values to gGraphPix()
+  //X values have been precalculated in gGenerateXValues
+  if (vars->thisstep==vars->sweepStartStep)
+  {
+    //ver114-6e added the refreshXXX flags
+    refreshForceRefresh=0;
+    //We normally want refreshGridDirty=0 because we redrew the grid when restarting. But
+    //for mulitscans, that step is skipped.
+    refreshGridDirty=vars->multiscanInProgress;
+    refreshTracesDirty=0;
+    refreshAutoScale=0;
+    refreshRedrawFromScratch=0;
+    if (firstScan)
+    {
+      refreshMarkersDirty=1;   //Signals to relocate any markers to correspond to their frequency.
+      //If required, do auto scaling of axes at end of first scan
+      if (autoScaleY2 || autoScaleY1)
+        refreshAutoScale=1; //ver115-3b
+    }
+    else
+    {
+      gStartNextDynamicScan();    //Initializes for erase/draw passes; done at start of scans 2...
+    }
+
+    //ver114-5c moved setting of isStickMode to UpdateGraphParams
+  }
+
+  //useExpeditedDraw is set to 1 for single trace (mag) in non-histo mode for linear y scaling
+  //The expedited draw procedure is slightly faster than normal drawing, and will almost always be
+  //used when in SA mode.
+  int useExpeditedDraw = gCanUseExpeditedDraw();
+  if (useExpeditedDraw)
+  {
+    gDrawSingleTrace();    //Normal SA drawing occurs with this
+  }
+  else
+  {
+    //Enter new Y values and draw from last point
+    //Comment out all but one; two choices allowed for testing
+    //call gDynamicDrawPoint thispointy1,thispointy2
+    gDynamicComboDrawPoint(thispointy1,thispointy2);     //This is the full-blown drawing procedure
+  }
+  if (vars->steps>=1000)  //ver114-4k
+  {
+    //Discard at least every 1000 points to avoid a slowdown.
+    //oneThousandthThisStep=vars->thisstep/1000;
+    //if (int(oneThousandthThisStep)==oneThousandthThisStep) then #graphBox$, "discard"
+  }
+  //ver114-4e deleted drawing of point values at start, center and end
+  if (vars->thisstep==vars->sweepEndStep) //just processed final point of a sweep //ver114-4k
+  {
+    //If autoscale is on for either axis then calculate the scale and redraw from raw values
+    //We only do this for the first scan. ver114-7a added this autoscale material
+    if (firstScan && (autoScaleY2 || autoScaleY1))   //ver115-3b
+    {
+      if (haltAtEnd==1) //Halt will redraw, so we just autoscale here
+      {
+        PerformAutoScale();   //Recalculates scaling in graph module
+      }
+      else
+      {
+        refreshForceRefresh=1;
+        refreshAutoScale=1;
+      }
+    }
+    if (refreshForceRefresh || refreshEachScan)
+    {
+      //force full refresh unless we are in stick mode; and don't redraw if haltAtEnd=1 because
+      //a redraw will occur when we halt.
+      if (vars->isStickMode==0 && haltAtEnd==0) RefreshGraph(1);
+    }
+    else
+    {//modver116-4b
+      //Even if we don't do a full refresh, we refresh the grid lines and traces except on first scan.
+      //This restores any grid lines that got erased
+      //If we draw markers, their movement from scan to scan can make a mess.
+      //If we don't draw them, the grid lines will cross them.
+      //So we skip this altogether if we have markers; we could do it if we had a way to erase markers.
+      int partialRefresh;
+      if (firstScan==0 && vars->isStickMode==0 && haltAtEnd==0)
+      {
+        if (doGraphMarkers)
+          gEraseMarkers();   //Erase prior markers before they move
+        gRefreshGridLinesOnly();
+        gRefreshTraces();
+        partialRefresh=1;
+      }
+      else
+      {
+        partialRefresh=0;
+      }
+      if (firstScan==1)
+        gDetermineMarkerPointNumbers(); //Finds new point numbers for old markers if freq changed
+      //Update marker info at end of every scan no matter what
+      if (hasAnyMark==1)
+        mDrawMarkerInfo(); //also updates marker locations
+
+      //If no refresh, draw markers on first scan only, and only if user wants them drawn
+      if ((firstScan==1 || partialRefresh) && doGraphMarkers==1)
+        gDrawMarkers(); //ver116-4b
+      //#graphBox$, "discard"    //Get rid of marker draw commands in memory
+    }
+    if ((vars->doCycleTraceColors==1) && (vars->isStickMode==1))  //ver116-4s  cycleTrace colors if necessary
+    {
+      vars->cycleNumber=vars->cycleNumber+1;
+      if (vars->cycleNumber>3)
+        vars->cycleNumber=1;
+      gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[vars->cycleNumber], gridappearance->cycleColorsAxis2[vars->cycleNumber]);  //ver116-4s
+    }
+    firstScan=0;  //scan has ended; next point is not in first scan since restart
+    vars->doSpecialRandom=(rand() % 100) / 100;  //Random number for doSpecialGraph ver115-1b
+  }
+
+  if (vars->varwindow == 1)
+  {
+    //updatevar(); //moved here from [ProcessAndPrint] ver111-34a
+  }
+}
+
+void msagraph::mMarkToCenter()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+sub mMarkToCenter btn$ 'Recenter around marker frequency
+    if selMarkerID$="" then
+        notice "No marker is selected."
+        exit sub  'No marker selected so nothing to do
+    end if
+    'Get frequency from from marker number from marker ID
+    newCenterFreq=gMarkerCurrXVal(mMarkerNum(selMarkerID$))
+    newCenterFreq=int(1000000*newCenterFreq+0.5)/1000000 'Round to nearest Hz.
+    call SetCenterSpanFreq newCenterFreq, sweepwidth   'Set new center with old span; also updates startfreq and endfreq
+    if haltsweep=1 then
+        continueCode=3 'Forces restart if in midsweep.
+    else
+        call RequireRestart
+    end if
+end sub
+*/
+}
+
+void msagraph::Expand()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+sub Expand  'Expand L to R markers to be the bounds of the sweep. Called from [menuExpandSweep]
+    if hasMarkL=0 and hasMarkR=0 then exit sub   'No L or R; nothing to do.
+    if hasMarkL=1 then
+        newLowerFreq=gMarkerCurrXVal(mMarkerNum("L"))   'Get L frequency
+    else
+        newLowerFreq=startfreq
+    end if
+    if hasMarkR=1 then
+        newUpperFreq=gMarkerCurrXVal(mMarkerNum("R"))   'Get R frequency
+    else
+        call gGetPointVal globalSteps+1, newUpperFreq, dum1, dum2  'Use final frequency ver114-7d
+    end if
+    'Note that when the first scan is completed, the marker point numbers will be
+    'redetermined from their current frequencies, so L and R will be moved to the
+    'edges of the scan.
+    call SetStartStopFreq newLowerFreq, newUpperFreq    'Enter new frequencies in globals
+end sub
+*/
+}
+void msagraph::RedrawGraph(int restoreErase)
+{
+  //Redraw all layers of the graph
+  //Redraw entire graph from scratch, using the point values previously accumulated.
+
+  refreshRedrawFromScratch=1;
+  RefreshGraph(restoreErase);
+}
+
+void msagraph::gSetMarkerNum(int markNum, int pointNum, QString ID, QString trace, QString style)
+{
+  //set marker by position in the list
+  //Enter marker data and update gNumMarkers to have the max entryNum of any entered marker
+  if (markNum<1 || markNum>20) { QMessageBox::about(0,"", "Invalid marker number"); return; } //for debugging
+  gMarkerPoints[markNum][0]=pointNum;
+  gMarkerPoints[markNum][1]=gGetPointXVal(pointNum); //Copy current x value (freq)
+  gMarkers[markNum][0]=ID;
+  gMarkers[markNum][1]=trace; gMarkers[markNum][2]=style;
+  if (markNum>gNumMarkers) gNumMarkers=markNum;
+}
+void msagraph::ResizeGraphHandler()
+{
+  /*
+  //Called when graph window resizes
+  #handle, "hide"     //hide window to avoid multiple system redraws ver115-1b
+  #graphBox$ "home"
+  #graphBox$ "posxy CenterX CenterY"
+  */
+  int CenterX = graphicsView->width() / 2;
+  int CenterY = graphicsView->height() / 2;
+
+  currGraphBoxWidth = CenterX * 2-1;   //ver115-1c
+  currGraphBoxHeight = CenterY * 2-1;  //ver115-1c
+
+  //Note: On resizing, all non-buttons seem to end up a few pixels higher than the original spec,
+  //so the Y locations are adjusted accordingly via markTop
+  //Note WindowHeight when window is created is entire height; on resizing, it is the client area only
+  //int markTop=currGraphBoxHeight+15;
+  //int markSelLeft=5; //ver115-1b   //ver115-1c
+  //int markEditLeft=markSelLeft+55;
+  //int markMiscLeft=markEditLeft+185;
+  //int configLeft=markMiscLeft+80;
+
+/*
+  #handle, "refresh"
+  #handle.Cover, "!show"      //Cover the crap that can appear from resizing
+  #handle.Cover, "!hide"      //Uncover and the crap is gone
+  #handle, "show"     //show window ver115-1b
+*/
+    //The graphicbox auto resizes but we have to update the graph module
+    //to let it know the new size
+
+  gUpdateGraphObject(currGraphBoxWidth, currGraphBoxHeight
+                     , graphMarLeft, graphMarRight, graphMarTop, graphMarBot);
+  graphicsView->fitInView(getScene()->sceneRect());
+  gCalcGraphParams();   //Calculate new scaling. May change min or max.
+  float xMin, xMax;
+  gGetXAxisRange(xMin, xMax); if (vars->startfreq!=xMin || vars->endfreq!=xMax) SetStartStopFreq(xMin, xMax);
+  gGenerateXValues(gPointCount()); //recreate x values and x pixel locations; keep same number of points
+  gRecalcPix(0);   //0 signals not to recalc x pixel coords, which we just did in gGenerateXValues.
+  //If a sweep is in progress, we don't want to redraw from here, because that can cause a crash.
+  //So we just clear the graph and signal to wait for the user to redraw. This crash may have to
+  //do with the fact that we don't know where we are in the sweep process when resizing is invoked,
+  //because it is not synchronous with the scan command. Or it may simply have something to do with
+  //the fact that no button has yet been pushed on the graph window, which somehow affects the
+  //LB resizing process. The crash still sometimes occurs, so it is best to halt before resizing.
+  if (haltsweep==1)
+  {
+//    #graphBox$, "cls"
+//    notice "Warning: Halt before resizing to avoid LB bug."
+    RequireRestart(); //ver115-9e  Otherwise old graph still appears, in wrong place.
+  }
+  else
+  {
+    refreshRedrawFromScratch=1; //To redraw from scratch ver115-1b
+    RedrawGraph(0);  //Redraw at new size
+  }
+}
+
+void msagraph::RememberState()
+{
+
+  //Record state before loading a context, to allow detection of certain changes
+  //We want to record enough to determine whether we have to restart, do a full redraw or just
+  //refresh and redraw setup info.
+  //Some of these changes can be made during a scan without an immediate redraw, but when loading
+  //a context we will force a halt.
+
+  //Change to msaMode$ may reqire a new graph window
+  vars->prevMSAMode=vars->msaMode;
+
+    //Changes to these will require a complete Restart
+  vars->prevFreqMode=vars->freqBand;       //ver115-1c
+  vars->prevPath=vars->path; //ver116-4j
+  gGetXAxisRange(vars->prevStartF, vars->prevEndF); vars->prevBaseF=vars->baseFrequency;
+  gGetIsLinear(vars->prevXIsLinear, vars->prevY1IsLinear, vars->prevY2IsLinear);
+  vars->prevSteps=vars->globalSteps;
+  vars->prevSweepDir=gGetSweepDir(); vars->prevAlternate=vars->alternateSweep;
+  vars->prevGenTrk=vars->gentrk ; vars->prevSpurCheck=vars->spurcheck; //ver114-6k
+  vars->prevTGOff=vars->offset ; vars->prevSGFreq=vars->sgout; //ver115-1a
+  vars->prevPath=vars->path; //ver115-1a
+
+    //Changes to these will require calling gCalcGraphParams and then a full Redraw
+  gGetYAxisRange(1, vars->prevStartY1, vars->prevEndY1);
+  gGetYAxisRange(2, vars->prevStartY2, vars->prevEndY2);
+  gGetNumDivisions(vars->prevHorDiv, vars->prevVertDiv);
+  vars->prevSwitchFR=vars->switchFR;   //forward/reverse switch affects axis labeling ver116-1b
+
+    //Changes to graph data type will require a replotting to get the proper transform,
+    //and redrawing from scratch to get axis labeling correct.
+  vars->prevY1DataType=vars->Y1DataType;  //ver115-1b deleted source constants
+  vars->prevY2DataType=vars->Y2DataType;
+
+  //If in a mode where these are relevant, changes to the following are treated
+  //the same as a change to the data source.   //ver114-7e added these
+  vars->prevS21JigAttach=vnaCal->S21JigAttach;
+  vars->prevS21JigR0=vnaCal->S21JigR0;   //ver115-1e
+  vars->prevS21JigShuntDelay=vnaCal->S21JigShuntDelay;   //ver115-1f
+  vars->prevS11BridgeR0=vnaCal->S11BridgeR0;
+  vars->prevS11GraphR0=vnaCal->S11GraphR0;
+  vars->prevS11JigType=vnaCal->S11JigType; //ver115-1b
+
+    //Changes to these require a full Redraw from existing Y values
+    //Note this refers to magtable data, not graph data
+  vars->prevDataChanged=0;   //If changed, this has to be set elsewhere
+
+     //Changes to these may require redraw from scratch or just normal refresh
+  vars->prevY1Disp=vars->Y1DisplayMode;
+  vars->prevY2Disp=vars->Y2DisplayMode;
+
+            //If auto scale gets turned on, we will signal to do autoscale at end of sweep,
+            //or do it immediately if we are halted.
+  vars->prevAutoScaleY1=autoScaleY1;
+  vars->prevAutoScaleY2=autoScaleY2;
+    //Changing planeadj could require immediate recalc of existing data
+  vars->prevPlaneAdj=vars->planeadj;   //ver114-7f
+    //If none of the above are changed, we will do a RefreshGraph with refreshGridDirty=1
+  //Items that reach here include;
+  //Marker Options, Graph Appearance, trace width and trace color
+  //RBW, video filter, SigGen freq, TG offset, spur test, wait time and plane extension
+
+}
+
+
+void msagraph::ToggleTransmissionReflection()
+{
+  //Load and graph reflection data if now in transmission, or transmission data if now in reflection
+  //This is used in full VNA modes only, for switching between reflection and transmission. They should have been
+  //scanned with the same parameters, because we don't restore any parameters here. For example, they must have the
+  //same number of steps. It is actually possible for the frequency ranges to differ, but that is not how this would
+  //normally be used.
+  //This will not disrupt the current data, which can be displayed by calling here again.
+  //Switching between VectorTrans and Reflection modes is specially handled, to preserve the data and Y-axis
+  //settings that were last in effect for the new mode. This special treatment is done for menu-driven change
+  //or by certain internally generated changes that call [ToggleTransmissionReflection], but not for changes
+  //resulting from loading of preference files.   ver116-1b
+
+
+
+  int restoreSettingsAfterChange=0;
+  if (vars->menuMode=="VectorTrans")  //menuMode$ has prior mode ver116-1b
+  {
+    //If changing from vector trans mode and sweep frequencies are the same, we preserve some settings
+    if (vars->refLastSteps!=0 && vars->refLastSteps==vars->steps && vars->refLastStartFreq==vars->startfreq
+        && vars->refLastEndFreq==vars->endfreq && vars->refLastIsLinear==gGetXIsLinear()) restoreSettingsAfterChange=1;
+  }
+  else    //changing from reflection to transmission
+  {
+    if (vars->transLastSteps!=0 && vars->transLastSteps==vars->steps && vars->transLastStartFreq==vars->startfreq
+        && vars->transLastEndFreq==vars->endfreq && vars->transLastIsLinear==gGetXIsLinear()) restoreSettingsAfterChange=1;
+  }
+
+  if (vars->msaMode=="Reflection") vars->msaMode="VectorTrans"; else vars->msaMode="Reflection"; //switch mode
+  ChangeMode();  //Conform to new mode
+  if (restoreSettingsAfterChange==0)
+  {
+    return;
+  }
+
+  if (vars->msaMode=="Reflection")    //These changes will be fully implemented at PartialRestart
+  {
+    SetYAxes(vars->refLastY1Type, vars->refLastY1Top, vars->refLastY1Bot, vars->refLastY1AutoScale,
+            vars->refLastY2Type, vars->refLastY2Top, vars->refLastY2Bot, vars->refLastY1AutoScale);
+  }
+  else
+  {
+    SetYAxes(vars->transLastY1Type, vars->transLastY1Top, vars->transLastY1Bot, vars->transLastY1AutoScale,
+            vars->transLastY2Type, vars->transLastY2Top, vars->transLastY2Bot, vars->transLastY2AutoScale);
+  }
+
+  //put data to be restored into VNAData.
+
+  //Note we don't have to worry about ResizeArrays, because any resizing would have been
+  //done when number of steps was set to its current value. Note also that we only restore the data
+  //if the old data had the same sweep settings as the current settings.
+
+  //We want to apply any graph R0 transform and plane extension, if applicable, so we indicate to copy
+  //the "intermediate" values.
+  hwdIf->CopyModeDataToVNAData(1);  //Copy data to be restored to VNAData
+  vars->VNARestoreDoR0AndPlaneExt=1;
+  // fix me hwdIf->RestoreVNAData();   //load and graph the data ver116-4j
+
+  vars->VNAData.mresize(2,3);  //save space
+  vars->VNADataNumSteps=1;
+  util.beep();
+
+}
+int msagraph::mMarkerNum(QString markID)
+{
+  //Return ordinal marker number for this marker ID$
+  //This value corresponds to the entry in the list of markers (1...)
+  //-1 for invalid ID$. This is used to convert meaningful ID//s into
+  //arbitrary storage locations. When marker info is printed, it is
+  //printed in the same order as the ordinal marker numbers. This is the only place
+  //that ID//s are tied to specific ordinals, to make it easy to change.
+  if (markID == "Halt")       //ver114-4c added Halt and renumbered
+        return 1;
+  else if (markID == "L")
+        return 2;
+  else if (markID == "R")
+        return 3;
+  else if (markID == "P+")
+        return 4;
+  else if (markID == "P-")
+        return 5;
+  else if (markID == "1")
+        return 6;
+  else if (markID == "2")
+        return 7;
+  else if (markID == "3")
+        return 8;
+  else if (markID == "4")
+        return 9;
+  else if (markID == "5")
+        return 10;
+  else if (markID == "6")
+        return 11;
+  else
+  {
+        return -1;
+  }
+}
+void msagraph::mDeleteMarker(QString markID)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+  markNum=mMarkerNum(markID$) :
+if markNum<1 then notice "Invalid Marker Number" : exit sub
+   call gUpdateMarkerPointNum markNum,-1
+       //Update the flags indicating whether we have the special markers
+   select case markID$
+       case "L"
+           hasMarkL=0
+       case "R"
+           hasMarkR=0
+       case "P+"
+           hasMarkPeakPos=0
+       case "P-"
+           hasMarkPeakNeg=0
+       case "1", "2","3","4","5", "6", "Halt"  //ver114-4c
+           //valid markers but nothing special to do
+       case else
+           exit sub    //Not valid marker ID
+   end select
+   if gValidMarkerCount>0 then hasAnyMark=1 else hasAnyMark=0
+   if markID$=selMarkerID$ then
+       call mMarkSelect ""  //ver114-5L
+   end if
       */
+}
+void msagraph::mAddMarker(QString markID, int pointNum, QString trace)
+{
+
+  //Add specified marker at specified point
+  QString markTrace=trace;
+  QString markStyle="LabeledWedge";
+  int markNum=mMarkerNum(markID);
+  if (markNum<0)
+  {
+    QMessageBox::warning(0,"Error", "Invalid Marker Number"); return;
+  }
+  if (pointNum<0) { mDeleteMarker(markID); return; }    //Adding with point num <0 is deleting
+  if (markID == "L")
+  {
+    hasMarkL=1;
+  }
+  else if (markID == "R")
+  {
+    hasMarkR=1;
+  }
+  else if (markID == "P+")
+  {
+    hasMarkPeakPos=1;
+    markTrace=QString::number(vars->primaryAxisNum);   //Always do peak markers on primary trace
+  }
+  else if (markID == "P-")
+  {
+    hasMarkPeakNeg=1;
+    markTrace=QString::number(vars->primaryAxisNum);   //Always do peak markers on primary trace
+    markStyle="LabeledInvertedWedge";
+  }
+  else if (markID == "Halt")   //ver114-4c
+  {
+        markTrace="Xaxis";  //ver114-6d
+        markStyle="HaltPointer";    //ver114-5m
+  }
+  else if (markID == "1" || markID == "2" || markID == "3" || markID == "4" || markID == "5" || markID == "6")
+  {
+        //valid markers but nothing special to do
+  }
+  else
+  {
+    return;    //not valid marker
+  }
+
+  hasAnyMark=1;    //Indicate that we have at least one marker
+  gSetMarkerNum(markNum, pointNum, markID, markTrace, markStyle);
+  //Note we do not change the selected marker here
+}
+
+void msagraph::mAddMarkerAndRedraw(QString markID, int ptNum, int traceNum)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+sub mAddMarkerAndRedraw markID$,ptNum, traceNum
+    call mAddMarker markID$,ptNum, str$(traceNum)
+    call mMarkSelect markID$  'Select the marker we added ver114-5L
+    if twoPortWinHndl$="" then
+        call RefreshGraph 0     'ver114-7d
+        'ver116-4j made calling [preupdatevar] responsibility of caller
+    else
+        call TwoPortDrawGraph 0
+    end if
+end sub
+*/
+}
+
+void msagraph::mAddMarkerFromKeyboard()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+[mAddMarkerFromKeyboard]  'Add marker when marker key was pressed ver116-4j
+    if haltsweep=1 then gosub [FinishSweeping]
+    key$=Inkey$ 'This is the key that was pressed
+    if isStickMode then wait    'Don't do marker in stick modes
+    key$=upper$(key$)   'to upper case
+    if len(key$)<>1 or inStr("LR123456", key$)=0 then wait  'exit if invalid marker
+    call gGetLastMouseQuery queryPt, queryTrace 'point and trace number of last mouse position
+        'erase prior slider markers
+    dum$=gDrawMarkerAtPointNum$(queryPt,"ALL","XOR","")    'Erase prior box
+    if smithGraphHndl$()<>"" then call smithDrawSliderMarker queryPt   'erase in Smith chart too
+    call mAddMarkerAndRedraw key$, queryPt, queryTrace  'record new marker and redraw, which clears the query info
+    if twoPortWinHndl$="" and varwindow = 1 then leftstep=int(queryPt+0.5)-1 : gosub [preupdatevar] 'will update variables at marker point ver116-4j
+wait
+*/
+}
+void msagraph::mClearMarkers()
+{
+  hasMarkL=0;
+  hasMarkR=0;
+  hasMarkPeakPos=0;
+  hasMarkPeakNeg=0;
+  hasAnyMark=0;
+  gClearMarkers();
+  gDrawMarkerInfo();    //to clear info area ver114-7n
+  // fix me mMarkSelect("");  //ver114-5L
+}
+
+void msagraph::mUserMarkSelect(QString btn)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+  //Marker was selected in combobox.
+      if twoPortWinHndl$="" then #handle.selMark, "selection? selMarkerID$"  _
+                      else #twoPortWin.selMark, "selection? selMarkerID$" //ver116-2a
+      if selMarkerID$="None" then selMarkerID$=""
+          //Show marker editing info; ver114-4a revised
+      call mUpdateMarkerEditButtons    //Enable/disable proper buttons
+      call mDisplaySelectedMarker  //Display numeric info
+          //Update Smith chart. But if sweep is in progress don//t, because we may have
+          //been called by program action. If sweeping, it will be updated at refresh time.
+      if haltsweep=0 and smithGraphHndl$()<>"" then call smithRefreshMarkerInfo   //ver115-2c
+  end sub
+*/
+}
+void msagraph::mEnterMarker(QString btn)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+sub mEnterMarker btn$    'Marker Enter button was clicked
+    'Enter new marker info based on the frequency. If the point num was changed,
+    'the frequency was updated, but the user may have changed the frequency so
+    'the point number may be outdated.
+    if twoPortWinHndl$="" then  'ver116-4a
+        #handle.markFreq, "!contents? markFreq$"    'get frequency from proper box
+    else
+        #twoPortWin.markFreq, "!contents? markFreq$"
+    end if
+    markFreq=val(markFreq$)
+    markPoint=gPointNumOfX(markFreq)   'Find point number matching this frequency.
+    if msaMode$="SA" then markPoint=int(0.5+markPoint)  'Round to integral point in SA mode ver115-2d
+    if markPoint <1 then markPoint=1
+    maxPoint=gPointCount()      'ver114-4a
+    if markPoint>maxPoint then markPoint=maxPoint
+    markFreq=gGetPointXVal(markPoint)
+    if twoPortWinHndl$="" then  'ver116-2a
+        print #handle.markFreq, using("####.######", markFreq)  'Enter frequency into box, in case we changed it ver116-2a
+        call gUpdateMarkerPointNum mMarkerNum(selMarkerID$), markPoint
+        if doGraphMarkers=1 then call RefreshGraph 0 else call mDrawMarkerInfo 'ver114-7d
+    else
+        print #twoPortWin.markFreq, using("####.######", markFreq)  'Enter frequency into box, in case we changed it ver116-2a
+        call gUpdateMarkerPointNum mMarkerNum(selMarkerID$), markPoint
+        call TwoPortDrawGraph 0   'ver116-2a
+    end if
+end sub
+*/
+}
+
+void msagraph::mDisplaySelectedMarker()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+sub mDisplaySelectedMarker    'Update label, point number and freq for selected marker
+    'ver114-5L deleted actual selection of marker in combobox, which is usually not necessary
+    if selMarkerID$="" then #handle.markFreq, "" : exit sub    'No marker to update ver114-4a
+    markPoint=gMarkerPointNum(mMarkerNum(selMarkerID$))
+    if markPoint<0 then  #handle.markFreq, "" : exit sub    'No marker to update ver114-4a
+    markFreq=gGetPointXVal(markPoint)
+    if twoPortWinHndl$="" then #handle.markFreq, using("####.######",markFreq) _
+                else #twoPortWin.markFreq, using("####.######",markFreq)   'ver116-2a
+
+        'If we have reference lines, other than fixed value, print their values as a message
+    if twoPortWinHndl$="" and referenceLineType>0 and referenceLineType<>3 then    'ver115-6d added display of reference values
+        message$="Marker ";selMarkerID$;":   "
+        call DetermineGraphDataFormat Y1DataType, axisLab1$, dataLab1$,isPhase1,y1Form$
+        call DetermineGraphDataFormat Y2DataType, axisLab2$, dataLab2$,isPhase2,y2Form$
+        call CalcReferences markPoint-1, isPhase1, ref1, isPhase2, ref2
+        if (Y1DataType<>constNoGraph) and (referenceTrace and 1) then   'Do reference for Y1
+            message$=message$; dataLab1$;" Ref=";uFormatted$(ref1, y1Form$);"     "
+        end if
+        if (Y2DataType<>constNoGraph) and (referenceTrace and 2)=2 then   'Do reference for Y2
+            message$=message$; dataLab2$;" Ref=";uFormatted$(ref2, y2Form$);"  "
+        end if
+        call PrintMessage
+    end if
+end sub
+*/
+}
+
+QString msagraph::mMarkerContext()
+{
+
+  //Return marker context as string
+  //successive lines are separated by chr$(13)
+  QString newLine="\r";
+  QString s=",";  //comma to separate items
+  QString j="";
+  QString s1="";
+  for (int i=0; i < 9; i++)
+  {
+    QString id=markerIDs[i];
+    int markNum=mMarkerNum(id);
+    int pointNum;
+    QString trace, style;
+    gGetMarkerByNum(markNum, pointNum, id, trace, style);
+    if (pointNum>0)
+    {
+        s1=s1+j+"Marker=" + id+s+ QString::number(pointNum)+ s+ trace;     //Marker id, point number and trace
+        j=newLine;
+    }
+  }
+  s1= s1+j+"Selected="+selMarkerID;
+  j=newLine;
+  s1= s1+newLine+"DoGraph="+QString::number(doGraphMarkers);
+  s1= s1+newLine+"LROptions="+QString::number(doPeaksBounded)+s+doLRRelativeTo
+      +s+QString::number(doLRRelativeAmount)+s+QString::number(doLRAbsolute); //ver115-3f
+  s1= s1+newLine+"FiltAnalysis="+QString::number(vars->doFilterAnalysis)+s+QString::number(vars->x1DBDown)+s+QString::number(vars->x2DBDown);
+  return s1;
+
+}
+QString msagraph::mRestoreMarkerContext(QString s, int &startPos, int isValidation)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+function mRestoreMarkerContext$(s$, byref startPos, isValidation)  'Restore marker info from context string
+    'Returns error message if error; otherwise 0. Ignores data prior to startPos.
+    'startPos is updated to one past the last line we process (normally EndContext or end of string)
+    'if isValidation=1, we merely check for errors
+    'sep$ is a possibly multi-character separator to delimit text items on one line
+    'successive lines are separated by chr$(13)
+    call mClearMarkers  'delete existing markers ver116-2a
+    newLine$=chr$(13)
+    nonTextDelims$=" ," + chr$(9)    'space, comma and tab are delimiters
+        'Get next line and increment startPos to start of the following line
+    oldStartPos=startPos
+    tLine$=uGetLine$(s$, startPos)  'Get line of data
+    oldStartPos=startPos
+    while tLine$<>""
+        origLine$=tLine$ 'ver115-1b
+        if Upper$(Left$(tLine$,10))="ENDCONTEXT" then exit while
+        isErr=0
+        equalPos=instr(tLine$,"=")     'equal sign marks end of tag
+        if equalPos=0 then
+            isErr=1 : exit while
+        else
+            tag$=Upper$(Left$(tLine$, equalPos-1))  'tag is stuff before equal sign
+            tLine$=Trim$(Mid$(tLine$, equalPos+1))  'contents is stuff after equal sign
+        end if
+        select case tag$
+            case "MARKER"
+                if isValidation=0 then _
+                    call mAddMarker Word$(tLine$,1,","),val(Word$(tLine$,2,",")),Word$(tLine$,3,",")  'id, point num, trace
+            case "SELECTED"
+                if isValidation=0 then selMarkerID$=tLine$
+            case "DOGRAPH"
+                if isValidation=0 then doGraphMarkers=val(tLine$)
+            case "LROPTIONS"
+                if isValidation=0 then 'modver115-3f
+                    isErr=uExtractNumericItems(1,tLine$, nonTextDelims$,v1, v2, v3)
+                    doPeaksBounded=v1
+                    doLRRelativeTo$=uExtractTextItem$(tLine$,",")   'ver116-2a
+                    isErr=uExtractNumericItems(2,tLine$, nonTextDelims$,v1, v2, v3)
+                    doLRRelativeAmount=v1
+                    doLRAbsolute=v2
+                end if
+            case "FILTANALYSIS"
+                if isValidation=0 then  'modver115-3f
+                    isErr=uExtractNumericItems(1,tLine$, nonTextDelims$,v1, v2, v3)
+                    doFilterAnalysis=v1
+                    x1DBDown=v2
+                    x2DBDown=v3
+                end if
+            case else
+                'Unrecognized tag. Must belong to the graph module, so we end here
+                startPos=oldStartPos    'reset to beginning of this line
+                exit while
+        end select
+        if isErr then mRestoreMarkerContext$="Marker Context Error in: "; origLine$: exit function  'ver115-1b
+        'Get next line and increment startPos to start of the following line
+        oldStartPos=startPos
+        tLine$=uGetLine$(s$, startPos)
+    wend
+    mRestoreMarkerContext$=""
+    call mMarkSelect selMarkerID$ 'To display info  ver114-5L
+end function
+*/
+  return "fix me";
+}
+void msagraph::DetectChanges()
+{
+  //Take appropriate redraw/restart action in response to certain changes
+  //This is a gosub routine so it can access [ChangeMode]. This needs to be called only if msaMode$ may have changed;
+  //otherwise call DetectChanges directly.
+  int doRestart=0;
+  if (vars->prevMSAMode != vars->msaMode)
+  {
+    ChangeMode();
+    doRestart=1;
+  }
+  DetectChanges(doRestart);
+}
+
+void msagraph::DetectChanges(int doRestart)
+{
+
+  //ver114-6e added DetectChanges; modver114-7f to move mode change detection to gosub routine
+  //Take appropriate redraw/restart action in response to certain changes
+  //We want to record enough to determine whether we have to restart, do a full redraw or just
+  //refresh and redraw setup info. If doRestart=1, we will specify a restart no matter what.
+  //Some of these changes can be made during a scan without an immediate redraw, but when loading
+  //a context we will force a halt.
+  //We set continueCode to specify the user action required; 0=continue; 2=wait; 3=restart
+
+  //TO DO--The concept has been to take the minimum action necessary, primarily for speed, but also to
+  //preserve existing data when possible. Now that we have [PartialRestart], it might make more sense
+  //to require [PartialRestart] whenever there is any doubt, and to zero out the data when it no longer
+  //makes sense. The caller can then do [PartialRestart] and regraph the data. In fact, we could change
+  //this subroutine to a gosub, and take all necessary action here. But it may be better for the user to do
+  //the restart, in case a series of changes are being made--the restart can be done at the end of the series.
+  //Some things we do here, such as recalculating graph params, would become unnecessary.
+
+  continueCode=0;  //Assume we can continue when we are done here
+  int doCalcAndRedraw=0;
+  int doTransform=0;
+  int dataTypeChanged=0;
+
+  //For certain switch settings, we don't bother to determine whether a change was made; we just
+  //implement the current setting.
+  hwdIf->SelectVideoFilter();  //Also makes auto wait calculations if necessary ver116-1b
+  hwdIf->SelectLatchedSwitches(vars->lastSetBand);  //transmit/reflect, forward/reverse; leaves band as it is (handled by restart)  //ver116-1b ver116-4s
+  if (vars->calCanUseAutoWait==0 && vars->useAutoWait)
+  {
+    //If the path calibration had insufficient or bad data, auto wait was disabled when loading
+    //the file. If preferences are loaded specifying to use it, we need to override that.
+    vars->useAutoWait=0;
+    vars->wate=100;
+  }
+
+  //Changes to graph data type will require recalculating grid labels with new format,
+  //recalculating the transform and then
+  //redrawing from scratch to get axis labeling correct.
+  if (vars->prevY1DataType!=vars->Y1DataType || vars->prevY2DataType!=vars->Y2DataType)
+  {
+    gSetDoAxis ((vars->Y1DataType!=constNoGraph), (vars->Y2DataType!=constNoGraph));  //Tell graph module whether we have graphs ver115-2c
+    ImplementDisplayModes();
+    doCalcAndRedraw=1;
+    dataTypeChanged=1;
+    doTransform=1;
+  }
+
+  //Changes to these will require a complete Restart
+  float currStartF, currEndF;
+  gGetXAxisRange(currStartF, currEndF);
+  int currXIsLinear, currY1IsLinear, currY2IsLinear;
+  gGetIsLinear(currXIsLinear, currY1IsLinear, currY2IsLinear);
+  if (vars->freqBand!=vars->prevFreqMode || currStartF!=vars->prevStartF
+      || currEndF!=vars->prevEndF || vars->prevSteps!=vars->globalSteps || vars->baseFrequency!=vars->prevBaseF)
+  {
+    doRestart=1;
+  }
+  if (currXIsLinear!=vars->prevXIsLinear || currY1IsLinear!=vars->prevY1IsLinear
+      || currY2IsLinear!=vars->prevY2IsLinear)
+  {
+    doRestart=1;
+  }
+  if (vars->prevGenTrk!=vars->gentrk || vars->prevSpurCheck!=vars->spurcheck)
+  {
+    doRestart=1;
+  }
+  if (vars->prevTGOff!=vars->offset || vars->prevSGFreq!=vars->sgout)
+  {
+    doRestart=1;
+  }
+  int filtbank = 0;
+  if (vars->prevPath!=vars->path)
+  {
+    hwdIf->SelectFilter(filtbank);
+    doRestart=1;
+  }
+  if (doRestart)
+  {
+    //If we are using fixed data as the reference source and any of the above changed,
+    //we can no longer use it.
+    if (referenceLineType==1)
+    {
+      referenceLineType=0 ;
+      referenceTrace=0 ;
+      gClearAllReferences();
+    }
+  }
+
+  if (vars->prevSweepDir!=gGetSweepDir() || vars->prevAlternate!=vars->alternateSweep)
+  {
+    doRestart=1;
+  }
+  if (vars->prevPath!=vars->path)
+  {
+    doRestart=1;
+  }
+  //If in a mode where these are relevant, we need to require Restart,
+  //but do not do anything to the existing data. Note that the calibration
+  //will be invalidated elsewhere in these cases, so there is no meaningful way
+  //to transform the data.
+  if (vars->msaMode=="Reflection")
+  {
+    if (vars->prevS21JigAttach!=vnaCal->S21JigAttach) doRestart=1;
+    if (vars->prevS21JigR0!=vnaCal->S21JigR0) doRestart=1;
+    if (vars->prevS21JigShuntDelay!=vnaCal->S21JigShuntDelay) doRestart=1;
+    if (vars->prevS11JigType!=vnaCal->S11JigType || vars->prevS11BridgeR0!=vnaCal->S11BridgeR0)
+    {
+      doRestart=1;
+    }
+  }
+
+  if (doRestart)
+  {
+    //If the data changed, we should redraw it before we exit. We assume the frequency
+    //points of the data are consistent with any changes to the graph module frequency points.
+    //If the data did not change, we may not be able to redraw it with the new sweep parameters so
+    //we don't try.
+    continueCode=3;
+    if (vars->prevDataChanged==0)
+    {
+      return;
+    }
+    gGenerateXValues(gPointCount());  //Make sure x values correspond to sweep parameters
+    //For RLC or fixed value reference, recalculate reference data
+    if (referenceLineType>1)
+    {
+      CreateReferenceSource();
+      CreateReferenceTransform();
+    }
+    doCalcAndRedraw=1;
+    doTransform=1;
+  }
+
+  //Changes to these will require calling gCalcGraphParams and then a full Redraw from existing Y values
+  int rescaleReferences=0;
+  int currStartY1, currEndY1;
+  int currStartY2, currEndY2;
+  int currHorDiv, currVertDiv;
+  gGetYAxisRange(1, currStartY1, currEndY1);
+  gGetYAxisRange(2, currStartY2, currEndY2);
+  gGetNumDivisions(currHorDiv, currVertDiv);
+  if (vars->prevSwitchFR!=vars->switchFR)
+    doCalcAndRedraw=1;    //Forward/Reverse switch affects axis labels ver116-1b
+  if (currStartY1!=vars->prevStartY1 || currEndY1!=vars->prevEndY1)
+  {
+    doCalcAndRedraw=1 ;
+    rescaleReferences=1;
+  }
+  if (currStartY2!=vars->prevStartY2 || currEndY2!=vars->prevEndY2)
+  {
+    doCalcAndRedraw=1 ;
+    rescaleReferences=1;
+  }
+  if (currHorDiv!=vars->prevHorDiv || currVertDiv!=vars->prevVertDiv)
+  {
+    doCalcAndRedraw=1;
+  }
+  if (rescaleReferences)
+  {
+    CreateReferenceTransform();
+  }
+  if (doCalcAndRedraw)
+  {
+    if (dataTypeChanged || vars->prevSwitchFR!=vars->switchFR)
+    {
+      UpdateGraphDataFormat(0);  //To get new data format ver116-1b
+    }
+    gCalcGraphParams();   //Calculate new scaling. May change min or max.
+    float xMin, xMax;
+    gGetXAxisRange(xMin, xMax);
+    if (vars->startfreq!=xMin || vars->endfreq!=xMax)
+    {
+      SetStartStopFreq(xMin, xMax);
+      continueCode=3;
+    }
+  }
+  int doRedraw=doCalcAndRedraw;
+
+  int autoScaleTurnedOn;
+  if ((vars->prevAutoScaleY1==0 || autoScaleY1==1) || (vars->prevAutoScaleY2==0 || autoScaleY2==1))
+  {
+    autoScaleTurnedOn=1;
+  }
+  else
+  {
+    autoScaleTurnedOn=0;
+  }
+  int autoScaleIsOn;
+  if (autoScaleY1==1 || autoScaleY2==1)
+  {
+    autoScaleIsOn=1;
+  }
+  else
+  {
+    autoScaleIsOn=0;
+  }
+
+  //If data changes, recalc x pixel values and require a restart, though proceeding will destroy the new data
+  if (vars->msaMode=="Reflection" && vars->prevS11GraphR0!=vnaCal->S11GraphR0)
+  {
+    continueCode=3 ;
+    doTransform=1;
+  }
+  if (vars->prevDataChanged)
+  {
+    continueCode=3;
+    doTransform=1;
+  }
+
+  if (doTransform)
+  {
+    UpdateGraphDataFormat(0);  //Update data formatting; may also affect data transform
+    RecalcYValues();
+    if (autoScaleIsOn)
+    {
+      PerformAutoScale();  //autoscale with the new data   //ver114-7a
+      autoScaleTurnedOn=0;     //Since we just did autoscale ver114-7e
+    }
+    doRedraw=1;  //Signal to do complete redraw from scratch
+  }
+
+  //If auto scale has been turned on, we signal to do the autoscaling at the end of the sweep or on redraw
+  if (autoScaleTurnedOn)
+  {
+    refreshAutoScale=1;
+  }
+
+  if (doRedraw)
+  {
+    RedrawGraph(0);
+    return;
+  }
+
+  //Changing trace style requires recreating the traces and refreshing if it has just
+  //been turned on (since we have no accumulated trace draw commands) or if it
+  //was and remains on but the style changed (between histo/normal or erase/stick).
+  int doRefreshTraces;
+  if (vars->prevY1Disp!=vars->Y1DisplayMode && (vars->Y1DisplayMode!=0 || vars->prevY1Disp==0))
+  {
+    doRefreshTraces=1;
+  }
+  if (vars->prevY2Disp!=vars->Y2DisplayMode && (vars->Y2DisplayMode!=0 || vars->prevY2Disp==0))
+  {
+    doRefreshTraces=1;
+  }
+  if (doRefreshTraces)
+  {
+    refreshTracesDirty=1;
+    refreshGridDirty=1;
+    RefreshGraph(0);
+    return;
+  }
+
+  //Everything else we redraw everything except the traces from scratch; traces
+  //will be drawn from gTrace1$() and gTrace2$()
+  //Marker Options, Graph Appearance, trace width and trace color will be in this category
+  //Also includes primaryAxisNum, which has no immediate effects except the order of marker info
+  refreshGridDirty=1;
+  //We don't redraw if in stick mode, because the "stuck" traces will be erased.
+  int doErasure;
+  if (haltsweep==1)
+  {
+    doErasure=1;
+  }
+  else
+  {
+    doErasure=0;    //Do erasure gap if still sweeping
+  }
+  if (vars->isStickMode==0)
+  {
+    RefreshGraph(doErasure);
+  }
+}
+
+QString msagraph::gRestoreSweepContext(QString &s, int &startPos, int isValidation) //Restore context info on sweep
+{
+  //Return error message if error; otherwise "". We ignore data prior to startPos.
+  //successive lines are separated by chr$(13)
+  //startPos is updated to one past the last line we process (normally EndContext or end of string)
+  //If isValidation=1, then we just run through the data for error checking, without changing anything.
+  QString newLine="\r";
+  QString aSpace=" ";
+  QString sep=";;"; //Used to separate text items
+  QString nonTextDelims=" ," "\t";    //space, comma and tab are delimiters
+  //Get next line and increment startPos to start of the following line
+  QString tLine = util.uGetLine(s, startPos);
+  QString tag;
+  while (tLine!="")
+  {
+    float v1, v2, v3;
+    QString origLine=tLine;
+    if (tLine.left(10).toUpper() == "ENDCONTEXT")
+    {
+      break;
+    }
+    int isErr=0;
+    int equalPos = tLine.indexOf("=");     //equal sign marks end of tag
+    if (equalPos==-0)
+    {
+      tag=""; //We will skip this line; it does not have a tag
+    }
+    else
+    {
+      tag=tLine.left(equalPos).toUpper();  //tag is stuff before equal sign
+      tLine=tLine.mid(equalPos+1).trimmed();  //contents is stuff after equal sign
+    }
+    //Each tag represents one or several data items. These are retrieved one at a time,
+    //and as each is retrieved it is deleted from tLine$. Numeric items are delimited
+    //by spaces, tabs or commas. Text items are delimited by the double character
+    //contained in sep$, because they may contain spaces or commas. If this is just
+    //a validation run, we do not enter any of the retrieved data into our variables.
+    //ver114-2d rearranged
+    if (tag == "MINMAXXAXIS")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+
+      if (isErr==0 && isValidation==0)
+      {
+        gXAxisMin=v1;
+        gXAxisMax=v2;
+      }
+    }
+    else if (tag == "MINMAXY1AXIS")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      if (isErr==0 && isValidation==0)
+      {
+        gY1AxisMin=v1;
+        gY1AxisMax=v2;
+      }
+    }
+    else if (tag == "MINMAXY2AXIS")
+    {
+      isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
+      if (isErr==0 && isValidation==0)
+      {
+        gY2AxisMin=v1;
+        gY2AxisMax=v2;
+      }
+    }
+    else if (tag == "ISLINEAR")
+    {
+      isErr=util.uExtractNumericItems(3, tLine,nonTextDelims, v1, v2, v3);
+      if (isErr==0 && isValidation==0)
+      {
+        gXIsLinear=v1;
+        gY1IsLinear=v2;
+        gY2IsLinear=v3;
+      }
+    }
+    else if (tag == "NUMSTEPS")
+    {
+      isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);
+      if (isErr==0 && isValidation==0)
+      {
+        gSetNumDynamicSteps(v1);
+      }
+    }
+    else if (tag == "SWEEPDIR")
+    {
+      isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);
+      if (isErr==0 && isValidation==0)
+      {
+        gSetSweepDir(v1);
+      }
+    }
+    else
+    {
+      //Unrecognized tag. Skip it
+    }
+    if (isErr)
+    {
+      return "Sweep Context Error in: " + origLine;
+    }
+    //Get next line and increment startPos to start of the following line
+    tLine=util.uGetLine(s, startPos);
+  }
+  gCalcGraphParams();   //Calculates various things derived from the above ver114-2d
+  return "";
 }

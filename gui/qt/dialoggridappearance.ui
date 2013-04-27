@@ -206,7 +206,7 @@
   </widget>
   <widget class="QPushButton" name="Save">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="geometry">
     <rect>

@@ -20,6 +20,10 @@ cWorkArray::cWorkArray()
 {
   uWorkArray.mresize(801,10);
   uWorkFormats.resize(802);
+
+  uWorkMaxPoints=800;  //Record size of uWorkArray(,); initially 800 points
+  uWorkMaxPerPoint=9;  //Initially max 9 items per point
+
 }
 //SEWgraph The next several routines manage uWorkArray() and uWorkFormats$(). uWorkArray()
 //serves as an intermediary to transfer data between arrays and either strings or files. To
@@ -32,7 +36,8 @@ void cWorkArray::uSetMaxWorkPoints(int maxPoints, int maxData)
   //Set max number of points in uWorkArray
   //maxPoints is the new max number of points; maxData is the max number of data entries per point
   //We create a few extra, and downsize if maxPoints is a drastic reduction, but never below 800 points
-  unsigned int nPoints=qMax(800, maxPoints+10) ; unsigned int nData=qMax(9, maxData);
+  int nPoints=qMax(800, maxPoints+10) ;
+  int nData=qMax(9, maxData);
   int redimWork;
   if (nPoints<uWorkMaxPoints/2 || nPoints>uWorkMaxPoints)
     redimWork=1;

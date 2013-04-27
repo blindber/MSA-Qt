@@ -16,7 +16,7 @@
 //******************************************************************************
 #include "dialogvnacal.h"
 #include "ui_dialogvnacal.h"
-
+#include <QMessageBox>
 dialogVNACal::dialogVNACal(QWidget *parent) :
   QDialog(parent),
   ui(new Ui::dialogVNACal)
@@ -28,6 +28,20 @@ dialogVNACal::~dialogVNACal()
 {
   delete ui;
 }
+void dialogVNACal::setFilePath(QString path)
+{
+  DefaultDir = path;
+  if (!QDir().mkpath(DefaultDir + "/MSA_Info/OperatingCal"))
+  {
+    QMessageBox::about(0,"Error", "Unable to create OperatingCal folder.");
+  }
+}
+
+void dialogVNACal::setUwork(cWorkArray *newuWork)
+{
+  uWork = newuWork;
+}
+
 void dialogVNACal::RunVNACal()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
@@ -466,4 +480,441 @@ int dialogVNACal::BaseLineCalIsInstalled()
                         retVal=1; else retVal=0;      //ver115-1b
   return retVal;
   */
+}
+int dialogVNACal::BandLineCalContextAsTextArray()
+{
+  //Put line cal points into uTextPointArray$, with header info
+  //return number of lines placed into uTextPointArray$
+  //First line begins with ! and is line 1 of the title: !Log Sweep Path N. "Log" may instead by "Linear"; N=path number
+  //First 3 lines are title, each preceded by !
+  //Next line is sweep info
+  //Next is Touchstone options line
+  //Next is comment data headings
+  //Then comes each point as its own string
+  QString sweep;
+  if (bandLineLinear) sweep="!Linear Sweep; "; else sweep="!Log Sweep ";
+  uWork->uTextPointArray[1]="! BandSweep Line Calibration Data";
+  uWork->uTextPointArray[2]="!";
+  uWork->uTextPointArray[3]="!"+bandLineTimeStamp;
+    //Save sweep info: log/linear ; path info (in form Path N); Jig attachment and R0
+  uWork->uTextPointArray[4]=sweep+bandLinePath+"; S21Jig="+bandLineS21JigAttach+ "; S21JigR0="+ bandLineS21JigR0; //ver115-1b
+  uWork->uTextPointArray[5]="# MHz S DB R 50" ;  //Freq in MHz, data in DB/angle format
+  uWork->uTextPointArray[6]="! MHz  S21_DB  S21_Degrees";
+  QString aSpace=" ";
+  for (int i=0; i < vars->globalSteps; i++)
+  {
+    //save freq, mag and phase
+    uWork->uTextPointArray[i+7] = QString::number(vars->bandLineCal[i][0])
+        + aSpace + QString::number(vars->bandLineCal[i][1])
+        + aSpace + QString::number(vars->bandLineCal[i][2]); //ver114-5f
+  }
+  return vars->globalSteps+7; //Number of lines
+}
+QString dialogVNACal::BandLineCalContext()
+{
+  //Return data points as string, with title in first 3 lines
+  //We do not include StartContext or EndContext lines
+  int nLines=BandLineCalContextAsTextArray();   //Assemble strings into uTextPointArray$
+  return uWork->uTextArrayToString(1,nLines); //Assemble array of strings into one string
+}
+void dialogVNACal::BandLineCalContextToFile(QStringList &fHndl)
+{
+  //save band line cal points to file
+  //We do not include StartContext or EndContext lines
+  //fHndl$ is the handle of an already open file. We output our data
+  //but do not close the file.
+  int nLines=BandLineCalContextAsTextArray();   //Assemble strings into uTextPointArray$
+  for (int i=1; i < nLines; i++)
+  {
+    fHndl.append(uWork->uTextPointArray[i]);
+  }
+}
+int dialogVNACal::GetBandLineCalContextFromFile(QString fHndl)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+ 'get points from file; return number of points
+    'We return number of points read, or -1 for file error
+    'fHndl$ is the handle of an already open file. We read our data
+    'but do not close the file. The last line we read will be "!EndContext"
+    isErr=uArrayFromFile(fHndl$,3) 'Get data, 3 per line
+    if isErr then GetBandLineCalContextFromFile=-1 : baseLineNumSteps=-1 : exit function
+        'Move the data from uWorkArray to gGraphVal
+    for i=1 to uWorkNumPoints
+        bandLineCal(i-1,0)=uWorkArray(i, 0) 'freq
+        bandLineCal(i-1,1)=uWorkArray(i, 1) : bandLineCal(i-1,2)=uWorkArray(i, 2) 'Mag and phase
+    next i
+    GetBandLineCalContextFromFile=uWorkNumPoints
+        'Now derive the sweep parameters from the array and the title ver114-5h
+    bandLineNumSteps=uWorkNumPoints-1
+    bandLineStartFreq=bandLineCal(0,0) : bandLineEndFreq=bandLineCal(bandLineNumSteps,0)
+    bandLineTimeStamp$=uWorkTitle$(3)   'uArrayFromFile put date/time stamp here
+    sweep$=uWorkTitle$(4)   'uArrayFromFile put sweep info here
+    if instr(sweep$,"Linear")>0 then bandLineLinear=1 else bandLineLinear=0
+            'ver115-1b added the retrieval of the following sweep info
+        'Get remaining sweep info from sweep$. Each item has a keyword and ends with a semi-colon or end of line
+    bandPathNum$=uGetParamText$(sweep$, "Path ", ";")  'Gets text after "Path " to semicolon or end
+    if bandPathNum$="" then bandLinePath$="Path 1" else bandLinePath$="Path ";bandPathNum$
+    bandLineS21JigAttach$=uGetParamText$(sweep$, "S21Jig=", ";")  'Gets text after S21Jig= to semicolon or end
+    if bandLineS21JigAttach$="" then bandLineS21JigAttach$="Series"
+    bandLineS21JigR0=val(uGetParamText$(sweep$, "S21JigR0=", ";"))  'Gets text after S21Jig= to semicolon or end
+    if bandLineS21JigR0=0 then bandLineS21JigR0=50
+    */
+  return 0;
+}
+void dialogVNACal::RestoreBandLineCalContext(QString &s, int &startpos)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+
+  /*
+function RestoreBandLineCalContext(byref s$, byref startPos)   'Restore line cal points. Return number of points
+    'We return number of points read, or -1 for file error
+    'We ignore data prior to startPos. We update startPos to the start of the next line after the line
+    'with "!EndContext"; or if no such line then one past end of string
+
+    isErr=uArrayFromString(s$, 1, startPos, 3)   'Get data into uWorkArray; 3 data per line (freq+mag+phase)
+    if isErr then RestoreBandLineCalContext=0 : errCode=1 : exit function
+        'Now transfer retrieved data from uWorkArray() to lineCalArray().
+    errCode=0
+    for i=1 to uWorkNumPoints
+        bandLineCal(i-1,0)=uWorkArray(i, 0) 'freq
+        bandLineCal(i-1,1)=uWorkArray(i, 1) : bandLineCal(i-1,2)=uWorkArray(i, 2) 'Mag and phase
+    next i
+    RestoreBandLineCalContext=uWorkNumPoints
+    'Now derive the sweep parameters from the array and the title ver114-5h
+    bandLineNumSteps=uWorkNumPoints-1
+    bandLineStartFreq=bandLineCal(0,0) : bandLineEndFreq=bandLineCal(bandLineNumSteps,0)
+    bandLineTimeStamp$=uWorkTitle$(3)   'uArrayFromString put date/time stamp here
+    sweep$=uWorkTitle$(4)   'uArrayFromString put sweep info here
+    if instr(sweep$,"Linear")>0 then bandLineLinear=1 else bandLineLinear=0
+            'ver115-1b added the retrieval of the following sweep info
+        'Get remaining sweep info from sweep$. Each item has a keyword and ends with a semi-colon or end of line
+    bandPathNum$=uGetParamText$(sweep$, "Path ", ";")  'Gets text after "Path " to semicolon or end
+    if bandPathNum$="" then bandLinePath$="Path 1" else bandLinePath$="Path ";bandPathNum$
+    bandLineS21JigAttach$=uGetParamText$(sweep$, "S21Jig=", ";")  'Gets text after S21Jig= to semicolon or end
+    if bandLineS21JigAttach$="" then bandLineS21JigAttach$="Series"
+    bandLineS21JigR0=val(uGetParamText$(sweep$, "S21JigR0=", ";"))  'Gets text after S21Jig= to semicolon or end
+    if bandLineS21JigR0=0 then bandLineS21JigR0=50
+end function
+*/
+}
+int dialogVNACal::BaseLineCalContextAsTextArray()
+{
+  //Put line cal points into uTextPointArray$, with header info
+  //return number of lines placed into uTextPointArray$
+  //First line begins with ! and is line 1 of the title: !Log Sweep Path N. "Log" may instead by "Linear"; N=path number
+  //First 3 lines are title, each preceded by !
+  //Next line is sweep info
+  //Next is Touchstone options line
+  //Next is comment data headings
+  //Then comes each point as its own string
+  QString sweep;
+  if (baseLineLinear) sweep="!Linear Sweep; "; else sweep="!Log Sweep ";
+  uWork->uTextPointArray[1]="! BaseLine Calibration Data";
+  uWork->uTextPointArray[2]="!";
+  uWork->uTextPointArray[3]="!"+baseLineTimeStamp;
+  uWork->uTextPointArray[4]=sweep+baseLinePath+"; S21Jig="+baseLineS21JigAttach + "; S21JigR0=" + baseLineS21JigR0; //ver115-1b
+  uWork->uTextPointArray[5]="# MHz S DB R 50";   //Freq in MHz, data in DB/angle format
+  uWork->uTextPointArray[6]="! MHz  S21_DB  S21_Degrees";
+  QString aSpace=" ";
+  for (int i=0; i < vars->globalSteps; i++)
+  {
+    //save freq, mag and phase
+    uWork->uTextPointArray[i+7]=QString::number(vars->baseLineCal[i][0])
+        +aSpace+QString::number(vars->baseLineCal[i][1])
+        +aSpace+QString::number(vars->baseLineCal[i][2]);
+  }
+  return vars->globalSteps+7; //Number of lines
+}
+QString dialogVNACal::BaseLineCalContext()
+{
+  //Return data points as string, with title in first 3 lines
+  //We do not include StartContext or EndContext lines
+  int nLines=BaseLineCalContextAsTextArray();   //Assemble strings into uTextPointArray$
+  return uWork->uTextArrayToString(1, nLines); //Assemble array of strings into one string
+}
+void dialogVNACal::BaseLineCalContextToFile(QStringList &fHndl)
+{
+  //save line cal points to file
+  //We do not include StartContext or EndContext lines
+  //fHndl$ is the handle of an already open file. We output our data
+  //but do not close the file.
+  int nLines=BaseLineCalContextAsTextArray();   //Assemble strings into uTextPointArray$
+  for (int i=0; i < nLines; i++)
+  {
+    fHndl.append(uWork->uTextPointArray[i]);
+  }
+}
+int dialogVNACal::RestoreBaseLineCalContext(QString &s, int &startPos)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+  'Restore line cal points. Return number of points
+     'We return number of points read, or -1 for file error
+     'We ignore data prior to startPos. We update startPos to the start of the next line after the line
+     'with "!EndContext"; or if no such line then one past end of string
+
+     isErr=uArrayFromString(s$, 1, startPos, 3)   'Get data into uWorkArray; 3 data per line (freq+mag+phase)
+     if isErr then RestoreBaseLineCalContext=-1 : exit function
+         'Now transfer retrieved data from uWorkArray() to lineCalArray().
+         'Make sure baseLineCal is big enough. Note that it can be bigger than data arrays,
+         'since it is used only by interpolating into a possibly smaller array.
+     if uWorkNumPoints>gMaxNumPoints then redim baseLineCal(uWorkNumPoints+20, 2) 'ver114-5m
+
+     for i=1 to uWorkNumPoints
+         baseLineCal(i-1,0)=uWorkArray(i, 0)    'Freq
+         baseLineCal(i-1,1)=uWorkArray(i, 1) : baseLineCal(i-1,2)=uWorkArray(i, 2) 'Mag and phase
+     next i
+     RestoreBaseLineCalContext=uWorkNumPoints
+              'Now derive the sweep parameters from the array and the title ver114-5h
+     baseLineNumSteps=uWorkNumPoints-1
+     baseLineStartFreq=baseLineCal(0,0) : baseLineEndFreq=baseLineCal(baseLineNumSteps,0)
+     baseLineTimeStamp$=uWorkTitle$(3)   'uArrayFromString put date/time stamp here
+     sweep$=uWorkTitle$(4)   'uArrayFromString put sweep info here
+     if instr(sweep$,"Linear")>0 then baseLineLinear=1 else baseLineLinear=0
+         'ver115-1b added the retrieval of the following sweep info
+         'Get remaining sweep info from sweep$. Each item has a keyword and ends with a semi-colon or end of line
+     basePathNum$=uGetParamText$(sweep$, "Path ", ";")  'Gets text after "Path " to semicolon or end
+     if basePathNum$="" then baseLinePath$="Path 1" else baseLinePath$="Path ";basePathNum$
+     baseLineS21JigAttach$=uGetParamText$(sweep$, "S21Jig=", ";")  'Gets text after S21Jig= to semicolon or end
+     if baseLineS21JigAttach$="" then baseLineS21JigAttach$="Series"
+     baseLineS21JigR0=val(uGetParamText$(sweep$, "S21JigR0=", ";"))  'Gets text after S21Jig= to semicolon or end
+     if baseLineS21JigR0=0 then baseLineS21JigR0=50
+     */
+  return 0;
+}
+int dialogVNACal::GetBaseLineCalContextFromFile(QFile *fHndl)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+ 'get points from file; return number of points
+    'We return number of points read, or -1 for file error
+    'fHndl$ is the handle of an already open file. We read our data
+    'but do not close the file. The last line we read will be "!EndContext"
+    isErr=uArrayFromFile(fHndl$,3) 'Get data, 3 per line
+    if isErr then GetBaseLineCalContextFromFile=-1 : baseLineNumSteps=-1 : exit function
+        'Move the data from uWorkArray to gGraphVal
+    for i=1 to uWorkNumPoints
+        baseLineCal(i-1,0)=uWorkArray(i, 0)    'Freq
+        baseLineCal(i-1,1)=uWorkArray(i, 1) : baseLineCal(i-1,2)=uWorkArray(i, 2) 'Mag and phase
+    next i
+    GetBaseLineCalContextFromFile=uWorkNumPoints
+         'Now derive the sweep parameters from the array and the title ver114-5h
+    baseLineNumSteps=uWorkNumPoints-1
+    baseLineStartFreq=baseLineCal(0,0) : baseLineEndFreq=baseLineCal(baseLineNumSteps,0)
+    baseLineTimeStamp$=uWorkTitle$(3)   'uArrayFromFile put date/time stamp here
+    sweep$=uWorkTitle$(4)   'uArrayFromFile put sweep info here
+    if instr(sweep$,"Linear")>0 then baseLineLinear=1 else baseLineLinear=0
+        'ver115-1b added the retrieval of the following sweep info
+        'Get remaining sweep info from sweep$. Each item has a keyword and ends with a semi-colon or end of line
+    basePathNum$=uGetParamText$(sweep$, "Path ", ";")  'Gets text after "Path " to semicolon or end
+    if basePathNum$="" then baseLinePath$="Path 1" else baseLinePath$="Path ";basePathNum$
+    baseLineS21JigAttach$=uGetParamText$(sweep$, "S21Jig=", ";")  'Gets text after S21Jig= to semicolon or end
+    if baseLineS21JigAttach$="" then baseLineS21JigAttach$="Series"
+    baseLineS21JigR0=val(uGetParamText$(sweep$, "S21JigR0=", ";"))  'Gets text after S21Jig= to semicolon or end
+    if baseLineS21JigR0=0 then baseLineS21JigR0=50
+    */
+  return 0;
+}
+void dialogVNACal::SaveBaseLineCalFile()
+{
+
+ if (CreateOperatingCalFolder())
+ {
+   QMessageBox::warning(0, "Error", "Cannot save BaseLine Cal file.");
+   return;
+ }
+
+ QStringList list;
+ QFile baseLineOut(DefaultDir + "/MSA_Info/OperatingCal/BaseLineCal.txt");
+ if (baseLineOut.open(QFile::WriteOnly))
+ {
+   QTextStream s(&baseLineOut);
+   BaseLineCalContextToFile(list);
+   QString sss = list.join("\r");
+   s << sss;
+
+   baseLineOut.close();
+ }
+}
+
+QFile *dialogVNACal::OpenBaseLineCalFile()
+{
+  //Open baseline calibration file; return its handle
+  //If file does not exist, return "".
+
+  QFile *fFile = new QFile(DefaultDir + "/MSA_Info/OperatingCal/BaseLineCal.txt");
+
+  if (!fFile->exists())
+  {
+    QString ggg = "file not found";
+    delete fFile;
+    fFile = NULL;
+  }
+  else if (!fFile->open(QFile::ReadOnly))
+  {
+    QString eee = fFile->errorString();
+    qDebug() << eee;
+    delete fFile;
+    fFile = NULL;
+  }
+
+  return fFile;
+}
+
+int dialogVNACal::LoadBaseLineCalFile()
+{
+  int retVal;
+
+  //Return 1 if error (file does not exist)
+  QFile *fHndl = OpenBaseLineCalFile();
+  if (fHndl==NULL) { retVal=1; baseLineNumSteps=-1; return retVal;}
+  int nPoints=GetBaseLineCalContextFromFile(fHndl);
+  if (nPoints<=0)
+  {
+   retVal=1; baseLineNumSteps=-1; //error
+  }
+  else
+  {
+   retVal=0;
+  }
+  fHndl->close();
+  delete fHndl;
+
+  return retVal;
+}
+int dialogVNACal::CreateOperatingCalFolder()
+{
+  if (!QDir().mkpath(DefaultDir + "/MSA_Info/OperatingCal"))
+    return 1;
+
+  return 0;
+}
+
+void dialogVNACal::InstallSelectedLineCal(Q2DfloatVector &GraphVal, int MaxPoints, int xIsLinear)
+{
+
+  //Apply full line cal or baseLine cal per applyCalLevel
+  //We put the necessary data into lineCalArray, and set actualLineCalLevel to 0(None), 1 (BaseLine)
+  //or 2 (Full LineCal) to indicate the level of line cal actually installed.
+    //If desiredCalLevel=2 and LineCal is current, install it
+
+  if (vars->calInProgress)    //ver115-1e
+  {
+        //Here we want no type of cal, so signal nothing is installed but don't clear the actual data
+    SignalNoCalInstalled();   //ver116-4b
+    return;
+  }
+
+  if (desiredCalLevel==2)
+  {
+    int isCurr=BandLineCalIsCurrent();
+        //If we are already applying cal, and it is valid and the installed time stamp matches the band cal, we are done
+    if (installedBandLineTimeStamp==bandLineTimeStamp && applyCalLevel==2 && isCurr) return; //ver115-2d
+    if (isCurr) applyCalLevel=2; else applyCalLevel=1;
+  }
+  else
+  {
+    applyCalLevel=1; //base cal
+  }
+
+  if (applyCalLevel==2)
+  {
+    installedBaseLineNumSteps=-1;   //Indicate that base line cal is not installed  ver115-1b fixed typo
+    for (int i=0; i <= vars->globalSteps; i++)    //retrieve data
+    {
+        vars->lineCalArray[i][0]=vars->bandLineCal[i][0]; //freq    //ver115-5c
+        vars->lineCalArray[i][1]=vars->bandLineCal[i][1]; //mag
+        vars->lineCalArray[i][2]=vars->bandLineCal[i][2]; //Phase
+    }
+    installedBandLineTimeStamp=bandLineTimeStamp;    //ver115-2d
+    return;
+  }
+
+    //We get here if applyCalLevel<2 or we did not have a current LineCal, so use BaseLineCal
+  if (desiredCalLevel>0)
+  {
+    if (BaseLineCalIsCurrent()) applyCalLevel=1; else applyCalLevel=0;  //ver115-1b
+  }
+  else
+  {
+    applyCalLevel=0;
+  }
+
+  if (applyCalLevel==1)
+  {
+    //We want and have BaseLine cal, so install it
+    if (BaseLineCalIsInstalled())
+      return;   //Already installed with these sweep params
+
+    int doPhase, doParams;
+    //ver114-5p changed interpolation to use the new Interpolation Module
+    if (vars->msaMode=="SA" || vars->msaMode=="ScalarTrans")
+    {
+      doPhase=0; doParams=1;   //do mag only
+    }
+    else
+    {
+        doPhase=1;doParams=3;   //Do both mag and phase
+    }
+    inter.intSetMaxNumPoints(1+qMax(baseLineNumSteps, vars->globalSteps));  //Be sure we have room ver115-9d
+    inter.intClearSrc(); inter.intClearDest();
+    for (int i=0; i <= baseLineNumSteps; i++) //copy cal table to intSrc
+    {
+        inter.intAddSrcEntry(vars->baseLineCal[i][0],vars->baseLineCal[i][1],util.NormalizePhase(vars->baseLineCal[i][2]));
+    }
+    for (int i=1; i <= vars->globalSteps+1; i++)
+    {
+      inter.intAddDestFreq(gGetPointXVal(GraphVal, MaxPoints, i));   //Install frequencies in intDest
+    }
+
+    inter.intSrcToDest(doPhase, 0, doParams);  //Do the actual interpolation into intDest()
+    for (int i=0; i <= vars->globalSteps; i++)  //put the data where we want it
+    {
+      int f,m,p;
+      inter.intGetDest(i+1,f, m, p);
+      vars->lineCalArray[i][0]=f;
+      //ver115-2d eliminated rounding
+      vars->lineCalArray[i][1]=m;
+      p=util.NormalizePhase(p);
+      vars->lineCalArray[i][2]=p;
+    }
+
+    //Save the sweep params under which we installed base line cal
+    installedBaseLineStartFreq=vars->startfreq;
+    installedBaseLineEndFreq=vars->endfreq;
+    installedBaseLineNumSteps=vars->globalSteps;
+    installedBaseLineLinear=xIsLinear;
+    installedBaseLineTimeStamp=baseLineTimeStamp;    //ver115-2d
+    //ver115-1b xLL  deleted installedBaseLinePath$
+    return;
+  }  //end of applying baseLine cal
+
+  //Here we want no type of line cal
+  SignalNoCalInstalled();   //ver116-4b
+}
+
+
+float dialogVNACal::gGetPointXVal(Q2DfloatVector &GraphVal, int MaxPoints, float N)
+{
+  int x;
+  //Return x for specified point (1...)
+  //We don't verify that N is in bounds, because its value may have been created with gGenerateXValues
+  //and the actual point data may not have been added yet.
+  //N may have a fractional part, so we do linear interpolation
+  if (N>0 && N<=MaxPoints)
+  {
+    int whole=int(N);
+    float fract=N-whole;
+    x=GraphVal[whole][0];
+    if (fract>0)
+    {
+      x=x+fract*(GraphVal[whole+1][0]-x);
+    }
+  }
+  else
+  {
+    x=-1;
+  }
+  return x;
 }

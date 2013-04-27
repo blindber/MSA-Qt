@@ -19,7 +19,10 @@
 
 #include <QDialog>
 #include "globalvars.h"
-//#include "graph.h"
+#include "msautilities.h"
+#include "uwork.h"
+#include "interpolation.h"
+
 
 namespace Ui {
 class dialogVNACal;
@@ -28,10 +31,12 @@ class dialogVNACal;
 class dialogVNACal : public QDialog
 {
   Q_OBJECT
-  
+
 public:
   explicit dialogVNACal(QWidget *parent = 0);
   ~dialogVNACal();
+  void setFilePath(QString path);
+  void setUwork(cWorkArray *newuWork);
   void RunVNACal();
   void setGlobalVars(globalVars *newVar);
 //  void setGlobalGraph(msagraph *newGraph);
@@ -39,7 +44,13 @@ public:
   int BandLineCalIsCurrent();
   int BaseLineCalIsCurrent();
   int BaseLineCalIsInstalled();
-  
+  void BandLineCalContextToFile(QStringList &fHndl);
+  int LoadBaseLineCalFile();
+  void BaseLineCalContextToFile(QStringList &fHndl);
+  int CreateOperatingCalFolder();
+
+
+  void InstallSelectedLineCal(Q2DfloatVector &GraphVal, int MaxPoints, int xIsLinear);
 
 
 
@@ -73,6 +84,9 @@ public:
 private:
   Ui::dialogVNACal *ui;
   globalVars *vars;
+  cWorkArray *uWork;
+  interpolation inter;
+  msaUtilities util;
   //msagraph *graph;
 
   void VNACalFinished();
@@ -88,6 +102,26 @@ private:
   void TransferBandToBaseLineCal();
   void TransferBandToBaseOSLCal();
   void CalInfo();
+
+
+  float gGetPointXVal(Q2DfloatVector &GraphVal, int MaxPoints, float N);
+
+
+  int BandLineCalContextAsTextArray();
+  QString BandLineCalContext();
+  void RestoreBandLineCalContext(QString &s, int &startpos);
+  int GetBandLineCalContextFromFile(QString fHndl);
+
+
+  int BaseLineCalContextAsTextArray();
+  QString BaseLineCalContext();
+  int RestoreBaseLineCalContext(QString &s, int &startPos);
+  int GetBaseLineCalContextFromFile(QFile *fHndl);
+
+  void SaveBaseLineCalFile();
+  QFile *OpenBaseLineCalFile();
+
+  QString DefaultDir;
 
 
 

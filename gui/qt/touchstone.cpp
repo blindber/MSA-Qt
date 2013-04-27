@@ -219,7 +219,7 @@ void touchStone::touchReadParams(QString source, int sourceType)
             else
             {
                 uWork->uWorkNumPoints=uWork->uWorkNumPoints+1;
-                if (uWork->uWorkNumPoints>=(unsigned int)touchMaxData)
+                if (uWork->uWorkNumPoints>=touchMaxData)
                 {
                   touchBadLine=fileLine;
                   return;
@@ -451,7 +451,7 @@ void touchStone::touchConvertParamForm(QString newForm)
     nParam=4;
   else
     nParam=1;   //Number of S-parameters per line ver116-1b
-  for (unsigned int i=1; i <= uWork->uWorkNumPoints; i++)   //Process each frequency
+  for (int i=1; i <= uWork->uWorkNumPoints; i++)   //Process each frequency
   {
     for (int pNum=1; pNum <= nParam; nParam++)
     {

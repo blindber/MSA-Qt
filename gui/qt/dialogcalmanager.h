@@ -41,11 +41,13 @@ public:
   explicit dialogCalManager(QWidget *parent = 0);
   ~dialogCalManager();
   void setMsaConfig(msaConfig *config);
+  void setGlobalVars(globalVars *newVars);
+  void setFilePath(QString path);
   //@==============Calibration Manager Module==========================
 
 
   int calEditorPathNum;  //0 for freq; 1-N for magnitude
-  QString  calManFileList[41];    //List of active paths; zero entry is used
+
   QString calManFiles;  //Indicates which files exist (marked by "1")
                          //First char is freq cal file, Nth (1...41) is mag cal file N-1
   QString calFileInfo[11][4];  //Used internally to request file info
@@ -73,14 +75,12 @@ public:
   void calManGetFreqInput(int measStep);
   void calManMenuMeasure();
   void calManMeasure();
-  void calManClean(QString btn);
+  void calManClean();
   void calManDisplayDefault(QString btn);
-  void calManSelectPath();
   void calManEnterAvailablePaths();
   void calManPrepareEntry();
   void calManEnterInstructions(QString btn);
-  void calManWarnToSave(int allowCancel);
-  int calManFile(QString btn);
+  int calManWarnToSave(int allowCancel);
   void calInitFirstUse(int maxMagPoints, int maxFreqPoints, int doPhase);
   int calVersion();
   void calSetMaxPoints(int maxMagPoints, int maxFreqPoints);
@@ -109,15 +109,14 @@ public:
   void calAvailableFiles(int pathNum, QString editor, int doPoints);
   void calInstallFile(int pathNum);
   void calSaveToFile(int pathNum);
-  void calSaveToEditor(QString editor, int pathNum);
-  void calOutputData(QString calFile, int isFile, int pathNum, int &startLine);
+  void calSaveToEditor(QPlainTextEdit *editor, int pathNum);
+  void calOutputData(QStringList &lines, int pathNum, int &startLine);
   QString calOpenFile(int pathNum);
   QString calFileName(int pathNum);
   QString calFilePath();
-  QString calLoadFromEditor(QString editor, int pathNum);
+  QString calLoadFromEditor(QPlainTextEdit *editor, int pathNum);
   QString calLoadFromFile(int pathNum);
-  QString calReadFile(QFile *calFile, int isFile, int pathNum, int &startLine);
-  void setFilePath(QString path);
+  QString calReadFile(QFile *calFile, QPlainTextEdit *editor, int isFile, int pathNum, int &startLine);
 
   //---------------Start Global Variables for Mag/Freq Calibration Module---------
       //calMagTable contains calibration data for the current signal path
@@ -165,25 +164,13 @@ private:
   msaUtilities util;
   interpolation inter;
   msaConfig *activeConfig;
+  globalVars *vars;
 
-
-
-  void calManBtnFile();
+  QStringList calManFileList;
+  bool teTextChanged;
+  int calManFileReload();
 
 public slots:
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 private slots:
   void on_Reload_clicked();
@@ -191,6 +178,20 @@ private slots:
   void on_Return_clicked();
   void on_StartEntry_clicked();
   void on_Clean_clicked();
+  void on_DispDefault_clicked();
+  void on_Measure_clicked();
+  void on_Enter_clicked();
+  void on_NextPoint_clicked();
+  void on_EnterAll_clicked();
+
+  void on_pathList_currentRowChanged(int currentRow);
+
+  void on_te_textChanged();
+
+signals:
+  void RequireRestart();
+  void PartialRestart();
+
 };
 
 #endif // DIALOGCALMANAGER_H

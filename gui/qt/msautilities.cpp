@@ -15,7 +15,8 @@
 // WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //******************************************************************************
 #include "msautilities.h"
-
+#include <QMessageBox>
+#include <QFileDialog>
 //==========================UTILITIES MODULE===========================================
 
 msaUtilities::msaUtilities()
@@ -138,20 +139,38 @@ int msaUtilities::uExtractNumericItems(int nItems, QString &data, QString delims
   //Returns their values in item1$, item2$. Missing items are returned as 0
   //Returns 1 if any item is blank or non-numeric
 
-  val1=0; val2=0; val3=0;    //ver116-2a
-  if (nItems<1 || nItems>3) return 1; // exit function
+  val1=0; val2=0; val3=0;
+  if (nItems<1 || nItems>3)
+  {
+    return 1; // exit function
+  }
 
   int retVal=0;  //No error yet
   QString item1 = uExtractDataItem(data, delims);
-  if (item1=="" ||  uIsNumeric(item1)==0) return 1;
+  if (item1=="" ||  uIsNumeric(item1)==0)
+  {
+    return 1;
+  }
   val1=item1.toFloat();
-  if (nItems==1) return retVal;
+  if (nItems==1)
+  {
+    return retVal;
+  }
   QString item2 = uExtractDataItem(data, delims);
-  if (item2=="" || uIsNumeric(item2)==0) return 1;
+  if (item2=="" || uIsNumeric(item2)==0)
+  {
+    return 1;
+  }
   val2=item2.toFloat();
-  if (nItems==2) return retVal;
+  if (nItems==2)
+  {
+    return retVal;
+  }
   QString item3=uExtractDataItem(data, delims);
-  if (item3=="" || uIsNumeric(item3)==0) retVal=1;
+  if (item3=="" || uIsNumeric(item3)==0)
+  {
+    retVal=1;
+  }
   val3=item3.toFloat();
   return retVal;
 
@@ -654,27 +673,54 @@ double msaUtilities::uMultiplierValue(QString mult)    //Return value of specifi
 
 QString msaUtilities::uPrompt(QString caption, QString msg, int doYesNo, int allowCancel)   //Post message and return user response
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*     //yes and no are allowed or alternatively OK
-    //Cancel may be allowed with either
-    //msg$ is the message to post. caption$ is the caption of the message box
-    //Returns "yes", "no", "ok" or "cancel"
-            //This code is modified from LB Workshop
-    calldll #user32, "MessageBeep", 0  as long, beepResult as long  //ver116-4q boolean to long
-    if doYesNo=0 then
-        if allowCancel=1 then mbflags = 0 OR _MB_OKCANCEL else mbflags = 0 OR _MB_OK
+  //yes and no are allowed or alternatively OK
+  //Cancel may be allowed with either
+  //msg$ is the message to post. caption$ is the caption of the message box
+  //Returns "yes", "no", "ok" or "cancel"
+  //This code is modified from LB Workshop
+  beep();
+  QMessageBox msgBox;
+  msgBox.setText(caption);
+  msgBox.setInformativeText(msg);
+
+  if (doYesNo == 0)
+  {
+    if (allowCancel)
+      msgBox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
     else
-        if allowCancel=1 then mbflags = 0 OR _MB_YESNOCANCEL else mbflags = 0 OR _MB_YESNO
-    end if
-    calldll #user32, "MessageBoxA", 0 as long, msg$ as ptr, _
-                        caption$ as ptr,  mbflags as long,  mbResult as long
-    //mbResult CODES: 1=ok 2=cancel 3=abort 4=retry 5=ignore 6=yes 7=no
-    if mbResult=1 then uPrompt$="ok" : exit void msaUtilities::
-    if mbResult=2 then uPrompt$="cancel": exit void msaUtilities::
-    if mbResult=6 then uPrompt$="yes": exit void msaUtilities::
-    if mbResult=7 then uPrompt$="no": exit void msaUtilities::
-*/
-  return "no";
+      msgBox.setStandardButtons(QMessageBox::Ok);
+
+  }
+  else
+  {
+    if (allowCancel)
+      msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+    else
+      msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+  }
+
+  msgBox.setDefaultButton(QMessageBox::Save);
+  int ret = msgBox.exec();
+
+  switch (ret)
+  {
+  case QMessageBox::Ok:
+    return "ok";
+    break;
+  case QMessageBox::Yes:
+    return "yes";
+    break;
+  case QMessageBox::No:
+    return "no";
+    break;
+  case QMessageBox::Cancel:
+    return "cancel";
+    break;
+  default:
+    // should never be reached
+    break;
+  }
+  return "WTF";
 }
 float msaUtilities::uRadsPerDegree()
 {
@@ -2043,4 +2089,346 @@ void msaUtilities::uEquivParallelImped(int sR, int sX, int &pR, int &pX)
     end if
     if sX=0 then pX=constMaxValue else pX=magSquared/sX
 */
+}
+
+float msaUtilities::NormalizePhase(float p)
+{
+  //Return phase in range -180<phase<=180
+  while (p>180) { p=p-360; }
+  while (p<=-180) { p=p+360; }
+  return p;
+}
+//==========================UTILITIES MODULE===========================================
+
+
+
+int  msaUtilities::uArrayFromFile(QFile *fHndl, int nPerLine)   //get points from file into uWorkArray()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*     //Return 1 if error; otherwise zero
+    //fHndl$ is the handle of an already open file. We read our data but do not close the file.
+    //The file likely contains a title, some other preliminary info (such as Touchstone info) and then
+    //many lines of numeric info, possibly ending with "EndContext". If the first lines begin with !, then
+    //up to 3 lines are considered title info, and are put into uWorkTitle(1-3).
+    //Once we encounter a line beginning with numeric data, we read it and all succeeding lines into uWorkArray()
+    //beginning with entry 1. We stop at the end of file or when we read the line "!EndContext"
+    //The required number of data items per line is nPerLine, but if nPerLine>=100 we get the required number
+    //from the first point we process.
+    //We put the number of points read into uWorkNumPoints and the number of items per line into uWorkNumPerPoint.
+    //If all lines do not have the same number of data items, we end with an error.
+    //Data on a line is delimited by spaces, tabs or commas.
+    nLines=0
+    //Break the file into separate lines, listed in uTextPointArray$()
+    while EOF(#fHndl$)=0
+        Line Input #fHndl$, tLine$
+        tLine$=Trim$(tLine$)
+        nLines=nLines+1
+        if nLines>gMaxNumPoints()+maxPointExtraLines then notice "Too Many Lines" : uArrayFromFile=1 : exit void msaUtilities::
+        if Left$(tLine$,1)="!EndContext" then nLines=nLines-1 : exit while    //End if we find !EndContext
+        uTextPointArray$(nLines)=tLine$ //Add this line to uTextPointArray$()
+    wend
+    uArrayFromFile=uWorkArrayFromTextArray(nLines, nPerLine) //Transfer data from strings to uWorkArray
+*/
+  return 0;
+}
+
+void msaUtilities::uArrayFromString(QString s, int startN, int &startPos, int nPerLine)   //get points from string into uWorkArray()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*     //Return 1 for error; otherwise 0.
+    //s$ is a string with lines delimited by carriage returns.
+    //The lines likely contains a title, some other preliminary info (such as Touchstone info) and then
+    //many lines of numeric info, possibly ending with "EndContext".
+    //We start at position startPos. We update startPos tothe beginning of the first line after the last one
+    //we process, or one past the end of the string.
+    //If the first lines begin with !, then
+    //up to 3 lines are considered title info, and are put into uWorkTitle(1-3).
+    //Once we encounter a line beginning with numeric data, we read it and all succeeding lines into uWorkArray()
+    //beginning with entry startN. We stop at the end of string or when we read the line "!EndContext"
+    //The required number of data items per line is nPerLine, but if nPerLine>=100 we get the required number
+    //from the first point we process.
+    //We put the number of points read into uWorkNumPoints and the number of items per line into uWorkNumPerPoint.
+    //If all lines do not have the same number of data items, we end with an error.
+    //Data on a line is delimited by spaces, tabs or commas.
+    nLines=0
+    //Break the string into separate lines, listed in uTextPointArray$()
+    sLen=len(s$)
+    //ver114-5o added lines to skip over !StartContext if it is the first line
+    saveStartPos=startPos
+    firstLine$=uGetLine$(s$, startPos) //get data line and increment startPos to next line
+    //If first line is !StartContext, skip it and start at the next line. startPos was already incremented
+    if Upper$(Left$(firstLine$,12))<>"!STARTCONTEXT" then startPos=saveStartPos     //backup to start
+
+    while startPos<=sLen
+        sepPos=instr(s$, chr$(13), startPos)
+        oldStartPos=startPos
+        if sepPos=0 then
+            tLine$=Trim$(Mid$(s$, startPos)) : startPos=sLen+1 //Entire remainder is final line
+        else
+            tLine$=Trim$(Mid$(s$, startPos, sepPos-startPos)) : startPos=sepPos+1  //This line goes to next CR  //ver114-2a
+        end if
+        if tLine$="!EndContext" then uArrayFromString=startPos : exit while  //ver114-2a
+        nLines=nLines+1
+        uTextPointArray$(nLines)=tLine$ //Add this line to uTextPointArray$()
+    wend
+    uArrayFromString=uWorkArrayFromTextArray(nLines, nPerLine) //Transfer data from strings to uWorkArray
+*/
+}
+
+void msaUtilities::uHighlightText(int handle)  //handle$ is handle variable for the target text box to highlight
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*     handle = hWnd(#handle$)
+    #handle$, "!Contents? txt$"
+    param1 = Len(txt$)
+    CallDLL #user32, "SendMessageA", _
+    handle as Ulong, _
+    _EM_SETSEL as Long, _
+    param1 as Long, _
+    0 as Long, _
+    result as Long
+*/
+}
+/*
+void msaUtilities::uSleep tms //wait for tms milliseconds
+{    tms=int(tms+0.5)    //avoids crash if fractional
+    if tms>0 then CALLDLL #kernel32, "Sleep", tms as ulong, Sleep as void   //ver116-1b
+
+}*/
+void msaUtilities::uSleep(int ms)
+{
+  QMutex dummy;
+  dummy.lock();
+  QWaitCondition waitCondition;
+  waitCondition.wait(&dummy, ms);
+}
+
+
+void msaUtilities::uTickCount()   //Return windows tick count ver116-1b
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*     //ms since system started, max about 49 days.
+    CALLDLL #kernel32, "GetTickCount", tick as ulong
+    uTickCount=tick
+*/
+}
+
+void msaUtilities::uParsePath(QString fullPath, QString &folder, QString &file) //Parse full path name of file into the file name and folder name (no slash at end)
+{
+  //check to make sure we don't have a blank string as absolutePath is undfined if blank
+  if (fullPath.trimmed() == "")
+  {
+    folder = "";
+    file = "";
+  }
+  QFileInfo info1(fullPath);
+
+  folder = info1.absolutePath();
+  file = info1.fileName();
+}
+
+int msaUtilities::uConfirmSave(QString fullPath) //if file fullPath$ exists, then ask user to confirm saving file. Return 1 if save, 0 if cancel.
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*     call uParsePath fullPath$, folder$, file$   //separate into folder and file name
+    if file$="" then uConfirmSave=0 : exit void msaUtilities:://No valid file name
+    files folder$, file$, fileInfo$()   //Look for matching files in this folder
+    if val(fileInfo$(0, 0)) > 0 then   //This is number of matching files
+        Confirm "File "+file$+" already exists. Do you want to replace it?"; response$
+        if response$="yes" then uConfirmSave=1 else uConfirmSave=0
+    else
+        uConfirmSave=1
+    end if
+*/
+  return 0;
+}
+QString msaUtilities::uAddExtension(QString name, QString exten)    //Add extension to path or file name if there is no extension
+{
+  if (name.indexOf(".") > -1)   //There already is an extension
+    return name;
+
+  return name + "." + exten;
+  /*
+  //exten$ should not have a dot in it. e.g. bitmap exten$ is bmp, not .bmp.
+  int L=name.length();
+  dotPos=0;
+  for (int i=L; i > 1; i--)  //scan character by character from end
+  {
+    QString thisChar=name.mid(i, 1);
+    if (thisChar==".") {dotPos=i; break; } //looking for dot
+    if (thisChar=="/") break;  //looking for backslash--indicates there is no extension
+  }
+  if (dotPos>0) { uAddExtension$=name$ : exit void msaUtilities::  //There already is an extension
+  uAddExtension$=name$;".";exten$  //append dot and exten$
+        */
+}
+
+void msaUtilities::uDeleteFile(QString fullName)   //Kill file if it exists; no error if it doesn//t
+{
+  QFile::remove(fullName);
+}
+
+int msaUtilities::uFileOrFolderExists(QString Path) // checks for the existence of the given file or folder
+{
+  int retVal = 0;
+  QFileInfo info(Path);
+  if (info.exists())
+    retVal = 1;
+
+  return retVal;
+}
+
+QString  msaUtilities::uSaveFileDialog(QWidget *parent, QString filter, QString defaultExt, QString initialDir, QString initialFile, QString windTitle)
+{
+  QString retVal;
+  retVal = QFileDialog::getSaveFileName(parent, windTitle, initialDir, filter);
+  return retVal;
+}
+
+QString msaUtilities::uOpenFileDialog(QWidget *parent, QString filter, QString defaultExt, QString initialDir, QString initialFile, QString windTitle)
+{/*
+  QStringList filt;
+  filt = filter.split(";;");
+  int filterIndex = filt.indexOf(defaultExt);
+*/
+  //QFileInfo ttt(initDir);
+  //initalDir = ttt.absoluteFilePath();
+  QString retVal;
+  retVal = QFileDialog::getOpenFileName(parent, windTitle, initialDir, filter);
+  //retVal = "C:\\Qt\\projects\\MSA\\MSA\\debug\\test_save_data.s1p";
+  return retVal;
+}
+
+bool msaUtilities::uVerifyDLL(QString dllName)
+{
+
+  //Return 1 if specified DLL exists; otherwise 0
+  //dllName$ can include or exclude the .dll extension
+  //First turn off Windows error message for missing dll
+
+  QLibrary *Lib = new QLibrary(dllName);
+  if (!Lib->load())
+  {
+    qDebug() << dllName << " " << Lib->errorString();
+    delete Lib;
+    return false;
+  }
+  Lib->unload();
+  delete Lib;
+  return true;
+}
+
+
+QString msaUtilities::uExtractFontColor(QString font)  //Return the color from a font specification
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+  int pos=font.indexOf("color");
+  if (pos=-1) return "";
+  int semiPos=font.indexOf(";", pos);  //Find semicolon after "color"
+  if (semiPos=-1) semiPos=font.length()+1;  //Pretend it is one past end if we didn//t find it
+  //QString colorSpec=font.mid(pos, semiPos-pos);
+  return  font.mid(6).trimmed(); //Everything except "color" is the actual color
+  */
+  return "fix me";
+}
+
+void msaUtilities::uSeriesRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C)   //From Z at two points, calculate series RLC components
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*     //The Z's are real and imaginary impedance at points 1 and 2; f1 and f2 are frequency in MHz
+    //We return R (ohms), L (Henries) and C (Farads).
+    //In theory Z1r=Z2r, but we use the one with the lower reactance value
+    //because it gets measured most accurately.
+    if abs(Z1i)<=abs(Z2i) then R=Z1r else R=Z2r
+    if R<0 then R=0
+    freqScale=1000000*2*uPi() //converts MHz to radians/sec
+    w1=f1*freqScale : w2=f2*freqScale
+
+    den=w1^2*w2*Z2i-w2^2*w1*Z1i
+    if den=0 then C=constMaxValue else C=(w2^2-w1^2)/den
+    //We determine L from C at one of the points. The best accuracy would be from the point with
+    //the higher frequency, where the L is more dominant.
+    if w1>w2 then
+        w=w1 : X=X1
+    else
+        w=w2 : X=X2
+    end if
+    den=w^2*C
+    if den=0 then L=constMaxValue else L=(w*X*C+1)/den
+    if C<0 then C=0
+    if L<0 then L=0
+    if C<1e-14 then C=0
+    if L<1e-11 then L=0
+    if C>10 then C=10
+    if L>10 then L=10
+*/
+}
+
+void msaUtilities::uParallelRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C)   //From Z at two points, calculate parallel RLC components
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*     //The Z's are real and imaginary impedance at points 1 and 2; f1 and f2 are frequency in MHz
+    //We return R (ohms), L (Henries) and C (Farads).
+    //Convert the impedances to equivalent parallel resistance||reactance
+    if Z1i=0 then X1=constMaxValue else X1=(Z1r^2+Z1i^2)/Z1i
+    if Z2i=0 then X2=constMaxValue else X2=(Z2r^2+Z2i^2)/Z2i
+
+    if Z1r=0 then R1=constMaxValue else R1=(Z1r^2+Z1i^2)/Z1r
+    if Z2r=0 then R2=constMaxValue else R2=(Z2r^2+Z2i^2)/Z2r
+
+    freqScale=1000000*2*uPi() //converts MHz to radians/sec
+    w1=f1*freqScale : w2=f2*freqScale
+
+    //In theory R1=R2, but we pick the one with the best measurement accuracy, meaning the one
+    //with the highest parallel X.
+    if abs(X1)>abs(X2) then R=R1 else R=R2
+    if R<0 then R=0
+
+        //Calculate C from X
+    den=X1*X2*(w1^2-w2^2)
+    if den=0 then C=constMaxValue else C=(w2*X1-w1*X2)/den
+
+    //We determine L from C at one of the points. The best accuracy would be from the point with
+    //the higher frequency, where the L is more dominant.
+    if w1>w2 then
+        w=w1 : X=X1
+    else
+        w=w2 : X=X2
+    end if
+    den=w+X*w^2*C
+    if den=0 then L=constMaxValue else L=X/den
+    if C<0 then C=0
+    if L<0 then L=0
+    if C<1e-14 then C=0
+    if L<1e-11 then L=0
+    if C>10 then C=10
+    if L>10 then L=10
+*/
+}
+
+QString msaUtilities::fixColor(QString col)
+{
+  col = col.trimmed();
+  if (col.indexOf("#") == 0)
+  {
+    //assume it's correct as there is a # at the start of the line
+    return col;
+  }
+  else if (col.indexOf(" ") != -1)
+  {
+    QStringList items;
+    items = col.split(QRegExp("\\s+"));
+    if (items.count() != 3)
+    {
+      // wrong number of items so set to magenta
+      return QColor(Qt::magenta).name();
+    }
+    else
+    {
+      return QColor(items.at(0).toInt(), items.at(1).toInt(), items.at(2).toInt()).name();
+    }
+  }
+  // assume color is a name eg black, white
+  return col;
 }

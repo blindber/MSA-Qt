@@ -50,7 +50,8 @@ dialogConfigMan::dialogConfigMan(QWidget *parent) :
 
   DefaultDir = QApplication::applicationDirPath();
   moduleVersion=" 1.10";
-  fileName = DefaultDir + "/MSA_Info/config.txt";
+  fileFullName = DefaultDir + "/MSA_Info/config.txt";
+
 }
 
 QString dialogConfigMan::configmoduleVersion()
@@ -60,7 +61,7 @@ QString dialogConfigMan::configmoduleVersion()
 
 QString dialogConfigMan::configFileFullName()
 {
-  return fileName;
+  return fileFullName;
 }
 
 dialogConfigMan::~dialogConfigMan()
@@ -82,18 +83,30 @@ void dialogConfigMan::load()
   configPLLtypes <<  "0" << "2325" << "2326,4118"; //ver116-4k
   configPLLtypes << "2350" << "2353" << "4112,4113";  //ver116-4k
 
+  ui->PLL1type->clear();
+  ui->PLL2type->clear();
+  ui->PLL3type->clear();
+
   ui->PLL1type->addItems(configPLLtypes);
   ui->PLL2type->addItems(configPLLtypes);
   ui->PLL3type->addItems(configPLLtypes);
 
   QStringList configPLLpol;
   configPLLpol << "0(invert)" << "1(non-inv)";  //ver116-4j
+
+  ui->PLL1pol->clear();
+  ui->PLL2pol->clear();
+  ui->PLL3pol->clear();
+
   ui->PLL1pol->addItems(configPLLpol);
   ui->PLL2pol->addItems(configPLLpol);
   ui->PLL3pol->addItems(configPLLpol);
 
   QStringList configPLLmodes;
   configPLLmodes << "0(Integer)" << "1(Fract)";
+
+  ui->PLL1mode->clear();
+  ui->PLL3mode->clear();
 
   ui->PLL1mode->addItems(configPLLmodes);
   ui->PLL3mode->addItems(configPLLmodes);
@@ -107,6 +120,7 @@ void dialogConfigMan::load()
 
   QStringList configParsers;
   configParsers << "0(parallel)" << "1(serial)";
+  ui->DDS1parse->clear();
   ui->DDS1parse->addItems(configParsers);
 
   ui->mast->setStyleSheet( "background: cyan;" );
@@ -127,15 +141,18 @@ void dialogConfigMan::load()
 
   QStringList configADCs;
   configADCs << "8(orig 8-bit)" << "12(ladder)" << "16(serial 16-bit)" << "22(serial 12-bit)";
+  ui->adconv->clear();
   ui->adconv->addItems(configADCs);
                   //TG topology
   QStringList configTGtops;
   configTGtops << "0(None)" << "1(orig)" << "2(DDS3/PLL3)";
+  ui->TGtop->clear();
   ui->TGtop->addItems(configTGtops);
                   //Control Board
 
   QStringList configControlBoards;
   configControlBoards << "0(Old)" << "1(Old, new harness)" << "2(SLIM original)" <<  "3(USB V1.0)"; //USB;01-08-2010
+  ui->cb->clear();
   ui->cb->addItems(configControlBoards);
 
                     //Final Filters
@@ -147,6 +164,7 @@ void dialogConfigMan::load()
   ui->LPT->setStyleSheet( "background: cyan;" );
   QStringList configLPTs;
   configLPTs << "Hex 378" << "Hex 175";
+  ui->LPT->clear();
   ui->LPT->addItems(configLPTs);
 
   setWindowTitle("MSA/VNA Configuration Manager Version " + configVersion() );
@@ -162,7 +180,7 @@ void dialogConfigMan::load()
   configNumDisplayedFilters=0;
   configCreateLoadFile();    //Load file data. Creates one if necessary
   configDisplayData(&tempConfig);
-  configAdjustDisplayedItems(); //ver115-1a
+  configAdjustDisplayedItems();
   blockChangeSignals(false);
 }
 
@@ -998,7 +1016,7 @@ void dialogConfigMan::configInitializeDefaults(msaConfig *tConfig)
 void dialogConfigMan::configSaveFile(const msaConfig tConfig)
 {
   QString settings = configHardwareContext(tConfig);
-  QFile fOut(fileName);
+  QFile fOut(fileFullName);
   if (fOut.open(QFile::WriteOnly | QFile::Text))
   {
     QTextStream s(&fOut);
@@ -1102,7 +1120,7 @@ void dialogConfigMan::configGetFilter(int N, float &freq, float &bw, msaConfig *
 QString dialogConfigMan::configReadFile(msaConfig *tConfig)
 {
   QString retVal = "";
-  QFile textFile(fileName);
+  QFile textFile(fileFullName);
   if (textFile.open(QFile::ReadOnly))
   {
     //... (open the file for reading, etc.)
@@ -1286,11 +1304,15 @@ QString dialogConfigMan::configRestoreHardwareContext(QString &s, int startPos, 
       }
       else if (tag =="PLL3PHASEPOLARITY")
       {
-        config->PLL3phasepolarity=nval; if (nval!=0 && nval!=1) isErr = true;
+        config->PLL3phasepolarity=nval;
+        if (nval!=0 && nval!=1)
+          isErr = true;
       }
       else if (tag =="PLL3MODE")
       {
-        config->PLL3mode=nval; if (nval!=0 && nval!=1) isErr = true;
+        config->PLL3mode=nval;
+        if (nval!=0 && nval!=1)
+          isErr = true;
       }
       else if (tag =="PLL3PHASEFREQ")
       {
@@ -1302,7 +1324,10 @@ QString dialogConfigMan::configRestoreHardwareContext(QString &s, int startPos, 
       }
       else if (tag =="HASVNA")
       {
-          if (nval-=0) config->hasVNA=0; else config->hasVNA=1;
+          if (nval==0)
+            config->hasVNA=0;
+          else
+            config->hasVNA=1;
       }
       else if (tag =="MAXPDMOUT")
       {
@@ -1453,12 +1478,6 @@ void dialogConfigMan::configClearFilters(msaConfig *tConfig)
 //------------From here to the end of the Configuration Manager Module is----------
 //------------the original Configuration Module, which lacked the user interface---
 
-void dialogConfigMan::configInitFirstUse()
-{
-  DefaultDir = QApplication::applicationDirPath();
-  configModuleVersion=" 1.10";
-  fileFullName = DefaultDir + "/MSA_Info/config.txt";
-}
 
 QString dialogConfigMan::configVersion()
 {

@@ -1,4 +1,4 @@
-#include "dialogoslcal.h"
+ï»¿#include "dialogoslcal.h"
 #include "ui_dialogoslcal.h"
 
 dialogOSLCal::dialogOSLCal(QWidget *parent) :
@@ -212,6 +212,11 @@ void dialogOSLCal::InstallSelectedOSLCal()
 
 end sub
 */
+}
+
+void dialogOSLCal::setUwork(cWorkArray *newuWork)
+{
+  uWork = newuWork;
 }
 
 void dialogOSLCal::PerformOSLCal()
@@ -1179,7 +1184,7 @@ sub CalcOSLCoeff   'Calc coeff a, b, c for base or band OSL cal
     'SO, SL, SS are the actual reflection coeff. of the open, short and load standards
     'The error model equation is as follows, where S is the actual S11 and M is
     'the measured S11:
-    '  S = (M – b) / (a – c*M)
+    '  S = (M b) / (a c*M)
     'Using S and M for the Open, Short and Load, we can calculate the
     'coefficients a, b and c.
     'The double letter variables Mx and Sx are the measured and actual values, with
@@ -1481,5 +1486,164 @@ void dialogOSLCal::CalUpdateFinished()
     end if
     wait
 '--end of [RunCalUpdate]
+*/
+}
+int dialogOSLCal::OSLCalContextAsTextArray(int isBand)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  //Put  cal points into uTextPointArray$, with header info
+  //isBand=1 means we do band cal; =0 means base cal
+  //return number of lines placed into uTextPointArray$
+  //First line begins with ! and is line 1 of the title: !Log Sweep Path N. "Log" may instead by "Linear"; N=path number
+  //First 3 lines are title, each preceded by !
+  //Next line is sweep info
+  //Next is Touchstone options line
+  //Next is comment data headings
+  //Then comes each point as its own string
+
+  uWork->uTextPointArray[1]="! OSL Calibration Data";
+  uWork->uTextPointArray[2]="!";
+  /*
+  if (vars->isBand)
+  {
+    if OSLBandLinear then sweep$="!Linear Sweep; " else sweep$="!Log Sweep "
+    uTextPointArray$(3)="!";OSLBandTimeStamp$
+    //Save sweep info: log/linear ; path info (in form Path N); Jig attachment and R0
+    uTextPointArray$(4)=sweep$;OSLBandPath$;"; S11Jig=";OSLBandS11JigType$; "; S11BridgeR0=";S11BridgeR0; _ //ver115-9d
+                "; S21Jig=";OSLBandS21JigAttach$; "; S21JigR0="; OSLBandS21JigR0 //ver115-1b, ver115-1g
+  }
+  else
+  {
+    if OSLBaseLinear then sweep$="!Linear Sweep; " else sweep$="!Log Sweep "
+     uTextPointArray$(3)="!";OSLBaseTimeStamp$
+    //Save sweep info: log/linear ; path info (in form Path N); Jig attachment and R0
+    uTextPointArray$(4)=sweep$;OSLBasePath$;"; S11Jig=";OSLBaseS11JigType$; "; S11BridgeR0=";S11BridgeR0; _ //ver115-9d
+                "; S21Jig=";OSLBaseS21JigAttach$; "; S21JigR0="; OSLBaseS21JigR0  //ver115-1b, ver115-1g
+  }
+  uTextPointArray$(5)="!"
+  aSpace$=" "
+  uTextPointArray$(6)="!  MHz    A_real   A_imag   B_real   B_imag     C_Real     C_Imag     RefDB     RefDeg"
+  for i=0 to globalSteps
+  {
+    //save freq, mag and phase
+    if isBand then  //Band cal
+    {
+        s$=OSLBandA(i,0);aSpace$;OSLBandA(i,1);aSpace$;OSLBandB(i,0);_
+                                aSpace$;OSLBandB(i,1);aSpace$; OSLBandC(i,0);aSpace$;OSLBandC(i,1);aSpace$
+        uTextPointArray$(i+7)=OSLBandRef(i,0);aSpace$;s$;OSLBandRef(i,1);aSpace$;OSLBandRef(i,2)
+    }
+    else    //Base cal
+    {
+        s$=OSLBaseA(i,0);aSpace$;OSLBaseA(i,1);aSpace$;OSLBaseB(i,0);_
+                                aSpace$;OSLBaseB(i,1);aSpace$; OSLBaseC(i,0);aSpace$;OSLBaseC(i,1);aSpace$
+        uTextPointArray$(i+7)=OSLBaseRef(i,0);aSpace$;s$;OSLBaseRef(i,1);aSpace$;OSLBaseRef(i,2)
+    }
+  }
+  return vars->globalSteps+7; //Number of lines
+
+*/
+  return 0;
+}
+void dialogOSLCal::OSLCalContextToFile(QFile *fHndl, int isBand)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+sub OSLCalContextToFile fHndl$, isBand   'save OSL cal points to file
+    'isBand=1 means we do band cal; =0 means base cal
+    'We do not include StartContext or EndContext lines
+         'fHndl$ is the handle of an already open file. We output our data
+        'but do not close the file.
+    nLines=OSLCalContextAsTextArray(isBand)   'Assemble strings into uTextPointArray$
+    for i=1 to nLines
+        print #fHndl$, uTextPointArray$(i)
+    next i
+end sub
+*/
+}
+void dialogOSLCal::OSLGetCalContextFromFile(QFile *fHndl, int isBand)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+function OSLGetCalContextFromFile(fHndl$, isBand)   'get points from file; return number of points
+    'isBand=1 means we do band cal; =0 means base cal
+    'We return number of points read, or -1 for file error
+    'fHndl$ is the handle of an already open file. We read our data
+    'but do not close the file. The last line we read will be "!EndContext"
+    isErr=uArrayFromFile(fHndl$,100) 'Get data, 100 means number per line to be determined
+    if isErr then
+        OSLGetCalContextFromFile=-1
+        if isBand then OSLBandNumSteps=-1 else OSLBaseNumSteps=-1 'Indicates no data
+        exit function
+    end if
+        'Move the data from uWorkArray to gGraphVal
+    if isBand then  'Band Cal
+        for i=1 to uWorkNumPoints   'ver116-4n
+            OSLBandRef(i-1,0)=uWorkArray(i, 0) 'freq
+            OSLBandA(i-1,0)=uWorkArray(i, 1) : OSLBandA(i-1,1)=uWorkArray(i, 2) 'Coeff A real and imag
+            OSLBandB(i-1,0)=uWorkArray(i, 3) : OSLBandB(i-1,1)=uWorkArray(i, 4) 'Coeff B real and imag
+            OSLBandC(i-1,0)=uWorkArray(i, 5) : OSLBandC(i-1,1)=uWorkArray(i, 6) 'Coeff C real and imag
+            OSLBandRef(i-1,1)=uWorkArray(i, 7) : OSLBandRef(i-1,2)=uWorkArray(i, 8) 'Mag and phase for ref
+        next i
+        OSLGetCalContextFromFile=uWorkNumPoints
+            'Now derive the sweep parameters from the array and the title ver114-5h
+        if uWorkNumPoints<1 then exit function
+        OSLBandNumSteps=uWorkNumPoints-1
+        OSLBandStartFreq=OSLBandRef(0,0) : OSLBandEndFreq=OSLBandRef(OSLBandNumSteps,0)
+        OSLBandTimeStamp$=uWorkTitle$(3)   'uArrayFromFile put date/time stamp here
+        sweep$=uWorkTitle$(4)   'uArrayFromFile put sweep info here
+        if instr(sweep$,"Linear")>0 then OSLBandLinear=1 else OSLBandLinear=0
+                'ver115-1b added the retrieval of the following sweep info
+            'Get remaining sweep info from sweep$. Each item has a keyword and ends with a semi-colon or end of line
+        calPathNum$=uGetParamText$(sweep$, "Path ", ";")  'Gets text after "Path " to semicolon or end
+        if calPathNum$="" then OSLBandPath$="Path 1" else OSLBandPath$="Path ";calPathNum$
+        OSLBandS11JigType$=uGetParamText$(sweep$, "S11Jig=", ";")  'Gets text after S11Jig= to semicolon or end ver115-1g
+        if OSLBandS11JigType$="" then OSLBandS11JigType$="Reflect"  'ver115-1g
+        if OSLBandS11JigType$="Reflect" then    'ver115-9d
+            'If using bridge, get bridge R0
+            OSLBandS11BridgeR0=val(uGetParamText$(sweep$, "S11BridgeR0=", ";"))  'Gets text after S11BridgeR0= to semicolon or end
+            if OSLBandS11BridgeR0<=0 then OSLBandS11BridgeR0=50
+        else
+            'If using S21 fixture for reflection measurements, get attachment and R0
+            OSLBandS21JigAttach$=uGetParamText$(sweep$, "S21Jig=", ";")  'Gets text after S21Jig= to semicolon or end
+            if OSLBandS21JigAttach$="" then OSLBandS21JigAttach$="Series"
+            OSLBandS21JigR0=val(uGetParamText$(sweep$, "S21JigR0=", ";"))  'Gets text after S21Jig= to semicolon or end
+            if OSLBandS21JigR0<=0 then OSLBandS21JigR0=50
+        end if
+    else    'Base
+        for i=1 to uWorkNumPoints   'ver116-4n
+            OSLBaseRef(i-1,0)=uWorkArray(i, 0) 'freq
+            OSLBaseA(i-1,0)=uWorkArray(i, 1) : OSLBaseA(i-1,1)=uWorkArray(i, 2) 'Coeff A real and imag
+            OSLBaseB(i-1,0)=uWorkArray(i, 3) : OSLBaseB(i-1,1)=uWorkArray(i, 4) 'Coeff B real and imag
+            OSLBaseC(i-1,0)=uWorkArray(i, 5) : OSLBaseC(i-1,1)=uWorkArray(i, 6) 'Coeff C real and imag
+            OSLBaseRef(i-1,1)=uWorkArray(i, 7) : OSLBaseRef(i-1,2)=uWorkArray(i, 8) 'Mag and phase for ref
+        next i
+        OSLGetCalContextFromFile=uWorkNumPoints
+            'Now derive the sweep parameters from the array and the title ver114-5h
+        if uWorkNumPoints<1 then exit function
+        OSLBaseNumSteps=uWorkNumPoints-1
+        OSLBaseStartFreq=OSLBaseRef(0,0) : OSLBaseEndFreq=OSLBaseRef(OSLBaseNumSteps,0)
+        OSLBaseTimeStamp$=uWorkTitle$(3)   'uArrayFromFile put date/time stamp here
+        sweep$=uWorkTitle$(4)   'uArrayFromFile put sweep info here
+        if instr(sweep$,"Linear")>0 then OSLBaseLinear=1 else OSLBaseLinear=0
+                'ver115-1b added the retrieval of the following sweep info
+            'Get remaining sweep info from sweep$. Each item has a keyword and ends with a semi-colon or end of line
+        calPathNum$=uGetParamText$(sweep$, "Path ", ";")  'Gets text after "Path " to semicolon or end
+        OSLBaseS11JigType$=uGetParamText$(sweep$, "S11Jig=", ";")  'Gets text after S11Jig= to semicolon or end ver115-1g
+        if OSLBaseS11JigType$="" then OSLBaseS11JigType$="Reflect"  'ver115-1g
+        if calPathNum$="" then OSLBasePath$="Path 1" else OSLBasePath$="Path ";calPathNum$
+
+        if OSLBandS11JigType$="Reflect" then    'ver115-9d
+            'If using bridge, get bridge R0
+            OSLBaseS11BridgeR0=val(uGetParamText$(sweep$, "S11BridgeR0=", ";"))  'Gets text after S11BridgeR0= to semicolon or end
+            if OSLBaseS11BridgeR0<=0 then OSLBaseS11BridgeR0=50
+        else
+            'If using S21 fixture for reflection measurements, get attachment and R0
+            OSLBaseS21JigAttach$=uGetParamText$(sweep$, "S21Jig=", ";")  'Gets text after S21Jig= to semicolon or end
+            if OSLBaseS21JigAttach$="" then OSLBaseS21JigAttach$="Series"
+            OSLBaseS21JigR0=val(uGetParamText$(sweep$, "S21JigR0=", ";"))  'Gets text after S21Jig= to semicolon or end
+            if OSLBaseS21JigR0<=0 then OSLBaseS21JigR0=50
+        end if
+    end if
+end function
 */
 }

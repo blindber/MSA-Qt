@@ -102,7 +102,6 @@ public:
   QString configRestoreHardwareContext(QString &s, int startPos, msaConfig *config);
   QString configHardwareContext(const msaConfig tConfig);
   int configRunManager(int autoR);
-  void configInitFirstUse();
   ~dialogConfigMan();
 
 
@@ -206,7 +205,6 @@ private:
   int configNumDisplayedFilters;
   int hasDDS3;
   int configDisplayHasTG;
-  QString fileName;
   QString moduleVersion;
   QString DefaultDir;
 

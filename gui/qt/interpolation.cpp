@@ -82,7 +82,7 @@ void interpolation::intAddSrcEntry(int f, int r, int im)
   intSrc[intSrcPoints][1]=r;
   intSrc[intSrcPoints][2]=im;
 }
-void interpolation::intAddDestFreq(int f)
+void interpolation::intAddDestFreq(float f)
 {
   //'Add new frequency to end of destination table
   intDestPoints=intDestPoints+1;

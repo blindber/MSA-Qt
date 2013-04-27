@@ -99,7 +99,6 @@ bool usbFunctions::usbInterfaceOpen(QString fileName)
   unsigned long result = 0;
   usbMSADeviceSetAllArrayPtr(ptrSAllArray,2002,40, &result); //USB:01-08-2010
 
-
   return usbLib->isLoaded();
 }
 
@@ -116,17 +115,7 @@ void usbFunctions::usbCloseInterface()
     usbLib = NULL;
   }
 }
-/*
-void usbFunctions::setUSBwrbuf(QString str)
-{
-  USBwrbuf = str;
-}
 
-void usbFunctions::setUSBwrbuf2(QString str)
-{
-  USBwrbuf2 = str;
-}
-*/
 void *usbFunctions::getUSBDevice()
 {
   return USBDevice;

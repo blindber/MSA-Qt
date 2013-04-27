@@ -114,6 +114,28 @@ public:
   void uEquivSeriesLC(int freq, int serR, int serReact,  int &serL, int &serC);
   void uEquivParallelImped(int sR, int sX, int &pR, int &pX);
 
+  float NormalizePhase(float p);
+
+  int uWorkArrayFromTextArray(int nLines, int nPerLine);
+  int  uArrayFromFile(QFile *fHndl, int nPerLine);   //get points from file into uWorkArray();
+  void uArrayFromString(QString s, int startN, int &startPos, int nPerLine);   //get points from string into uWorkArray();
+  void uHighlightText(int handle);  //handle$ is handle variable for the target text box to highlight
+  void uSleep(int ms);
+  void uTickCount();   //Return windows tick count ver116-1b
+  void uParsePath(QString fullPath, QString &folder, QString &file); //Parse full path name of file into the file name and folder name (no slash at end);
+  int uConfirmSave(QString fullPath); //if file fullPath$ exists, then ask user to confirm saving file. Return 1 if save, 0 if cancel.
+  QString uAddExtension(QString name, QString exten);    //Add extension to path or file name if there is no extension
+  void uDeleteFile(QString fullName);   //Kill file if it exists; no error if it doesn//t
+  int uFileOrFolderExists(QString Path); // checks for the existence of the given file or folder
+  QString  uSaveFileDialog(QWidget *parent, QString filter, QString defaultExt, QString initialDir, QString initialFile, QString windTitle);
+  QString uOpenFileDialog(QWidget *parent, QString filter, QString defaultExt, QString initialDir, QString initialFile, QString windTitle);
+  bool uVerifyDLL(QString dllName);
+  QString uExtractFontColor(QString font);  //Return the color from a font specification
+  void uSeriesRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C);   //From Z at two points, calculate series RLC components
+  void uParallelRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C);   //From Z at two points, calculate parallel RLC components
+
+
+  QString fixColor(QString col);
 
 private:
   float uKRadsPerDegree;

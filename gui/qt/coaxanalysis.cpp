@@ -26,22 +26,22 @@ coaxAnalysis::coaxAnalysis()
   maxCoaxEntries=100;
 }
 
-void coaxAnalysis::CoaxLoadDataFile()
+void coaxAnalysis::CoaxLoadDataFile(QString path)
 {
   //Load coax data file into coaxData$. If error, clear coaxData$
   coaxNames.clear();
   numCoaxEntries = 0;
 
-  if (!QFile::exists(DefaultDir + "/MSA_Info/CoaxData.txt"))
+  if (!QFile::exists(path + "/MSA_Info/CoaxData.txt"))
   {
-    if (!CoaxCreateFile()) //Create file with default entries
+    if (!CoaxCreateFile(path)) //Create file with default entries
     {
       QMessageBox::critical(0,"Error","Unable to open/create coax data file.");// : exit sub
       return;
     }
   }
 
-  QFile textFile(DefaultDir + "/MSA_Info/CoaxData.txt");
+  QFile textFile(path + "/MSA_Info/CoaxData.txt");
   if (textFile.open(QFile::ReadOnly | QFile::Text))
   {
     //... (open the file for reading, etc.)
@@ -103,7 +103,7 @@ void coaxAnalysis::CoaxLoadDataFile()
 */
 }
 
-bool coaxAnalysis::CoaxCreateFile()
+bool coaxAnalysis::CoaxCreateFile(QString path)
 {
   //Each line contains coax name, Z0, VF, K1, K2, comma-separated
   //VF is velocity of propagation as fraction of speed of light, typically 0.5-0.7 for coax cable
@@ -112,8 +112,8 @@ bool coaxAnalysis::CoaxCreateFile()
   //These are derived from http://www.vk1od.net/calc/tl/tllc.php
   //and the program TLDetails.exe
 
-  QDir().mkpath(DefaultDir + "/MSA_Info/");
-  QFile fOut(DefaultDir + "/MSA_Info/CoaxData.txt");
+  QDir().mkpath(path + "/MSA_Info/");
+  QFile fOut(path + "/MSA_Info/CoaxData.txt");
   if (fOut.open(QFile::WriteOnly | QFile::Text))
   {
     QTextStream s(&fOut);
@@ -154,6 +154,7 @@ bool coaxAnalysis::CoaxCreateFile()
 void coaxAnalysis::setFilePath(QString path)
 {
   DefaultDir = path;
+  CoaxLoadDataFile(path);
 }
 /*
 '=============Start Coax Analysis Module===================================

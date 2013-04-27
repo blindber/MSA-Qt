@@ -25,8 +25,8 @@ class coaxAnalysis
 public:
   coaxAnalysis();
 
-  void CoaxLoadDataFile();
-  bool CoaxCreateFile();
+  void CoaxLoadDataFile(QString path);
+  bool CoaxCreateFile(QString path);
   void setFilePath(QString path);
 
 private:

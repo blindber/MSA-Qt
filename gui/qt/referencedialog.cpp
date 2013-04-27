@@ -17,6 +17,7 @@
 #include "referencedialog.h"
 #include "ui_referencedialog.h"
 #include <QColorDialog>
+#include "constants.h"
 
 referenceDialog::referenceDialog(QWidget *parent) :
   QDialog(parent),
@@ -191,7 +192,7 @@ void referenceDialog::ShowEligibleTraces()
     ui->smith->setVisible(false);
     return;
   }
-  if (settings.Y1DataType!=vars.constNoGraph) // this is bad, vars is not linked to the global one
+  if (settings.Y1DataType!=constNoGraph) // this is bad, vars is not linked to the global one
   {
     ui->t1->setVisible(true);
     bool t1 = ui->t1->checkState();
@@ -205,7 +206,7 @@ void referenceDialog::ShowEligibleTraces()
     HideTrace1();
     ui->t1->setVisible(false);
   }
-  if (settings.Y2DataType!=vars.constNoGraph)
+  if (settings.Y2DataType!=constNoGraph)
   {
     ui->t2->setVisible(true);
     bool t2 = ui->t2->checkState();
@@ -289,7 +290,7 @@ void referenceDialog::refDialogFinished()
     activeSettings->referenceColor1=settings.referenceColor1;
     int i = ui->width1->currentIndex() + 1;
     if (i<1) i=1;
-    activeSettings->referenceColor1=i;
+    activeSettings->referenceWidth1=i;
   }
 
   if (ui->t2->checkState())
@@ -372,7 +373,7 @@ void referenceDialog::ReferenceDialog(referDialog *newSettings)
   activeSettings = newSettings;
 
   settings.referenceColor1 = activeSettings->referenceColor1;
-  settings.referenceColor1 = activeSettings->referenceColor1;
+  settings.referenceWidth1 = activeSettings->referenceWidth1;
 
   settings.referenceColor2 = activeSettings->referenceColor2;
   settings.referenceWidth2 = activeSettings->referenceWidth2;
@@ -635,7 +636,7 @@ void referenceDialog::on_UseRLC_clicked(bool checked)
 void referenceDialog::on_color1_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor(QString("background: %1;").arg(settings.referenceColor1));
+  QColor color = QColorDialog::getColor(settings.referenceColor1, this);
   if (color.isValid())
   {
     settings.referenceColor1 = color.name();
@@ -647,7 +648,7 @@ void referenceDialog::on_color1_clicked(const QModelIndex &index)
 void referenceDialog::on_color2_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor(QString("background: %1;").arg(settings.referenceColor2));
+  QColor color = QColorDialog::getColor(settings.referenceColor2, this);
   if (color.isValid())
   {
     settings.referenceColor2 = color.name();
@@ -659,7 +660,7 @@ void referenceDialog::on_color2_clicked(const QModelIndex &index)
 void referenceDialog::on_colorSmith_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor(QString("background: %1;").arg(settings.referenceColorSmith));
+  QColor color = QColorDialog::getColor(settings.referenceColorSmith, this);
   if (color.isValid())
   {
     settings.referenceColorSmith = color.name();

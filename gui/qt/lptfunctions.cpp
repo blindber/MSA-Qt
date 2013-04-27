@@ -274,7 +274,7 @@ void lptFunctions::Process16MagPha()
 */
 }
 
-void lptFunctions::Process16Mag()
+int lptFunctions::Process16Mag()
 {
   /*
 'ver111-33a
@@ -299,6 +299,7 @@ void lptFunctions::Process16Mag()
     if stat0>127 then magdata = magdata + 1  'WAIT is low, MAG is high
     return 'to [ReadMagnitude]with magdata
     */
+  return 11297;
 }
 void lptFunctions::Process22MagPha()
 {

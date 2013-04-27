@@ -17,7 +17,9 @@
 #ifndef DIALOGOSLCAL_H
 #define DIALOGOSLCAL_H
 
+#include <QtCore>
 #include <QDialog>
+#include "uwork.h"
 
 namespace Ui {
 class dialogOSLCal;
@@ -31,9 +33,11 @@ public:
   explicit dialogOSLCal(QWidget *parent = 0);
   ~dialogOSLCal();
   void InstallSelectedOSLCal();
+  void setUwork(cWorkArray *newuWork);
   
 private:
   Ui::dialogOSLCal *ui;
+  cWorkArray *uWork;
 
   //---------------Routines to Handle OSL Calibration------------ added by ver115-1b
     void BandOSLCalIsCurrent();
@@ -77,6 +81,11 @@ private:
     void PerformLineCalUpdate();
     void CalUpdateAborted();
     void CalUpdateFinished();
+
+    int OSLCalContextAsTextArray(int isBand);
+    void OSLCalContextToFile(QFile *fHndl, int isBand );
+    void OSLGetCalContextFromFile(QFile *fHndl, int isBand);
+
   //---------------End Routines to Handle OSL Calibration---------------
 
 };

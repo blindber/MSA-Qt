@@ -10,8 +10,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = msa-qt
 TEMPLATE = app
 
-QMAKE_CFLAGS_WARN_ON += -Wno-unused-parameter
-QMAKE_CXXFLAGS += -Wno-unused-parameter
+QMAKE_CFLAGS_WARN_ON += -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable
+QMAKE_CXXFLAGS += -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable
 
 target.path = /home/pi/msa-qt
 INSTALLS += target
@@ -59,7 +59,13 @@ SOURCES += main.cpp\
     dialogoslcal.cpp \
     coaxanalysis.cpp \
     lptfunctions.cpp \
-    dialogvnacal.cpp
+    dialogvnacal.cpp \
+    hwdinterface.cpp \
+    twoport.cpp \
+    debugmodule.cpp \
+    complexmaths.cpp \
+    dialogsavecustappearance.cpp \
+    dialogchooseprimaryaxis.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -76,7 +82,14 @@ HEADERS  += mainwindow.h \
     dialogoslcal.h \
     coaxanalysis.h \
     lptfunctions.h \
-    dialogvnacal.h
+    dialogvnacal.h \
+    hwdinterface.h \
+    twoport.h \
+    debugmodule.h \
+    complexmaths.h \
+    constants.h \
+    dialogsavecustappearance.h \
+    dialogchooseprimaryaxis.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \
@@ -84,7 +97,9 @@ FORMS    += mainwindow.ui \
     dialogconfigman.ui \
     dialogcalmanager.ui \
     dialogoslcal.ui \
-    dialogvnacal.ui
+    dialogvnacal.ui \
+    dialogsavecustappearance.ui \
+    dialogchooseprimaryaxis.ui
 
 RESOURCES += \
     resource.qrc

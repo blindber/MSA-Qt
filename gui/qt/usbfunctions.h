@@ -103,8 +103,6 @@ public:
   bool usbInterfaceOpen(QString fileName);
   void usbCloseInterface();
 
-  //void setUSBwrbuf(QString str);
-  //void setUSBwrbuf2(QString str);
 
   void *getUSBDevice();
 

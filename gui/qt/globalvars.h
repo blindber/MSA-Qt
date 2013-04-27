@@ -117,8 +117,6 @@ public:
 
       QString imageSaveLastFolder;  //Folder in which last graph image was saved, regular or Smith chart ver115-2a
 
-      QString Appearances[11];    //Names of Appearances
-      QString customPresetNames[6];   //User names for custom color presets (1-5) ver115-2a
 
           //ver114-4k variables allowing forward or reverse sweep
       //The following 3 variables are not global, but are used in connection with reverse sweeps
@@ -147,46 +145,20 @@ public:
 
       int Y1DataType, Y2DataType;    //data component constant to determine Y1 and Y2 graph data
 
-          //The following component constants are used to specify the data component needed to graph
-      int constGraphS11DB, constGraphS11Ang, constTheta;
-      int constMagDBM,constMagWatts,constMagDB,constMagRatio,constMagV;
-      int constRho,constAngle,constRawAngle,constGD,constSerReact,constParReact; //ver115-1b
-      int constSerR,constSerC,constSerL,constParR,constParC,constParL;
-      int constSWR, constReturnLoss, constInsertionLoss;   //ver114-8d
-      int constImpedMag, constImpedAng;  //ver115-1d
-      int constReflectPower, constComponentQ;    //ver115-2d
-      int constAdmitMag, constAdmitAng, constConductance, constSusceptance;  //ver115-4a
-      int constAux0, constAux1, constAux2, constAux3, constAux4, constAux5; //for auxGraphData(,)  ver115-4a
-      int constNoGraph; //ver115-2c used to suppress data
-          //The following identify slots in ReflectArray() but are not used for graphing. They hold
-          //S11 prior to the final adjustment for plane extension and graph R0, and are saved to make
-          //it easier to recalculate S11 when those values change.
-      int constIntermedS11DB, constIntermedS11Ang;   //ver115-2d
 
-          //The following constants are for two-port graphs. They do not have values
-          //distinct from those for regular graphs ver116-1b
-      int constTwoPortS11DB, constTwoPortS21DB, constTwoPortS12DB, constTwoPortS22DB;
-      int constTwoPortS11Ang, constTwoPortS21Ang, constTwoPortS12Ang, constTwoPortS22Ang;
-      int constTwoPortMatchedS21DB, constTwoPortMatchedS12DB; //For/Rev gain dB with impedance-matching terminations ver116-2a
-      int constTwoPortMatchedS21Ang, constTwoPortMatchedS12Ang;   //angle of gain
-      int constTwoPortMatchedS11DB, constTwoPortMatchedS22DB;       //For/Rev RL dB with specified terminations ver116-2a
-      int constTwoPortMatchedS11Ang, constTwoPortMatchedS22Ang;   //angle of return loss
-      int constTwoPortKStability, constTwoPortMuStability; //ver116-2a //Amplifier stability factors
-
-
-      Q2DintVector ReflectArray;//(2020,17) //Actual signal freq (0),GraphS11DB(1), GraphS11Ang(2),linearMag(3),
+      Q2DfloatVector ReflectArray;//(2020,17) //Actual signal freq (0),GraphS11DB(1), GraphS11Ang(2),linearMag(3),
                               //Impedance Mag(4), Impedance Angle(5),Rs(6), Xs(7), Rp(8),
                               // Xp(9), Cs(10), Ls(11), Cp(12), Lp(13), SWR(14),
                               //intermedDB(), intermedAng(15) (intermed= w/o R0 transform or plane ext) //ver115-2d
 
       int uWorkReflectData[17]; //Same data as ReflectArray, but for only one entry  //ver115-1b //ver115-2d
 
-      Q2DintVector  S21DataArray;//Frequency (actual input freq) (0), mag(1), phase(2) and intermed phase(3) for VectorTrans and ScalarTrans modes. ver116-1b
+      Q2DfloatVector  S21DataArray;//Frequency (actual input freq) (0), mag(1), phase(2) and intermed phase(3) for VectorTrans and ScalarTrans modes. ver116-1b
                               //Intermed phase is phase before plane extension, saved in case of recalculation
           //The following auxGraphDataXXX arrays have info on auxiliary graphs, which are numbered 0 to 5; the
           //graph number is the first index of the array. If the graphs are specified as data types constAux0, etc., then
           //the graph number is the constant for the desired graph minus constAux0.
-      Q2DintVector  auxGraphData;//Used to hold specially calculated data, such as from Q analysis, which can be retrieved and graphed.
+      Q2DfloatVector  auxGraphData;//Used to hold specially calculated data, such as from Q analysis, which can be retrieved and graphed.
           //auxGraphDataInfo$ Info for UpdateGraphDataFormat for auxGraphData. ver115-4a
           //(,0) is graph Name, (,1) is formatting string, (,2) is axis label, (,3) is marker label
       QString auxGraphDataFormatInfo[6][4];
@@ -224,7 +196,7 @@ public:
                               //indicating which contexts are involved ver114-3a
       //Constants to specify context types in contextTypes()
 
-      int constHardware, constGrid, constTrace, constSweep, constMarker, constBand, constBase, constGraphData, constModeData;
+      //int constHardware, constGrid, constTrace, constSweep, constMarker, constBand, constBase, constGraphData, constModeData;
 
 //      constHardware=0 : constGrid=1 : constTrace=2 : constSweep=3 : constMarker=4 : constBand=5
 //      constBase=6 : constGraphData=7 : constModeData=8
@@ -358,10 +330,10 @@ public:
 
 
 
-      Q2DintVector lineCalArray;    //calibration data for each step#: (0)freq (tuning),(1)magpower during cal,(2)phaseofpdm during cal
-      Q2DintVector bandLineCal; //Bandsweep line calibration data; transferred to lineCalArray when needed ver 114-5f
+      Q2DfloatVector lineCalArray;    //calibration data for each step#: (0)freq (tuning),(1)magpower during cal,(2)phaseofpdm during cal
+      Q2DfloatVector bandLineCal; //Bandsweep line calibration data; transferred to lineCalArray when needed ver 114-5f
           //Note baseLineCal is fixed sized
-      Q2DintVector baseLineCal; //Baseline line calibration data; transferred to lineCalArray when needed ver 114-5f
+      Q2DfloatVector baseLineCal; //Baseline line calibration data; transferred to lineCalArray when needed ver 114-5f
 
   //Impedance can be measured via S21 in a test jig, or via S11 in a reflection bridge
           //We need to know the reference impedance (a resistance) of each, and for the jig

@@ -44,7 +44,7 @@ public:
   explicit dialogGridappearance(QWidget *parent = 0);
   ~dialogGridappearance();
 
-  void AppearanceShow();
+  void AppearanceShow(int currentAxis);
   void gGetGridColors(QString &backCol, QString &lineCol, QString &boundsCol);
   void gSetGridColors(QString backCol, QString lineCol, QString boundsCol);
   void gSetFonts(QString xFont, QString y1Font, QString y2Font, QString gridFont);
@@ -53,6 +53,13 @@ public:
   void gGetTextColors(QString &xText, QString &y1Text, QString &y2Text, QString &gridText);
   void gGetInfoColors(QString &fore, QString &back);
   void SetCycleColors();
+  QString gGetLastPresetColors();
+  void FillAppearancesArray();
+
+
+  QString customPresetNames[6];   //User names for custom color presets (1-5) ver115-2a
+
+
 
 
   QString gTrace1Color, gTrace2Color;  //Color of graph lines.
@@ -75,6 +82,17 @@ public:
   void gGetTraceColors(QString &col1, QString &col2);
   void gGetSupplementalTraceColors(QString &col1A, QString &col2A, QString &col1B, QString &col2B);
   void gSetSupplementalTraceColors(QString col1A, QString col2A, QString col1B, QString col2B);
+
+  void gUsePresetColors(QString btn, int primaryAxis);
+  void gUseCustomPresetColors(int N);
+  void gSetCustomPresetColors(int N, QString grid, QString bounds, QString back, QString gridText
+                              ,QString XText, QString Y1Text, QString Y2Text, QString trace1
+                              ,QString trace2,QString trace1A, QString trace2A, QString trace1B, QString trace2B);
+  void gGetCustomPresetColors(int N, QString &grid,QString &bounds,QString &back,QString &gridText,QString &XText
+                              ,QString &Y1Text,QString &Y2Text, QString &trace1, QString &trace2
+                              , QString &trace1A, QString &trace2A, QString &trace1B, QString &trace2B);
+  void gInitCustomColors();
+
 
 private slots:
 
@@ -106,14 +124,14 @@ private slots:
   void on_BoxY2B_clicked(const QModelIndex &index);
 
 
+  void on_Save_clicked();
+
 private:
   Ui::dialogGridappearance *ui;
   QGraphicsScene *scene;
   bool allowClose;
 
   void AppearanceDrawSample();
-  void AppearanceSave();
-  void AppearanceSubToSave();
   void PresetClosebox();
   void AppearanceList();
   void AppearanceDeletePreset();
@@ -137,6 +155,9 @@ private:
   QString XCol;
   QString TextCol;
 
+  QString Appearances[11];    //Names of Appearances
+
+  int currentPriAxis;
 protected:
   virtual void closeEvent(QCloseEvent *e);
   virtual void showEvent ( QShowEvent * event );

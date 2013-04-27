@@ -15,7 +15,7 @@
 // WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //******************************************************************************
 #include "globalvars.h"
-
+#include "constants.h"
 
 globalVars::globalVars()
 {
@@ -57,90 +57,9 @@ globalVars::globalVars()
   //Note if these are changed, FilterDataType may have to be changed. //ver115-1b altered these
   //We start with 1, because entry 0 of ReflectArray is frequency
 
-  constGraphS11DB=1;   //S11 db re S11GraphR0
-  constGraphS11Ang=2;  //S11 angle re S11GraphR0
-  constRho=3;      //S11 data with mag made linear
-  constImpedMag=4; //impedance magnitude (linear, not db)
-  constImpedAng=5; //impedance angle
-  constSerR=6;     //Series Resistance
-  constSerReact =7;  //Series Reactance
-  constParR=8;    //Equiv parallel resistance
-  constParReact=9; //Equiv parallel reactance
-  constSerC=10;     //Equiv series capacitance
-  constSerL=11;     //Equiv series inductance
-  constParC=12;     //Equiv parallel capacitance
-  constParL=13;     //Equiv parallel inductance
-  constSWR=14;     //SWR
-  constIntermedS11DB=15;   //Not a graph item ver115-2d
-  constIntermedS11Ang=16;   //Not a graph item ver115-2d
-
-      //The above are in ReflectArray(); the below are either not reflection related
-      //or are other names for reflection data, or simple calculations from that data.
-  constMagDBM=17;   //Magnitude dBM for SA mode
-  constMagWatts=18; //Magnitude watts (linear) for SA mode
-  constMagV=19;     //Magnitude volts (linear) for SA mode
-  constMagDB=20;    //Magnitude dB for S21
-  constMagRatio=21;    //Magnitude ratio (linear) for S21
-  constAngle=22;    //Angle for S21
-  constTheta=23;   //Theta for reflection
-  constGD=24;       //Group Delay for S21
-  constReturnLoss=25;  //Return Loss for reflection   ver114-8d
-  constInsertionLoss=26;   //Insertion Loss for S21   ver114-8d
-  constReflectPower=27;        //Percent reflected power ver115-2d
-  constComponentQ=28;           //component Q (not resonance Q) ver115-2d
-  constAdmitMag=29;     //ver115-4a
-  constAdmitAng=30;
-  constConductance=31;
-  constSusceptance=32;
-  constRawAngle=33;        //Transmission angle without cal adjustment
-      //constAuxN represent the data in auxGraphData(step, N). They must be consecutively numbered. ver115-4a
-  constAux0=34;    //N=0 for accessing auxGraphData
-  constAux1=35;
-  constAux2=36;
-  constAux3=37;
-  constAux4=38;
-  constAux5=39;
-  constNoGraph=40;     //don't graph and don't label the axis
-
-      //The following can be used directly to index TwoPortArray to retrieve the data
-      //Note that the constant for an angle is always one more than that for its corresponding DB
-  constTwoPortS11DB=1;
-  constTwoPortS21DB=3;
-  constTwoPortS12DB=5;
-  constTwoPortS22DB=7;
-  constTwoPortS11Ang=2;
-  constTwoPortS21Ang=4;
-  constTwoPortS12Ang=6;
-  constTwoPortS22Ang=8;
-
-      //The following can be used directly (after subtracting constTwoPortMatchedS11DB-1) to index TwoPortMatchedSParam to retrieve the data
-      //Note that the constant for an angle is always one more than that for its corresponding DB
-  constTwoPortMatchedS11DB=9; //ver116-2a
-  constTwoPortMatchedS11Ang=10; //ver116-2a
-  constTwoPortMatchedS21DB=11; //ver116-2a
-  constTwoPortMatchedS21Ang=12; //ver116-2a
-  constTwoPortMatchedS12DB =13; //ver116-2a
-  constTwoPortMatchedS12Ang =14; //ver116-2a
-  constTwoPortMatchedS22DB=15; //ver116-2a
-  constTwoPortMatchedS22Ang=16; //ver116-2a
-
-      //The following do not directly index an array; they need to be calculated
-  constTwoPortKStability=17;    //ver116-2a
-  constTwoPortMuStability=18;  //ver116-2a
-
-
   maxNumSteps=40000;       //ver114-3e
   maxPointExtraLines=100;  //ver116-4k
 
-  constHardware=0;
-  constGrid=1;
-  constTrace=2;
-  constSweep=3;
-  constMarker=4;
-  constBand=5;
-  constBase=6;
-  constGraphData=7;
-  constModeData=8;
 
   doCycleTraceColors = 0;
   cycleNumber = 0;
@@ -156,6 +75,10 @@ globalVars::globalVars()
   test = 0;
 
   doingInitialization = 1;
+
+  steps = 400;
+  globalSteps = 400;
+
 }
 int globalVars::DataTypeIsAngle(int dataType)
 {
@@ -251,64 +174,7 @@ void globalVars::zeroVars()
   primaryAxisNum = 0;
   Y1DataType = 0;
   Y2DataType = 0;
-  constGraphS11DB = 0;
-  constGraphS11Ang = 0;
-  constTheta = 0;
-  constMagDBM = 0;
-  constMagWatts = 0;
-  constMagDB = 0;
-  constMagRatio = 0;
-  constMagV = 0;
-  constRho = 0;
-  constAngle = 0;
-  constRawAngle = 0;
-  constGD = 0;
-  constSerReact = 0;
-  constParReact = 0;
-  constSerR = 0;
-  constSerC = 0;
-  constSerL = 0;
-  constParR = 0;
-  constParC = 0;
-  constParL = 0;
-  constSWR = 0;
-  constReturnLoss = 0;
-  constInsertionLoss = 0;
-  constImpedMag = 0;
-  constImpedAng = 0;
-  constReflectPower = 0;
-  constComponentQ = 0;
-  constAdmitMag = 0;
-  constAdmitAng = 0;
-  constConductance = 0;
-  constSusceptance = 0;
-  constAux0 = 0;
-  constAux1 = 0;
-  constAux2 = 0;
-  constAux3 = 0;
-  constAux4 = 0;
-  constAux5 = 0;
-  constNoGraph = 0;
-  constIntermedS11DB = 0;
-  constIntermedS11Ang = 0;
-  constTwoPortS11DB = 0;
-  constTwoPortS21DB = 0;
-  constTwoPortS12DB = 0;
-  constTwoPortS22DB = 0;
-  constTwoPortS11Ang = 0;
-  constTwoPortS21Ang = 0;
-  constTwoPortS12Ang = 0;
-  constTwoPortS22Ang = 0;
-  constTwoPortMatchedS21DB = 0;
-  constTwoPortMatchedS12DB = 0;
-  constTwoPortMatchedS21Ang = 0;
-  constTwoPortMatchedS12Ang = 0;
-  constTwoPortMatchedS11DB = 0;
-  constTwoPortMatchedS22DB = 0;
-  constTwoPortMatchedS11Ang = 0;
-  constTwoPortMatchedS22Ang = 0;
-  constTwoPortKStability = 0;
-  constTwoPortMuStability = 0;
+
   doFilterAnalysis = 0;
   x1DBDown = 0;
   x2DBDown = 0;
@@ -318,15 +184,6 @@ void globalVars::zeroVars()
   VNADataLinear = 0;
   VNADataZ0 = 0;
   VNARestoreDoR0AndPlaneExt = 0;
-  constHardware = 0;
-  constGrid = 0;
-  constTrace = 0;
-  constSweep = 0;
-  constMarker = 0;
-  constBand = 0;
-  constBase = 0;
-  constGraphData = 0;
-  constModeData = 0;
   startfreq = 0;
   endfreq = 0;
   baseFrequency = 0;

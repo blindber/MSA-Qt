@@ -19,7 +19,7 @@
 #include <QColorDialog>
 #include <QGraphicsScene>
 #include <QGraphicsTextItem>
-
+#include "dialogsavecustappearance.h"
 
 dialogGridappearance::dialogGridappearance(QWidget *parent) :
   QDialog(parent),
@@ -51,8 +51,9 @@ dialogGridappearance::~dialogGridappearance()
 {
   delete ui;
 }
-void dialogGridappearance::AppearanceShow()
+void dialogGridappearance::AppearanceShow(int currentAxis)
 {
+  currentPriAxis = currentAxis;
   gGetGridColors(BackCol, LineCol, BoundsCol);
 
   QString temp = QString("background: %1;").arg(BackCol);
@@ -124,50 +125,6 @@ void dialogGridappearance::AppearanceDrawSample()
   ui->graphicsView->fitInView(scene->sceneRect());  //,Qt::KeepAspectRatio);
   ui->graphicsView->ensureVisible(scene->sceneRect(),10,10);
 }
-void dialogGridappearance::AppearanceSave()
- {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*'Use colors and save them as a custom preset
-    saveCancelled=0
-    gosub void dialogGridappearance::AppearanceSubToSave()
-    if saveCancelled then wait
-    'ver116-4b deleted setting graph module colors; gUsePresetColors will do that
-    call gUsePresetColors "Custom";savedAsPresetNum  'To register that we are using this preset and implement it
-    call SetCycleColors 'ver116-4s
-    close #gridappearance
-    call RedrawGraph 0
-    exit sub
-
- '---------------------------Start of AppearanceSubToSave-------
-*/
-}
-void dialogGridappearance::AppearanceSubToSave()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-    WindowWidth = 465
-    WindowHeight = 335
-    UpperLeftX=100
-    UpperLeftY=100
-
-    statictext #colorpreset.statictext1, "Select the Custom Appearance to be replaced by the new colors.",  25,  17, 384,  20
-    statictext #colorpreset.statictext2, "You may also rename the Custom Appearance.",  60,  37, 350,  20
-    ListboxColor$ = "white"
-
-    listbox #colorpreset.List, customPresetNames$(), void dialogGridappearance::AppearanceList(),  145,  82, 160,  90
-    textbox #colorpreset.Name, 145, 200,120, 20
-    statictext #colorpreset, "Name", 105, 200, 40, 20
-    button #colorpreset.Delete,"Delete",void dialogGridappearance::AppearanceDeletePreset(), UL,  70, 240,  90,  40
-    button #colorpreset.Save,"Save",void dialogGridappearance::AppearanceSavePreset(), UL,  180, 240,  90,  40
-    button #colorpreset.Cancel,"Cancel",void dialogGridappearance::AppearanceCancelPreset(), UL, 290, 240,  90,  40
-
-    open "Save Custom Appearance" for dialog_modal as #colorpreset
-    print #colorpreset, "font ms_sans_serif 10"
-    print #colorpreset, "trapclose void dialogGridappearance::PresetClosebox()"
-    print #colorpreset.List, "singleClickSelect"
-    wait
-*/
-}
 void dialogGridappearance::PresetClosebox()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
@@ -217,11 +174,10 @@ void dialogGridappearance::AppearanceSavePreset()
 void dialogGridappearance::AppearanceCancelPreset()
  {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*'Perform action for the button named 'Cancel'
-    close #colorpreset
-    saveCancelled=1
-    return
- '---------------------------End of AppearanceSubToSave-------
+  //Perform action for the button named 'Cancel'
+//    close #colorpreset
+/*    saveCancelled=1;
+    return;
 */
 }
 void dialogGridappearance::addText(qreal x, qreal y, QString text, QColor color)
@@ -306,7 +262,8 @@ void dialogGridappearance::gGetInfoColors(QString &fore, QString &back)
 void dialogGridappearance::gSetTraceColors(QString &col1, QString &col2)
 {
   //Set color of graph traces
-  gTrace1Color=col1; gTrace2Color=col2;
+  gTrace1Color=col1;
+  gTrace2Color=col2;
 }
 void dialogGridappearance::gGetTraceColors(QString &col1, QString &col2)
 {
@@ -341,6 +298,30 @@ void dialogGridappearance::SetCycleColors()
   cycleColorsAxis1[0]=Y1Col; cycleColorsAxis1[1]=Y1ACol; cycleColorsAxis1[2]=Y1BCol;
   cycleColorsAxis2[0]=Y2Col; cycleColorsAxis2[1]=Y2ACol; cycleColorsAxis2[2]=Y2BCol;
 }
+QString dialogGridappearance::gGetLastPresetColors()
+{
+  //Get last selected color preset
+  return gGraphColorPreset;
+}
+void dialogGridappearance::FillAppearancesArray()
+{
+  for (int i=0; i <= 10; i++)
+  {
+    Appearances[i]="";
+  } //Clear
+  Appearances[0]="DARK";
+  Appearances[1]="LIGHT";
+  int k=1;     //max currently used appearance index ver115-2a
+  for (int i=1; i < 5; i++)    //add custom names  ver115-2a
+  {
+    QString customName=customPresetNames[i];
+    if (customName!="Empty")
+    {
+      k=k+1;
+      Appearances[k]=customName;
+    }
+  }
+}
 
 void dialogGridappearance::on_Cancel_clicked()
 {
@@ -350,7 +331,7 @@ void dialogGridappearance::on_Cancel_clicked()
 void dialogGridappearance::on_BoxY1_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(Y1Col, this);
   if (color.isValid())
   {
     Y1Col = color.name();
@@ -364,7 +345,7 @@ void dialogGridappearance::on_BoxY1_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxY1A_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(Y1ACol, this);
   if (color.isValid())
   {
     Y1ACol = color.name();
@@ -373,23 +354,12 @@ void dialogGridappearance::on_BoxY1A_clicked(const QModelIndex &index)
   }
   ui->BoxY1A->setCurrentRow(-1);
 }
-void dialogGridappearance::on_Use_clicked()
-{
-  //Use but don't save the selected colors
-  gSetGridColors(BackCol, LineCol, BoundsCol);
-  gSetTextColors(XCol, Y1Col, Y2Col, TextCol);
-  gSetTraceColors(Y1Col, Y2Col);
-  gSetSupplementalTraceColors(Y1ACol, Y2ACol, Y1BCol, Y2BCol);
-  SetCycleColors();
-  allowClose = true;
-  close();
-  //call RedrawGraph 0
-}
+
 
 void dialogGridappearance::on_BoxY2_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(Y2Col, this);
   if (color.isValid())
   {
     Y2Col = color.name();
@@ -403,7 +373,7 @@ void dialogGridappearance::on_BoxY2_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxBack_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(BackCol, this);
   if (color.isValid())
   {
     BackCol = color.name();
@@ -416,7 +386,7 @@ void dialogGridappearance::on_BoxBack_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxY1B_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(Y1BCol, this);
   if (color.isValid())
   {
     Y1BCol = color.name();
@@ -429,7 +399,7 @@ void dialogGridappearance::on_BoxY1B_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxX_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(XCol, this);
   if (color.isValid())
   {
     XCol = color.name();
@@ -442,7 +412,7 @@ void dialogGridappearance::on_BoxX_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxBounds_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(BoundsCol, this);
   if (color.isValid())
   {
     BoundsCol = color.name();
@@ -455,7 +425,7 @@ void dialogGridappearance::on_BoxBounds_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxGrid_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(LineCol, this);
   if (color.isValid())
   {
     LineCol = color.name();
@@ -468,7 +438,7 @@ void dialogGridappearance::on_BoxGrid_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxText_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(TextCol, this);
   if (color.isValid())
   {
     TextCol = color.name();
@@ -481,7 +451,7 @@ void dialogGridappearance::on_BoxText_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxY2A_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(Y2ACol, this);
   if (color.isValid())
   {
     Y2ACol = color.name();
@@ -494,7 +464,7 @@ void dialogGridappearance::on_BoxY2A_clicked(const QModelIndex &index)
 void dialogGridappearance::on_BoxY2B_clicked(const QModelIndex &index)
 {
   Q_UNUSED(index);
-  QColor color = QColorDialog::getColor();
+  QColor color = QColorDialog::getColor(Y2BCol, this);
   if (color.isValid())
   {
     Y2BCol = color.name();
@@ -502,4 +472,230 @@ void dialogGridappearance::on_BoxY2B_clicked(const QModelIndex &index)
     AppearanceDrawSample();
   }
   ui->BoxY2B->setCurrentRow(-1);
+}
+void dialogGridappearance::on_Use_clicked()
+{
+  //Use but don't save the selected colors
+  gSetGridColors(BackCol, LineCol, BoundsCol);
+  gSetTextColors(XCol, Y1Col, Y2Col, TextCol);
+  gSetTraceColors(Y1Col, Y2Col);
+  gSetSupplementalTraceColors(Y1ACol, Y2ACol, Y1BCol, Y2BCol);
+  SetCycleColors();
+  allowClose = true;
+  close();
+}
+void dialogGridappearance::on_Save_clicked()
+{
+  QStringList names;
+  for (int ii=1; ii <= 5; ii++)
+  {
+    names.append(customPresetNames[ii]);
+  }
+  //Use colors and save them as a custom preset
+  DialogSaveCustAppearance getName(this);
+  getName.setNameList(names);
+  getName.exec();
+  if (getName.saveCancelled)
+  {
+    return;
+  }
+  int savedAsPresetNum = getName.getPresetNumber();
+  QString newName = getName.getPresetName();
+
+  gSetCustomPresetColors(savedAsPresetNum, LineCol, BoundsCol, BackCol,
+                         TextCol, XCol, Y1Col, Y2Col,
+                         Y1Col, Y2Col, Y1ACol, Y2ACol, Y1BCol, Y2BCol);
+  customPresetNames[savedAsPresetNum] = newName;
+  FillAppearancesArray();
+
+  gUsePresetColors("Custom" + QString::number(savedAsPresetNum), currentPriAxis);  //To register that we are using this preset and implement it
+  SetCycleColors();
+
+  allowClose = true;
+  close();
+}
+void dialogGridappearance::gUsePresetColors(QString btn, int primaryAxis)
+{
+  //ver116-4b added extra trace colors
+  //Light, Dark and Sepia are hard-wired. In addition, 5 custom colors may be used, and referred to as Custom1, ....
+  //btn$ specifies the preset to be used. It may be in the form of a
+  //button handle, so we drop everything before the period, if there is one.
+  int pos=btn.indexOf(".");
+  if (pos>-1)
+    btn=btn.mid(pos+1);
+  if (btn.left(6).toUpper()=="CUSTOM")
+  {
+    //We need to use a numbered custom color set. btn$ is in the form "CustomN" where N is 1-5
+    gUseCustomPresetColors(btn.mid(7).toInt());
+    return;
+  }
+
+  gTrace1Color = QColor(250,40,20).name();
+  gTrace2Color = QColor(30,30, 230).name();
+  btn=btn.trimmed().toUpper();
+  gGraphColorPreset=btn;     //ver114-2a Save for later use
+  if (btn == "LIGHT")       //Black on white
+  {
+    gGridLineColor = QColor(200, 200, 200).name();
+    gGridBoundsColor=QColor(Qt::black).name();
+    gBackColor = QColor(Qt::white).name();
+    gXTextColor=QColor(Qt::black).name();
+    gGridTextColor=QColor(Qt::black).name();
+    if (primaryAxis==1)
+    {
+      gTrace1Color = QColor(30, 30, 230).name();
+      gTrace2Color = QColor(250, 40, 20).name();   //blue, red
+      gTrace1AColor = QColor(20, 160, 175).name();
+      gTrace2AColor = QColor(230, 140, 20).name();   //dark cyan, orange
+      gTrace1BColor = QColor(0, 150, 50).name();
+      gTrace2BColor = QColor(200, 175, 20).name();   //green, gold
+    }
+    else
+    {
+      gTrace1Color = QColor(250, 40, 20).name();
+      gTrace2Color = QColor(30, 30, 230).name();   //red, blue
+      gTrace1AColor = QColor(230, 140, 20).name();
+      gTrace2AColor = QColor(20, 160, 175).name();   //orange, dark cyan
+      gTrace1BColor = QColor(200, 175, 20).name();
+      gTrace2BColor = QColor(0, 150, 50).name();   //gold, green
+    }
+    gY1TextColor=gTrace1Color;
+    gY2TextColor=gTrace2Color;
+  }
+  else if (btn == "DARK")       //White On black
+  {
+    gGridLineColor = QColor(150, 150, 140).name();
+    gGridBoundsColor = QColor(190, 190, 180).name();
+    gBackColor = QColor(0, 0, 0).name();
+    if (primaryAxis==1)  //ver115-3c
+    {
+      gTrace1Color = QColor(0, 255, 255).name();
+      gTrace2Color = QColor(255, 200, 90).name();  //cyan,orange
+      gTrace1AColor = QColor(100, 190, 255).name();
+      gTrace2AColor = QColor(255, 50, 50).name();   //light blue, red
+      gTrace1BColor = QColor(0, 255, 150).name();
+      gTrace2BColor = QColor(255, 255, 50).name();   //green, yellow
+    }
+    else
+    {
+      gTrace1Color = QColor(255, 200, 90).name();
+      gTrace2Color = QColor(0, 255, 255).name();  //orange, cyan
+      gTrace1AColor = QColor(255, 50, 50).name();
+      gTrace2AColor = QColor(100, 190, 255).name();   //red, light blue
+      gTrace1BColor = QColor(255, 255, 50).name();
+      gTrace2BColor = QColor(0, 255, 150).name();   //yellow, green
+    }
+    gXTextColor = QColor(245, 245, 240).name();
+    gGridTextColor = QColor(245, 245, 240).name();
+    gY1TextColor=gTrace1Color;
+    gY2TextColor=gTrace2Color;
+  }
+  else if (btn == "SEPIA")
+  {
+    gGridLineColor = QColor(255, 230, 180).name();
+    gGridBoundsColor = QColor(115, 85, 0).name();
+    gBackColor = QColor(255, 255, 255).name();
+    gXTextColor=QColor(Qt::black).name();
+    gGridTextColor=QColor(Qt::black).name();
+    if (primaryAxis==1)
+    {
+      gTrace1Color = QColor(30, 30, 230).name();
+      gTrace2Color = QColor(250, 40, 20).name();   //blue, red
+      gTrace1AColor = QColor(20, 160, 175).name();
+      gTrace2AColor = QColor(230, 140, 20).name();   //dark cyan, orange
+      gTrace1BColor = QColor(200, 175, 20).name();
+      gTrace2BColor = QColor(220, 220, 50).name();   //green, yellow
+    }
+    else
+    {
+      gTrace1Color = QColor(250, 40, 20).name();
+      gTrace2Color = QColor(30, 30, 230).name();   //red, blue
+      gTrace1AColor = QColor(230, 140, 20).name();
+      gTrace2AColor = QColor(20, 160, 175).name();   //orange, dark cyan
+      gTrace1BColor = QColor(220, 220, 50).name();
+      gTrace2BColor = QColor(200, 175, 20).name();   //yellow, green
+    }
+    gY1TextColor=gTrace1Color;
+    gY2TextColor=gTrace2Color;
+  }
+}
+
+void dialogGridappearance::gUseCustomPresetColors(int N)
+{
+  //Use preset color set N (1...5) //ver116-4b added extra trace colors
+  if (N<1)
+    N=1;
+  if (N>5)
+    N=5;
+  gGridLineColor=gCustomColors[N][0];
+  gGridBoundsColor=gCustomColors[N][1];
+  gBackColor=gCustomColors[N][2];
+  gGridTextColor=gCustomColors[N][3];
+  gXTextColor=gCustomColors[N][4];
+  gY1TextColor=gCustomColors[N][5];
+  gY2TextColor=gCustomColors[N][6];
+  gTrace1Color=gCustomColors[N][7];
+  gTrace2Color=gCustomColors[N][8];
+  gTrace1AColor=gCustomColors[N][9];
+  gTrace2AColor=gCustomColors[N][10];
+  gTrace1BColor=gCustomColors[N][11];
+  gTrace2BColor=gCustomColors[N][12];
+  gGraphColorPreset="Custom" + QString::number(N);       //So we can identify what set of colors we last started with
+}
+void dialogGridappearance::gSetCustomPresetColors(int N, QString grid, QString bounds, QString back, QString gridText, QString XText, QString Y1Text, QString Y2Text, QString trace1, QString trace2, QString trace1A, QString trace2A, QString trace1B, QString trace2B)
+{
+  //Set Nth (1-5) preset color set; don't actually implement this set yet
+  if (N<1) N=1;
+  if (N>5) N=5;
+  gCustomColors[N][0]=grid;
+  gCustomColors[N][1]=bounds;
+  gCustomColors[N][2]=back;
+  gCustomColors[N][3]=gridText;
+  gCustomColors[N][4]=XText;
+  gCustomColors[N][5]=Y1Text;
+  gCustomColors[N][6]=Y2Text;
+  gCustomColors[N][7]=trace1;
+  gCustomColors[N][8]=trace2;
+  gCustomColors[N][9]=trace1A;
+  gCustomColors[N][10]=trace2A;
+  gCustomColors[N][11]=trace1B;
+  gCustomColors[N][12]=trace2B;
+}
+void dialogGridappearance::gGetCustomPresetColors(int N, QString &grid, QString &bounds, QString &back, QString &gridText, QString &XText, QString &Y1Text, QString &Y2Text, QString &trace1, QString &trace2, QString &trace1A, QString &trace2A, QString &trace1B, QString &trace2B)
+{
+  //Get Nth (1-5) preset color set
+  if (N<1) N=1;
+  if (N>5) N=5;
+  N = N -1;
+  grid=gCustomColors[N][0];
+  bounds=gCustomColors[N][1]; //ver116-4b fixed second index of all these
+  back=gCustomColors[N][2];
+  gridText=gCustomColors[N][3];
+  XText=gCustomColors[N][4];
+  Y1Text=gCustomColors[N][5];
+  Y2Text=gCustomColors[N][6];
+  trace1=gCustomColors[N][7];trace2=gCustomColors[N][8];
+  trace1A=gCustomColors[N][9];trace2A=gCustomColors[N][10];
+  trace1B=gCustomColors[N][11];trace2B=gCustomColors[N][12];
+}
+void dialogGridappearance::gInitCustomColors()
+{
+//Initialize the custom colors to default values just to be valid
+  for (int N=0; N < 5; N++)
+  {
+    //White background, dark foreground
+    gCustomColors[N][0]="200 200 200";   //Line
+    gCustomColors[N][1]="black";         //Bounds
+    gCustomColors[N][2]="white";         //Background
+    gCustomColors[N][3]="black";         //GridText
+    gCustomColors[N][4]="black";         //XText
+    gCustomColors[N][5]="250 40 20";     //Y1Text off-red
+    gCustomColors[N][6]="30 30 230";     //Y2Text off-blue
+    gCustomColors[N][7]="250 40 20";     //Trace1 off-red
+    gCustomColors[N][8]="30 30 230";     //Trace2 off-blue
+    gTrace1AColor="230 140 20";         //Trace1A orange
+    gTrace2AColor="20 160 175";         //Trace 2A dark cyan
+    gTrace1BColor="220 220 50";         //Trace1B yellow
+    gTrace2BColor="200 175 20";         //Trace2B green
+  }
 }

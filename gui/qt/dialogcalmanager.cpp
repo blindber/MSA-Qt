@@ -39,6 +39,10 @@ dialogCalManager::dialogCalManager(QWidget *parent) :
   ui(new Ui::dialogCalManager)
 {
   ui->setupUi(this);
+
+  connect(this, SIGNAL(RequireRestart()), parent, SLOT(RequireRestart()));
+  connect(this, SIGNAL(PartialRestart()), parent, SLOT(PartialRestart()));
+
   calMagTable.mresize(802,3);
   calFreqTable.mresize(802,2);
   calMagCoeffTable.mresize(802,8);   //SEWcal
@@ -48,7 +52,10 @@ dialogCalManager::dialogCalManager(QWidget *parent) :
   calFreqPoints = 0;
   calfigModuleVersion = 0;
 
-
+  QFont font("Monospace");
+  font.setStyleHint(QFont::TypeWriter);
+  ui->te->setFont(font);
+  ui->pathList->setFont(font);
 }
 
 dialogCalManager::~dialogCalManager()
@@ -61,15 +68,24 @@ void dialogCalManager::setMsaConfig(msaConfig *config)
   activeConfig = config;
 }
 
+void dialogCalManager::setGlobalVars(globalVars *newVars)
+{
+  vars = newVars;
+}
+void dialogCalManager::setFilePath(QString path)
+{
+  DefaultDir = path;
+}
+
+
 
 //This is a gosub subroutine rather than a true subroutine so that it can call [Measure] which
 //in turn can call the non-subroutines that currently run the MSA hardware.
 void dialogCalManager::calManRunManager(int hasVNA)
 {
-  resize(575,620);
-
   calManPrepareEntry();
-  calManFileList[0]="0 (Frequency)";
+  calManFileList.clear();
+  calManFileList.append("0 (Frequency)");
 
   ui->data1->setStyleSheet( "background: cyan;" );
   ui->data2->setStyleSheet( "background: cyan;" );
@@ -79,48 +95,58 @@ void dialogCalManager::calManRunManager(int hasVNA)
   calSetDoPhase(hasVNA);
 
   calManEnterAvailablePaths();  //Loads list of filter files
-  calEditorPathNum=0;    //SEW6 ver113-7c
-  calManFile("Load");    //Loads frequency file (creates if necessary)
+  ui->pathList->setCurrentRow(0);
+  on_pathList_currentRowChanged(0);
+  calEditorPathNum=0;
+  calManFileReload();    //Loads frequency file (creates if necessary)
   exec();
 }
 void dialogCalManager::calManForceOn()
-{/*//ver116-4j
-    #calman.ForceVal, "!show" : #calman.ForceVal, "0" : wait
-*/
+{
+  ui->ForceVal->setVisible(true);
+  ui->ForceVal->setText("0");
 }
 void dialogCalManager::calManForceOff()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//ver116-4j
-    #calman.ForceVal, "!hide" : wait
-*/
+{  
+  ui->ForceVal->setVisible(false);
 }
 void dialogCalManager::calManSetPhase()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*/Only relevant when checkbox is implemented
-    call calSetDoPhase 1
-    if calEditorPathNum<>0 then call calManClean "" : call calManPrepareEntry
-    wait
-*/
+  /*
+  calSetDoPhase(1);
+  if (calEditorPathNum!=0)
+  {
+    calManClean("");
+    calManPrepareEntry();
+  }*/
 }
 void dialogCalManager::calManResetPhase()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//Only relevant when checkbox is implemented
-    call calSetDoPhase 0
-    if calEditorPathNum<>0 then call calManClean ""  : call calManPrepareEntry
-    wait
-*/
+{/*
+  calSetDoPhase(0);
+  if (calEditorPathNum!=0)
+  {
+    calManClean("");
+    calManPrepareEntry();
+  }*/
 }
 void dialogCalManager::calManBtnReturn()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+  int doCan=calManWarnToSave(1); //Warn to save if data changed. Allow cancel.
+     if (doCan==1)
+     {
+       return;  //cancelled  Exit calManRunManager
+     }
+     calInstallFile(0);   //Leave with freq file installed
+     calCloseWindows();
+     haltsweep=0;
+     RequireRestart();
+     */
 }
 void dialogCalManager::calManFinished()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*    goto [calManBtnReturn()  //ver116-1b
-*/
+  calManBtnReturn();
 }
 void dialogCalManager::calCloseWindows()
 {
@@ -415,6 +441,23 @@ return
 */
 }
 
+void dialogCalManager::calManClean()
+{
+  /*
+  'Format and Sort list
+      'We just get the data and put it back
+      fErr$=calLoadFromEditor$("#calman.te", calEditorPathNum) 'This also sorts
+      if fErr$<>"" then notice "Bad Data. "+fErr$ : exit sub
+      if calEditorPathNum=0 then nPoints=calNumFreqPoints() else nPoints=calNumMagPoints()
+      #calman.te, "!cls"
+      call calSaveToEditor  "#calman.te", calEditorPathNum
+      if nPoints=0 then
+          'If there are no data points, start over with a clean header
+          call calCreateDefaults calEditorPathNum,"#calman.te", 0 'zero signals no points
+      end if
+          */
+}
+
 void dialogCalManager::calManDisplayDefault(QString btn)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
@@ -426,69 +469,66 @@ void dialogCalManager::calManDisplayDefault(QString btn)
 end sub
 */
 }
-void dialogCalManager::calManSelectPath()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//Handle user selection of calibration file ver116-1b made this a branch label menu item
-    //Can be called only from menu
-    //Set current path number. Will be negative if there is no selection
-    if calManWarnToSave(1)=1 then wait   //cancelled ver116-1b
-    prevPathNum=calEditorPathNum
-    #calman.pathList, "selectionindex? sel"
-    if sel=0 then notice "No File Selected." : wait  //Must be error ver116-1b
-    calEditorPathNum=sel-1    //sel starts at 1 if valid selection; calEditorPathNum starts at 0
-    if calManFile("Reload")=1 then  //Load new file ver116-1b
-        //User cancelled the switch
-        #calman.pathList, "selectindex ";prevPathNum+1  //index is one more than path number
-        calEditorPathNum=prevPathNum
-    end if
-
-    if calEditorPathNum=0 then
-        #calman.teLabel, "Frequency Calibration Table"
-    else
-        #calman.teLabel, "Path Calibration Table"
-        path$="Path ";calEditorPathNum   //set main MSA path variable ver116-1b
-        call SelectFilter filtbank : gosub [PartialRestart]  //ver116-4j
-    end if
-    calManRefPhase=0    //ver116-4j
-wait
-*/
-}
 void dialogCalManager::calManEnterAvailablePaths()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//Create list of available paths
+  //Create list of available paths
     //The list is based on the MSA info in MSAFilters(), which lists
     //freq and bw for each calibration path, starting at path 1=index 1
     //We create a list where index 0 is the frequency cal file, and index N (1...)
     //is the Nth mag cal path.
 
-    for i=0 to 40: calManFileList$(i)="": next i   //Clear list
-    calManFileList$(0)="0 (Frequency)"
-    for i=1 to MSANumFilters
-        freq$=str$(MSAFilters(i,0)) : bw=MSAFilters(i,1) : bw$=str$(bw)
-        freq$=freq$+Space$(max(0,7-len(freq$)))   //makes freq$ a fixed width
-        if bw=0 then bwPad$="   " else _
-                bwPad$=Space$(5-int(Log(bw)/Log(10))) //Aligns bw$ at decimal;
-        bw$=bwPad$+str$(bw)
-        configFormatFilter$=freq$+bw$
-        thisFilt$=freq$+bw$
-        calManFileList$(i)=str$(i) + " (" + Trim$(thisFilt$) + ")"   //Path num plus freq and bw
-    next
-    #calman.pathList, "reload"  //Loads new strings into listbox
-end sub
-*/
+  calManFileList.clear();
+  calManFileList.append("0 (Frequency)");
+
+  QString bwPad;
+  QString bwStr;
+  QString thisFilt;
+  QString freq;
+  float bw;
+  for (int i=1; i <= activeConfig->MSANumFilters; i++)
+  {
+    freq = QString::number(activeConfig->MSAFilters[i][0]);
+    bw = activeConfig->MSAFilters[i][1];
+
+    freq = freq + util.Space(qMax(0,7-freq.length()));   //makes freq a fixed width
+    if (bw==0)
+      bwPad="   ";
+    else
+      bwPad = util.Space(5-((int)(log(bw)/log(10)))); //Aligns bw at decimal;
+    bwStr = bwPad + QString::number(bw);
+    thisFilt = freq + bwStr;
+    calManFileList.append(QString::number(i) + " (" + thisFilt.trimmed() + ")");   //Path num plus freq and bw
+  }
+  ui->pathList->blockSignals(true);
+  //Clear list
+  ui->pathList->clear();
+  //Loads new strings into listbox
+  ui->pathList->addItems(calManFileList);
+  ui->pathList->setCurrentRow(0);
+  ui->pathList->blockSignals(false);
 }
 void dialogCalManager::calManPrepareEntry()
 {
 //hide all entry boxes, labels and buttons
-  ui->Lref->setVisible(false); ui->ref->setVisible(false); ui->ref2->setVisible(false);
-  ui->Lref2->setVisible(false); ui->data1->setVisible(false); ui->Ldata1->setVisible(false);
-  ui->data2->setVisible(false); ui->Ldata2->setVisible(false); ui->data3->setVisible(false);
-  ui->Ldata3->setVisible(false); ui->Measure->setVisible(false); ui->Enter->setVisible(false);
-  ui->NextPoint->setVisible(false); ui->PrevPoint->setVisible(false); ui->EnterAll->setVisible(false);
+  ui->Lref->setVisible(false);
+  ui->ref->setVisible(false);
+  ui->ref2->setVisible(false);
+  ui->Lref2->setVisible(false);
+  ui->data1->setVisible(false);
+  ui->Ldata1->setVisible(false);
+  ui->data2->setVisible(false);
+  ui->Ldata2->setVisible(false);
+  ui->data3->setVisible(false);
+  ui->Ldata3->setVisible(false);
+  ui->Measure->setVisible(false);
+  ui->Enter->setVisible(false);
+  ui->NextPoint->setVisible(false);
+  ui->PrevPoint->setVisible(false);
+  ui->EnterAll->setVisible(false);
   ui->StartEntry->setVisible(true);
-  ui->Force->setVisible(false); ui->ForceVal->setVisible(false);
+  ui->Force->setVisible(false);
+  ui->ForceVal->setVisible(false);
   ui->enterInstruct->clear();
   //ui->enterInstruct, "place 10 15"
   ui->enterInstruct->insertPlainText("To begin entry of calibration data, click Start Entry.\n");
@@ -498,79 +538,40 @@ void dialogCalManager::calManPrepareEntry()
 void dialogCalManager::calManEnterInstructions(QString btn)
 {
 }
-void dialogCalManager::calManWarnToSave(int allowCancel)
+int dialogCalManager::calManWarnToSave(int allowCancel)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//Give warning to save if data has changed. Return 1 to cancel
-    //calManOldText$ contains the old data to compare against. This method is used
-    //because the !modified? command cannot be reset at the time of a Save.
-    //If allowCancel=1, the message box will allow the user to cancel
-    can=0
-    #calman.te, "!contents? curr$"  //get current data
-    if calManOldText$=curr$ then calManWarnToSave=0: exit function
+  //Give warning to save if data has changed. Return 1 to cancel
+  //calManOldText$ contains the old data to compare against. This method is used
+  //because the !modified? command cannot be reset at the time of a Save.
+  //If allowCancel=1, the message box will allow the user to cancel
 
-        //Put up a message box.
-    msg$="Unsaved calibration changes will be lost. Do you want to SAVE first?"
-    ans$=uPrompt$("Warning", msg$,1,allowCancel)    //yes, no, possibly cancel
-    if ans$="no" then calManWarnToSave=0: exit function    //Proceed, no save
-    if ans$="cancel" then calManWarnToSave=1 : exit function   //Cancel
-    errMsg$=calLoadFromEditor$("#calman.te", calEditorPathNum)   //Get current text editor data ver116-1b
-    if errMsg$<>"" then   //ver116-1b
-        notice "Data Error: "+errMsg$+ "; file not saved."  //ver116-1b
-        calManWarnToSave=allowCancel        //cancel if possible ver116-1b
-        exit function  //ver116-1b
-    end if
-    call calSaveToFile calEditorPathNum     //User wants to save so do it
-    call calInstallFile calEditorPathNum     //Re-read to check for errors SEWcal2,ver113-7g
-    #calman.te, "!contents? calManOldText$"  //Save for future compare
-    calManWarnToSave=0  //No cancel
-end function
-*/
-}
-void dialogCalManager::calManBtnFile()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-}
-int dialogCalManager::calManFile(QString btn)
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//Load/save/create files returns 0, except 1 if user cancels
-    //All file loads must be done through this function
-    calManFile=0
-    select case btn$
-        case  "Load", "Reload"
-            if calEditorPathNum<0 then notice "You must select a calibration file to save."
-            if calEditorPathNum=0 then
-                        //Before loading the frequency file we must be sure that the mag cal
-                    //data is valid for the MSA//s active filter
-                match=0
-                for i=1 to MSANumFilters
-                    f=MSAFilters(i, 0) : bw=MSAFilters(i,1)
-                    if f=finalfreq and bw=finalbw then match=i : exit for
-                next i
-                if match=0 then notice "Can//t find active filter; don't use Measure."    //only possible in debugging
-                call calInstallFile match  //Loads mag cal file
-            end if
-            call calInstallFile calEditorPathNum
-            #calman.te, "!cls"
-            call calSaveToEditor "#calman.te", calEditorPathNum //display data
-            call calManPrepareEntry //Prepare buttons and instructions for data entry
-        case "Save"
-            if calEditorPathNum<0 then notice "You must select a calibration file to save."
-            errMsg$=calLoadFromEditor$("#calman.te", calEditorPathNum)
-            if errMsg$<>"" then notice "Data Error: "+errMsg$+ "; file not saved." : exit function
-            call calSaveToFile, calEditorPathNum
-            dum=calManFile("Load")    //Reload to update editor and verify data
-        case "Default"
-            if calManWarnToSave(1)=1 then calManFile=1 : exit function   //Cancelled  moved here by ver116-1b
-            if calEditorPathNum<0 then notice "You must first select a calibration file."
-            call calCreateDefaults calEditorPathNum, "", 1
-            call calManPrepareEntry
-        case else
-    end select
-    #calman.te, "!contents? calManOldText$"  //Save for future compare
-end function
-*/
+  if (teTextChanged == false)
+  {
+    return 0;
+  }
+
+  //Put up a message box.
+  QString msg = "Unsaved calibration changes will be lost. Do you want to SAVE first?";
+  QString ans=util.uPrompt("Warning", msg, 1, allowCancel);    //yes, no, possibly cancel
+  if (ans=="no")
+  {
+    return 0;    //Proceed, no save
+  }
+  if (ans=="cancel")
+  {
+    return 1;
+  }
+  QString errMsg=calLoadFromEditor(ui->te, calEditorPathNum);   //Get current text editor data ver116-1b
+  if (errMsg!="")
+  {
+    QMessageBox::information(this, "Notice", "Data Error: " + errMsg + "; file not saved.");
+    return allowCancel;  //cancel if possible ver116-1b
+  }
+  calSaveToFile(calEditorPathNum);     //User wants to save so do it
+  calInstallFile(calEditorPathNum);     //Re-read to check for errors SEWcal2,ver113-7g
+  teTextChanged = false;
+  return 0;
 }
 //@====================Original Calibration Manager Ended Here=====================
 
@@ -600,17 +601,17 @@ void dialogCalManager::calInitFirstUse(int maxMagPoints, int maxFreqPoints, int 
   if (maxMagPoints<=800)
     calMaxMagPoints=801;
   else
-    calMaxMagPoints=maxMagPoints+1; //ver114-4b
+    calMaxMagPoints=maxMagPoints+1;
   if (maxFreqPoints<=800)
     calMaxFreqPoints=801;
   else
-    calMaxFreqPoints=maxFreqPoints+1; //ver114-4b
+    calMaxFreqPoints=maxFreqPoints+1;
   calFileCommentChar="*";        //Use asterisk as comment char
 
   calMagTable.mresize(calMaxMagPoints+1,3);
   calFreqTable.mresize(calMaxFreqPoints+1,2);
-  calMagCoeffTable.mresize(calMaxMagPoints+1,8);   //SEWcal
-  calFreqCoeffTable.mresize(calMaxFreqPoints+1,4);   //SEWcal   //ver114-4b
+  calMagCoeffTable.mresize(calMaxMagPoints+1,8);
+  calFreqCoeffTable.mresize(calMaxFreqPoints+1,4);
 
   calMagFileHadPhase=0;
   calDoPhase=doPhase;  //ver114-5q
@@ -1002,46 +1003,62 @@ int dialogCalManager::calBinarySearch(int dataType, float searchVal)
 }
 void dialogCalManager::calConvertMagPhase(float magdata, int wantPhase, float &magDB, float &phaseCorrect)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  'This function returns the magnitude (magDB) and the phase correction (phaseCorrect)
-    'based on the ADC signal strength reading magdata. The phase correction is returned
-    'only if wantPhase=1; otherwise zero is returned.
+  //This function returns the magnitude (magDB) and the phase correction (phaseCorrect)
+  //based on the ADC signal strength reading magdata. The phase correction is returned
+  //only if wantPhase=1; otherwise zero is returned.
 
-    'It uses cubic interpolation on the calibration entries of calMagTable.
-    'Note: calMagTable is organized with the smallest ADC values first
-        'SEW8 revised call to calBinarySearch
-    index=calBinarySearch(0,magdata)   'search calMagTable
-    'index now is the first entry >= magdata, except that if no entry meets that test,
-    'index will be one past the end.
-    phaseCorrect=0
-    if index>calMagPoints then
-        'Off top end;use largest mag and phase correction for largest ADC entry
-        magDB=calMagTable(calMagPoints,1)
-        if wantPhase then phaseCorrect=calMagTable(calMagPoints,2)  'ver115-1a
-        exit sub
-    end if
-    if index=1 then
-        'Off bottom end;use mag and phase correction for smallest ADC entry
-        magDB=calMagTable(1,1)
-        if wantPhase then phaseCorrect=calMagTable(1,2) 'ver115-1a
-        exit sub
-    end if
+  //It uses cubic interpolation on the calibration entries of calMagTable.
+  //Note: calMagTable is organized with the smallest ADC values first
+  //SEW8 revised call to calBinarySearch
+  int index=calBinarySearch(0, magdata);   //search calMagTable
+  //index now is the first entry >= magdata, except that if no entry meets that test,
+  //index will be one past the end.
+  phaseCorrect=0;
+  if (index>calMagPoints)
+  {
+    //Off top end;use largest mag and phase correction for largest ADC entry
+    magDB=calMagTable[calMagPoints][1];
+    if (wantPhase)
+    {
+      phaseCorrect=calMagTable[calMagPoints][2];
+    }
+    return;
+  }
+  if (index==1)
+  {
+    //Off bottom end;use mag and phase correction for smallest ADC entry
+    magDB=calMagTable[1][1];
+    if (wantPhase)
+    {
+      phaseCorrect=calMagTable[1][2];
+    }
+    return;
+  }
 
-    'Evaluate cubic at x=magdata
-    dif=magdata-calMagTable(index,0)
-    A=calMagCoeffTable(index,0) : B=calMagCoeffTable(index,1)
-    C=calMagCoeffTable(index,2) : D=calMagCoeffTable(index,3)
-    magDB = A+dif*(B+dif*(C+dif*D))
+  //Evaluate cubic at x=magdata
+  float dif = magdata - calMagTable[index][0];
+  float A=calMagCoeffTable[index][0];
+  float B=calMagCoeffTable[index][1];
+  float C=calMagCoeffTable[index][2];
+  float D=calMagCoeffTable[index][3];
+  magDB = A+dif*(B+dif*(C+dif*D));
 
-    if wantPhase=1 then
-        A=calMagCoeffTable(index,4) : B=calMagCoeffTable(index,5)
-        C=calMagCoeffTable(index,6) : D=calMagCoeffTable(index,7)
-        phaseCorrect = A+dif*(B+dif*(C+dif*D))
-        if phaseCorrect<=-180 then phaseCorrect=phaseCorrect+360 'ver113-7e
-        if phaseCorrect>180 then phaseCorrect=phaseCorrect-360 'ver113-7e
-    end if
-*/
+  if (wantPhase==1)
+  {
+    float A=calMagCoeffTable[index][4];
+    float B=calMagCoeffTable[index][5];
+    float C=calMagCoeffTable[index][6];
+    float D=calMagCoeffTable[index][7];
+    phaseCorrect = A+dif*(B+dif*(C+dif*D));
+    if (phaseCorrect<=-180)
+    {
+      phaseCorrect=phaseCorrect+360;
+    }
+    if (phaseCorrect>180)
+    {
+      phaseCorrect=phaseCorrect-360;
+    }
+  }
 }
 float dialogCalManager::calConvertFreqError(float freq)
 {
@@ -1306,134 +1323,124 @@ void dialogCalManager::calInstallFile(int pathNum)
 }
 void dialogCalManager::calSaveToFile(int pathNum)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub calSaveToEditor editor$, pathNum   'Save to text editor
-    'Save variables and point array into text editor, in same format as a file
-    'calFileComments$() are placed at the beginning of the data, marked
-    'with calFileCommentChar$
-    startLine=1
-    call calOutputData editor$, 0 ,pathNum,startLine
-    #editor$, "!select 1,1"
-    #editor$, "!copy" : #editor$, "!paste"  'This scrolls the window to the top
-end sub*/
+  //Save a cal file for path number pathNum. We assume the necessary
+  //folders are already in place
+  //If pathNum=0 we are dealing with a freq cal file.
+  //File output replaces any existing file of the same name.
+  //calFileComments$() are placed at the beginning of the file, marked
+  //with calFileCommentChar$
+
+  QString calFile = calFilePath() + calFileName(pathNum);
+  QFile fOut(calFile);
+  int startLine=1;
+  if (fOut.open(QFile::WriteOnly | QFile::Text))
+  {
+    QStringList toSave;
+    calOutputData(toSave, pathNum, startLine);
+
+    QTextStream s(&fOut);
+    QString settings = toSave.join("\n") + "\n";
+    s << settings;
+
+    fOut.close();
+  }
 }
-void dialogCalManager::calSaveToEditor(QString editor, int pathNum)
+void dialogCalManager::calSaveToEditor(QPlainTextEdit *editor, int pathNum)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub calSaveToEditor editor$, pathNum   'Save to text editor
-    'Save variables and point array into text editor, in same format as a file
-    'calFileComments$() are placed at the beginning of the data, marked
-    'with calFileCommentChar$
-    startLine=1
-    call calOutputData editor$, 0 ,pathNum,startLine
-    #editor$, "!select 1,1"
-    #editor$, "!copy" : #editor$, "!paste"  'This scrolls the window to the top
-end sub*/
+
+//Save to text editor
+    //Save variables and point array into text editor, in same format as a file
+    //calFileComments$() are placed at the beginning of the data, marked
+    //with calFileCommentChar$
+    int startLine=1;
+    QStringList newText;
+    calOutputData(newText, pathNum, startLine);
+    editor->clear();
+    editor->insertPlainText(newText.join("\n"));
+    editor->moveCursor(QTextCursor::Start);
+    teTextChanged = false;
+//    #editor$, "!select 1,1"
+//    #editor$, "!copy" : #editor$, "!paste"  //This scrolls the window to the top
 }
-void dialogCalManager::calOutputData(QString calFile, int isFile, int pathNum, int &startLine)
+void dialogCalManager::calOutputData(QStringList &lines, int pathNum, int &startLine)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  sub calOutputData calFile$, isFile, pathNum, byRef startLine     'Output data to file or text editor
-      'Save data as a frequency cal file. Replaces any existing file.
-      'The data is sent to  a file already opened, whose handle is in calFile$
-      'or from a text editor whose handle is in calFile$. The type of source is
-      'indicated by isFile (1 for file, 0 for textEditor).
-      'calFileComments$() are placed at the beginning of the file, marked
-      'with calFileCommentChar$
-      'We update startLine to one past the last line we write
+  //Output data to file or text editor
+  //Save data as a frequency cal file. Replaces any existing file.
+  //The data is sent to  a file already opened, whose handle is in calFile$
+  //or from a text editor whose handle is in calFile$. The type of source is
+  //indicated by isFile (1 for file, 0 for textEditor).
+  //calFileComments$() are placed at the beginning of the file, marked
+  //with calFileCommentChar$
+  //We update startLine to one past the last line we write
 
-      'Start with comments
-      for i=1 to 2
-          com$=calFileComments$(i)
-          if com$<>"" then print #calFile$, calFileCommentChar$+com$
-      next i
+  //Start with comments
 
-      print #calFile$, "CalVersion=";using("##.##", calModuleVersion)
-      if pathNum=0 then
-          print #calFile$, "FreqTable="
-          print #calFile$, calFileCommentChar$+"    MHz        db   in increasing order of MHz"
-          for i=1 to calFreqPoints
-              f=calFreqTable(i,0)
-              f$=using ("####.######", calFreqTable(i,0))
-              v$=using ("####.###", calFreqTable(i,1))  'ver115-1e
-              print #calFile$, f$;"  ";v$  'output data line
-          next i
+  for (int i=1; i <= 2; i++)
+  {
+    QString com = calFileComments[i];
+    if (com!="")
+      lines.append(calFileCommentChar + com);
+  }
+
+  lines.append("CalVersion=" + util.usingF("##.##", calModuleVersion));
+  if (pathNum==0)
+  {
+    lines.append("FreqTable=");
+    lines.append(calFileCommentChar+"    MHz        db   in increasing order of MHz");
+    for (int i=1; i <= calFreqPoints; i++)
+    {
+      //float f=calFreqTable[i][0];
+      QString f = util.usingF("####.######", calFreqTable[i][0]);
+      QString v = util.usingF("####.###", calFreqTable[i][1]);
+      lines.append(f+"  "+v);  //output data line
+    }
+  }
+  else
+  {
+    lines.append("MagTable=");
+    if (calDoPhase==0)
+    {
+      lines.append(calFileCommentChar + "  ADC      dBm   in increasing order of ADC");
+    }
+    else
+    {
+      lines.append(calFileCommentChar + "  ADC      dBm      Phase   in increasing order of ADC");
+    }
+    for (int i=1; i <= calMagPoints; i++)
+    {
+      QString adc = util.usingF("#######", calMagTable[i][0]);
+      QString v = util.usingF("####.###", calMagTable[i][1]);
+      QString p = util.usingF("####.##", calMagTable[i][2]);
+      if (calDoPhase==0)
+      {
+        lines.append(adc + "  " +v);  //output data line
+      }
       else
-          print #calFile$, "MagTable="
-          if calDoPhase=0 then
-              print #calFile$, calFileCommentChar$+"  ADC      dBm   in increasing order of ADC"  'ver116-1b
-          else
-              print #calFile$, calFileCommentChar$+"  ADC      dBm      Phase   in increasing order of ADC"   'ver116-1b
-          end if
-          for i=1 to calMagPoints
-              adc$=using ("#######", calMagTable(i,0))
-              v$=using ("####.###", calMagTable(i,1))  'ver115-1e
-              p$=using ("####.##", calMagTable(i,2))
-              if calDoPhase=0 then
-                  print #calFile$, adc$;"  ";v$  'output data line
-              else
-                  print #calFile$, adc$;"  ";v$;"  ";p$ 'output data line
-              end if
-          next i
-      end if
-      'For now, we don't print the end tag, nor do we require it on input
-      'print #calFile$, "EndCalFile="
-      end sub
-      */
+      {
+        lines.append(adc + "  " + v + "  " + p); //output data line
+      }
+    }
+  }
+  //For now, we don't print the end tag, nor do we require it on input
+  //print #calFile$, "EndCalFile="
 }
 QString dialogCalManager::calOpenFile(int pathNum)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
-sub calOutputData calFile$, isFile, pathNum, byRef startLine     'Output data to file or text editor
-    'Save data as a frequency cal file. Replaces any existing file.
-    'The data is sent to  a file already opened, whose handle is in calFile$
-    'or from a text editor whose handle is in calFile$. The type of source is
-    'indicated by isFile (1 for file, 0 for textEditor).
-    'calFileComments$() are placed at the beginning of the file, marked
-    'with calFileCommentChar$
-    'We update startLine to one past the last line we write
-
-    'Start with comments
-    for i=1 to 2
-        com$=calFileComments$(i)
-        if com$<>"" then print #calFile$, calFileCommentChar$+com$
-    next i
-
-    print #calFile$, "CalVersion=";using("##.##", calModuleVersion)
-    if pathNum=0 then
-        print #calFile$, "FreqTable="
-        print #calFile$, calFileCommentChar$+"    MHz        db   in increasing order of MHz"
-        for i=1 to calFreqPoints
-            f=calFreqTable(i,0)
-            f$=using ("####.######", calFreqTable(i,0))
-            v$=using ("####.###", calFreqTable(i,1))  'ver115-1e
-            print #calFile$, f$;"  ";v$  'output data line
-        next i
-    else
-        print #calFile$, "MagTable="
-        if calDoPhase=0 then
-            print #calFile$, calFileCommentChar$+"  ADC      dBm   in increasing order of ADC"  'ver116-1b
-        else
-            print #calFile$, calFileCommentChar$+"  ADC      dBm      Phase   in increasing order of ADC"   'ver116-1b
-        end if
-        for i=1 to calMagPoints
-            adc$=using ("#######", calMagTable(i,0))
-            v$=using ("####.###", calMagTable(i,1))  'ver115-1e
-            p$=using ("####.##", calMagTable(i,2))
-            if calDoPhase=0 then
-                print #calFile$, adc$;"  ";v$  'output data line
-            else
-                print #calFile$, adc$;"  ";v$;"  ";p$ 'output data line
-            end if
-        next i
-    end if
-    'For now, we don't print the end tag, nor do we require it on input
-    'print #calFile$, "EndCalFile="
-end sub*/
+   'Open calibration file for path number pathNum; return its handle
+    'if pathNum=0 then we want freq cal file
+    'If file does not exist, return "".
+    fName$=calFileName$(pathNum)
+    On Error goto [noFile]
+    open fName$ for input as #calFile
+    calOpenFile$="#calFile"
+    exit function
+[noFile]
+    fName$=""
+    calOpenFile$="" 'ver114-2f
+*/
   return "fix me";
 }
 QString dialogCalManager::calFileName(int pathNum)
@@ -1451,20 +1458,31 @@ QString dialogCalManager::calFilePath()
   //Return path name for cal files, ending in "\"
   return DefaultDir + "/MSA_Info/MSA_Cal/";
 }
-QString dialogCalManager::calLoadFromEditor(QString editor, int pathNum)
+QString dialogCalManager::calLoadFromEditor(QPlainTextEdit *editor, int pathNum)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  function calLoadFromEditor$(editor$,pathNum) 'Read data from text editor. Return error message
-      'editor$ is the handle of the text editor. We also sort.
-      startLine=1 : isFile=0
-      fErr$=calReadFile$(editor$,isFile,pathNum,startLine)
-      if pathNum=0 then call calSortFreq else call calSortMag
-      calLoadFromEditor$=fErr$
-      if pathNum<>0 then finalfreq=MSAFilters(pathNum, 0) : finalbw=MSAFilters(pathNum, 1)   'SEW7 made conditional
-      end function
-      */
-  return "fix me";
+
+  //Read data from text editor. Return error message
+  //editor$ is the handle of the text editor. We also sort.
+  int startLine=0;
+  int isFile=0;
+  QString fErr = calReadFile (NULL, editor, isFile, pathNum, startLine);
+  if (pathNum==0)
+  {
+    calSortFreq();
+  }
+  else
+  {
+    calSortMag();
+  }
+
+  if (pathNum!=0)
+  {
+    activeConfig->finalfreq = activeConfig->MSAFilters[pathNum][0];
+    activeConfig->finalbw = activeConfig->MSAFilters[pathNum][1];
+  }
+
+  return fErr;
 }
 QString dialogCalManager::calLoadFromFile(int pathNum)
 {
@@ -1478,7 +1496,7 @@ QString dialogCalManager::calLoadFromFile(int pathNum)
   }
   //open fileName$ for input as #calIn
   int startLine=1; int isFile=1;
-  retVal = calReadFile(calIn, isFile, pathNum, startLine);
+  retVal = calReadFile(calIn, NULL, isFile, pathNum, startLine);
   calIn->close();
   if (pathNum!=0)
   {
@@ -1488,7 +1506,7 @@ QString dialogCalManager::calLoadFromFile(int pathNum)
   return retVal;
 
 }
-QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, int &startLine)
+QString dialogCalManager::calReadFile(QFile *calFile, QPlainTextEdit *editor, int isFile, int pathNum, int &startLine)
 {
   //Reads calibration data, starting at line startLine and continuing until
   //we find the tag "EndCalFile=" (case insensitive). We update startLine
@@ -1532,12 +1550,19 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
   {
     calClearFreqPoints();
   }
-  int ncalFileComments=0; int accumComments=1;
+  int ncalFileComments=0;
+  int accumComments=1;
   int nLines;
-  calFileComments[0]=""; calFileComments[1]="";
+  calFileComments[0]="";
+  calFileComments[1]="";
+  QStringList lines;
   if (isFile==0)
   {
     //then #calFile$, "!lines nLines"
+    QString text = editor->toPlainText();
+    lines = text.split("\n");
+    nLines = lines.count();
+
   }
   else
     nLines=100000;
@@ -1549,12 +1574,15 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
         //Loop until we reach nLines (if text editor) or end of file (if file)
     if (isFile)
     {
-        if (calFile->atEnd()) break;// EOF(#calFile$)<>0 then exit for
-        //Line Input #calFile$, tLine$   //Read one line
-        tLine = util.readLine(calFile, '\r');
+        if (calFile->atEnd())
+          break;  //exit for
+        tLine = util.readLine(calFile, '\r'); // Read one line
     }
     else
     {
+      qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+      tLine = lines.at(fileLine);
+
     //    print #calFile$, "!line ";fileLine;" tLine$" //Get line number fileLine
     }
 
@@ -1569,8 +1597,8 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
         //Save first two comment lines, w/0 the comment character
         if (accumComments && isComment && ncalFileComments<2)
         {
-            calFileComments[ncalFileComments]=tLine.mid(2);
-            ncalFileComments=ncalFileComments+1;
+          ncalFileComments=ncalFileComments+1;
+          calFileComments[ncalFileComments]=tLine.mid(1);
         }
     }
     else    //valid non-comment line
@@ -1582,7 +1610,8 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
             QString tag=tLine.left(equalPos).toUpper();
             QString item=tLine.mid(equalPos+1);  //stuff after equal sign
             int commentPos=item.indexOf(calFileCommentChar);
-            if (commentPos>=0) item=item.left(commentPos-1);   //drop comments
+            if (commentPos>=0)
+              item=item.left(commentPos-1);   //drop comments
             item=item.trimmed();
             doMag=0; doFreq=0; int isErr=0;
 
@@ -1591,7 +1620,7 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
               int a = ceil(item.toFloat()*100);
               int b = ceil(calModuleVersion*100);
               if (a>b)
-                retVal="Warning; "+p+"File format is later version than the sofware";
+                retVal="Warning; " + p + "File format is later version than the sofware";
             }
             else if (tag == "MAGTABLE")
             {
@@ -1599,7 +1628,10 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
             }
             else if (tag == "FREQTABLE")
             {
-              if (pathNum>0) isErr=1; else doFreq=1;
+              if (pathNum>0)
+                isErr=1;
+              else
+                doFreq=1;
             }
             else if (tag == "ENDCALFILE")
             {
@@ -1612,7 +1644,11 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
             {
               isErr=true;
             }
-            if (isErr) { retVal=p+"Line "+QString::number(fileLine); return retVal; }  //invalid tag
+            if (isErr)
+            {
+              retVal = p + "Line "+QString::number(fileLine);
+              return retVal;
+            }  //invalid tag
         }
         else    //No equal sign; must be data
         {
@@ -1677,28 +1713,63 @@ QString dialogCalManager::calReadFile(QFile *calFile, int isFile, int pathNum, i
 
 }
 
-void dialogCalManager::setFilePath(QString path)
+
+int dialogCalManager::calManFileReload()
 {
-  DefaultDir = path;
+  if (calEditorPathNum<0)
+  {
+    QMessageBox::information(this, "", "You must select a calibration file to save.");
+    return 0;
+  }
+  if (calEditorPathNum==0)
+  {
+    //Before loading the frequency file we must be sure that the mag cal
+    //data is valid for the MSA//s active filter
+    int match=0;
+    for (int i=1; i <= activeConfig->MSANumFilters; i++)
+    {
+      float f = activeConfig->MSAFilters[i][0];
+      float bw = activeConfig->MSAFilters[i][1];
+      if (f == activeConfig->finalfreq && bw == activeConfig->finalbw)
+      {
+        match=i;
+        break; //exit for
+      }
+    }
+    if (match==0)
+    {
+      QMessageBox::information(this, "notice", "Can't find active filter; don't use Measure.");    //only possible in debugging
+    }
+    calInstallFile(match);  //Loads mag cal file
+  }
+  calInstallFile(calEditorPathNum);
+  ui->te->clear();
+  calSaveToEditor(ui->te, calEditorPathNum); //display data
+
+  calManPrepareEntry(); //Prepare buttons and instructions for data entry
 }
 
-//=================End Mag/Freq  Calibration Module===================
-//=================End Calibration Manager Module===================
-
 void dialogCalManager::on_Reload_clicked()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//Handle file buttons
-      pos=instr(btn$,".")
-      if pos>0 then btn$=Mid$(btn$, pos+1)    //Drop part before period
-      r=calManFile(btn$)  //r indicates whether cancelled; we don't care.
-  end sub
-  */
+{  
+  calManFileReload();
 }
 
 void dialogCalManager::on_Save_clicked()
 {
+  if (calEditorPathNum<0)
+  {
+    QMessageBox::information(this, "", "You must select a calibration file to save.");
+    return;
+  }
 
+  QString errMsg = calLoadFromEditor(ui->te, calEditorPathNum);
+  if (errMsg!="")
+  {
+    QMessageBox::information(this, "notice", "Data Error: " + errMsg + "; file not saved.");
+    return;
+  }
+  calSaveToFile(calEditorPathNum);
+  calManFileReload();   //Reload to update editor and verify data
 }
 
 void dialogCalManager::on_Return_clicked()
@@ -1874,4 +1945,77 @@ void dialogCalManager::on_Clean_clicked()
       end if
   end sub
   */
+}
+
+void dialogCalManager::on_DispDefault_clicked()
+{
+  if (calManWarnToSave(1)==1)
+  {
+    return;   //Cancelled
+  }
+  calCreateDefaults(calEditorPathNum, "#calman.te", 1);
+  calManClean();
+  calManPrepareEntry();
+}
+
+void dialogCalManager::on_Measure_clicked()
+{
+
+}
+
+void dialogCalManager::on_Enter_clicked()
+{
+
+}
+
+void dialogCalManager::on_NextPoint_clicked()
+{
+
+}
+
+void dialogCalManager::on_EnterAll_clicked()
+{
+
+}
+
+void dialogCalManager::on_pathList_currentRowChanged(int currentRow)
+{
+  //Handle user selection of calibration file ver116-1b made this a branch label menu item
+  //Can be called only from menu
+  //Set current path number. Will be negative if there is no selection
+  if (calManWarnToSave(1)==1)
+    return;
+
+  int prevPathNum=calEditorPathNum;
+  if (currentRow == -1)
+  {
+    QMessageBox::information(this, "", "No File Selected.");
+    return;  //Must be error
+  }
+  calEditorPathNum=currentRow;    //calEditorPathNum starts at 0
+  if (calManFileReload()==1)  //Load new file
+  {
+    //User cancelled the switch
+    ui->pathList->setCurrentRow(prevPathNum);
+    calEditorPathNum=prevPathNum;
+  }
+
+  if (calEditorPathNum==0)
+  {
+    ui->teLabel->setText("Frequency Calibration Table");
+  }
+  else
+  {
+    ui->teLabel->setText("Path Calibration Table");
+    vars->path = "Path " + QString::number(calEditorPathNum);   //set main MSA path variable
+    // fix me SelectFilter(vars->filtbank);
+    PartialRestart();
+  }
+  calManRefPhase=0;
+
+}
+
+void dialogCalManager::on_te_textChanged()
+{
+  teTextChanged = true;
 }
