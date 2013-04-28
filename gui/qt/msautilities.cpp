@@ -1390,7 +1390,7 @@ void msaUtilities::uRefcoToShuntS21DB(float rho, float theta, float &db, float &
     if db<-199 then db=-199
     */
 }
-float  msaUtilities::uParseRLC(QString spec, QString &connect, float &R, float &L, float &C, float &QL, float &QC, float &D, QString &coaxSpecs)
+int  msaUtilities::uParseRLC(QString spec, QString &connect, float &R, float &L, float &C, float &QL, float &QC, float &D, QString &coaxSpecs)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*

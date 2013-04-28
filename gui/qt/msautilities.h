@@ -84,7 +84,7 @@ public:
   void uShuntImpedanceToS21DB(float R0, float R, float I, float delay, float freq, float &db, float &deg);
   void uRefcoToSeriesS21DB(float rho, float theta, float &db, float &deg);
   void uRefcoToShuntS21DB(float rho, float theta, float &db, float &deg);
-  float uParseRLC(QString spec, QString &connect, float &R, float &L, float &C, float &QL, float &QC, float &D, QString &coaxSpecs);
+  int uParseRLC(QString spec, QString &connect, float &R, float &L, float &C, float &QL, float &QC, float &D, QString &coaxSpecs);
   void uComboImpedance(QString connect, float R, float L, float C, float QL, float QC, float freq, float &Zr, float &Zi);
   int uRLCComboResponse(QString spec, float Z0, QString jig);
   void uPhaseShiftImpedance(float R0, float theta, float &Zr, float &Zi);

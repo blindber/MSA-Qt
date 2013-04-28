@@ -19,6 +19,7 @@
 #include "math.h"
 #include "constants.h"
 #include "dialogchooseprimaryaxis.h"
+#include "dialogFreqAxisPreference.h"
 
 #include <qwaitcondition.h>
 
@@ -76,16 +77,6 @@ MainWindow::MainWindow(QWidget *parent) :
   ui->graphicsView->fitInView(scenePleaseWait.sceneRect());
 
   FindClientOffsets();   //set clientWidthOffset and clientHeightOffset from test window ver115-1b
-
-
-  //Note physical selection of filter 1 is done in step 5 below
-  for (int i=1; i <= activeConfig.MSANumFilters; i++)
-  {
-    //For each filter, combine freq and bw into nicely aligned string. Used to load #main.FiltList
-    activeConfig.MSAFiltStrings[i-1]="P" + QString("%1").arg(i) + "   "
-        + winConfigMan->configFormatFilter(activeConfig.MSAFilters[i][0]
-        , activeConfig.MSAFilters[i][1]);
-  }
 
 
   CreateGraphWindow();
@@ -209,6 +200,15 @@ void MainWindow::delayedStart()
     hwdIf->calMan->calInstallFile(i);
   }
   vars->path="Path 1";
+  //Note physical selection of filter 1 is done in step 5 below
+  for (int i=1; i <= activeConfig.MSANumFilters; i++)
+  {
+    //For each filter, combine freq and bw into nicely aligned string. Used to load #main.FiltList
+    activeConfig.MSAFiltStrings[i-1]="P" + QString("%1").arg(i) + "   "
+        + winConfigMan->configFormatFilter(activeConfig.MSAFilters[i][0]
+        , activeConfig.MSAFilters[i][1]);
+  }
+
 
   //The below are not actually the desired states. See step 3 (initialization) for explanation.
   //The latched filter addresses will be asserted by SelectVideoFilter because the video filter
@@ -2558,7 +2558,13 @@ void MainWindow::on_btnRedraw_clicked()
 
 void MainWindow::on_btnExpandLR_clicked()
 {
-
+  graph->gDrawMarkerPix("INVERTEDWEDGE", "A", 100, 100);
+  graph->gDrawMarkerPix("LABELEDINVERTEDWEDGE", "B", 100, 150);
+  graph->gDrawMarkerPix("LABELEDWEDGE", "C", 100, 200);
+  /*graph->gDrawWedgePix(100,100);
+  graph->gDrawInvertedWedgePix(100,150);
+  graph->gDrawSmallInvertedWedgePix(100,200);
+  graph->gDrawHaltPointerPix(100,250);*/
 }
 
 void MainWindow::on_btnmMarkToCenter_clicked()
@@ -3072,16 +3078,16 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   //ver115-1a deleted printing of glitchtime
   vars->doingInitialization=0;   //We are done with initialization on startup //ver114-4g moved
 
-  if (vars->calInProgress==1)  //ver114-5g
+  if (vars->calInProgress==1)
   {
     vars->message="Calibration in progress."; graph->PrintMessage(); //ver114-4g
   }
   else
   {
     vars->message="";
-    graph->PrintMessage();    //ver114-4f
+    graph->PrintMessage();
   }
-  if (vars->msaMode=="SA" && vars->gentrk==0 && vars->multiscanInProgress==0)     //ver115-4f
+  if (vars->msaMode=="SA" && vars->gentrk==0 && vars->multiscanInProgress==0)
   {
     if ((vars->endfreq-vars->startfreq)/vars->steps >activeConfig.finalbw/1000)      //compare as MHz
     {
@@ -3265,8 +3271,9 @@ void MainWindow::LoadDataFileWithContext(QString dataFileName)
     //If the file had more points than our arrays can handle, then resize them.
     //Note this does not resize uWorkArray, which would erase its data.
   if (uWork.uWorkNumPoints>=graph->gMaxNumPoints())
-    hwdIf->ResizeArrays(uWork.uWorkNumPoints+10); //ver115-6b
-
+  {
+    ResizeArrays(uWork.uWorkNumPoints+10);
+  }
     //Note that we don//t make the plane extension or R0 adjustments that [ProcessDataArrays] makes. If we
     //have loaded the context with the data, we presume the data already is adjusted per the context. If we
     //did not load the context, we will force plane ext and R0 to avoid need for adjustments.
@@ -3604,8 +3611,6 @@ QString MainWindow::SweepContext()
 }
 void MainWindow::RestoreSweepContext()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-
   //public routine to restore sweep context
   //There are a couple of things we can//t do within a true subroutine, so we use this routine as a wrapper
   //Because this gosub routine cannot accept arguments, the following values (non-global) must be preset:
@@ -3916,8 +3921,6 @@ void MainWindow::RestoreSweepContext()
 }
 void MainWindow::FilterDataType(int &t, int axisNum)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-
   //Make sure data types are valid for current msaMode$
   //Change to default values if invalid
   //ver115-3b changed to do only a single variable, so we get called once per axis.
@@ -4363,5 +4366,177 @@ void MainWindow::on_actionPrimary_Axis_triggered()
       RestartPlainSAmode();
       return;
     }
+  }
+}
+
+void MainWindow::on_actionSweep_triggered()
+{
+
+  if (graph->haltsweep)
+  {
+    FinishSweeping();
+  }
+
+  dialogFreqAxisPreference sweepWindow(this);
+
+  sweepStruct config;
+  if (vars->msaMode == "SA")
+  {
+    config.msaMode = modeSA;
+  }
+  else if (vars->msaMode == "Reflection")
+  {
+    config.msaMode = modeRefelection;
+  }
+  else if (vars->msaMode == "VectorTrans")
+  {
+    config.msaMode = modeVectorTrans;
+  }
+  else if (vars->msaMode == "ScalarTrans")
+  {
+    config.msaMode = modeScalarTrans;
+  }
+  else
+  {
+    QMessageBox::critical(this, "Bad msamode", "Who did a typo?");
+  }
+
+  config.gentrk = vars->gentrk;
+  config.calCanUseAutoWait = vars->calCanUseAutoWait;
+  config.useAutoWait = vars->useAutoWait;
+  config.alternateSweep = vars->alternateSweep;
+  config.centfreq = vars->centfreq;
+  config.sweepwidth = vars->sweepwidth;
+  config.startfreq = vars->startfreq;
+  config.endfreq = vars->endfreq;
+  config.baseFrequency = vars->baseFrequency;
+  config.globalSteps = vars->globalSteps;
+  config.wate = vars->wate;
+  config.path = vars->path;
+  config.doSpecialGraph = vars->doSpecialGraph;
+  config.videoFilter = vars->videoFilter;
+  config.spurcheck = vars->spurcheck;
+  config.normrev = vars->normrev;
+  config.sgout = vars->sgout;
+  config.offset = vars->offset;
+  config.switchFR = vars->switchFR;
+  config.userFreqPref = vars->userFreqPref;
+  config.planeadj = vars->planeadj;
+  config.prevPlaneAdj = vars->prevPlaneAdj;
+  config.freqBand = vars->freqBand;
+  config.LO2 = vars->LO2;
+  config.autoWaitPrecision = vars->autoWaitPrecision;
+
+
+  // need to hange the MSAFiltStrings away from an array
+  config.MSANumFilters = activeConfig.MSANumFilters;
+  for (int i = 0; i < activeConfig.MSANumFilters; i++)
+  {
+    config.MSAFiltStrings.append(activeConfig.MSAFiltStrings[i]);
+  }
+  for (int i = 1; i <= 4; i++)
+  {
+    if (activeConfig.videoFilterNames[i].trimmed() != "")
+    {
+      config.videoFilterNames.append(activeConfig.videoFilterNames[i]);
+    }
+  }
+  config.TGtop = activeConfig.TGtop;
+  config.appxLO2 = activeConfig.appxLO2;
+  config.invdeg = activeConfig.invdeg;
+
+  config.S11GraphR0 = vnaCal.S11GraphR0;
+  config.prevS11GraphR0 = vars->prevS11GraphR0;
+  config.S11JigType = vnaCal.S11JigType;
+  config.S21JigAttach = vnaCal.S21JigAttach;
+
+  gridappearance->FillAppearancesArray(config.appearances);
+  config.lastPresetColor = gridappearance->gGetLastPresetColors();
+  gridappearance->getcustomPresetNames(config.customPresetNames);
+
+  config.sweepDir = graph->gSweepDir;
+  config.XIsLinear = graph->gGetXIsLinear();
+  int HorDiv;
+  int VertDiv;
+  graph->gGetNumDivisions(HorDiv, VertDiv);
+  config.HorDiv = HorDiv;
+  config.VertDiv = VertDiv;
+  config.refreshEachScan = graph->refreshEachScan;
+  config.displaySweepTime = graph->displaySweepTime;
+
+  graph->RememberState();  //Remember various variables so we can see if they change
+  int needRestart = sweepWindow.DisplayAxisXPreference(&config);
+
+  if (!sweepWindow.cancelled )
+  {
+    //-------------------------------------------------------------
+    // grab all the changes from the form
+
+    //vars->gentrk = config.gentrk;
+    vars->calCanUseAutoWait = config.calCanUseAutoWait;
+    vars->useAutoWait = config.useAutoWait;
+    vars->alternateSweep = config.alternateSweep;
+
+    vars->centfreq = config.centfreq;
+    vars->sweepwidth = config.sweepwidth;
+    vars->startfreq = config.startfreq;
+    vars->endfreq = config.endfreq;
+    graph->gSetXAxisRange(config.startfreq, config.endfreq);
+
+    vars->baseFrequency = config.baseFrequency;
+    vars->globalSteps = config.globalSteps;
+    vars->wate = config.wate;
+    vars->path = config.path;
+    vars->doSpecialGraph = config.doSpecialGraph;
+    vars->videoFilter = config.videoFilter;
+    vars->spurcheck = config.spurcheck;
+    vars->normrev = config.normrev;
+    vars->sgout = config.sgout;
+    vars->offset = config.offset;
+    vars->switchFR = config.switchFR;
+    vars->userFreqPref = config.userFreqPref;
+    vars->planeadj = config.planeadj;
+    vars->prevPlaneAdj = config.prevPlaneAdj;
+    vars->freqBand = config.freqBand;
+    //vars->LO2 = config.LO2;
+    vars->autoWaitPrecision = config.autoWaitPrecision;
+
+    activeConfig.invdeg = activeConfig.invdeg;
+
+    vnaCal.S11GraphR0 = config.S11GraphR0;
+    vars->prevS11GraphR0 = config.prevS11GraphR0;
+    vnaCal.S11JigType = config.S11JigType;
+    vnaCal.S21JigAttach = config.S21JigAttach;
+
+    graph->gSetSweepDir(config.sweepDir);
+    graph->gSetXIsLinear(config.XIsLinear);
+
+    graph->gSetNumDivisions(config.HorDiv,config.VertDiv);
+    graph->refreshEachScan = config.refreshEachScan;
+    graph->displaySweepTime = config.displaySweepTime;
+
+    //-------------------------------------------------------------
+    graph->DetectChanges(0);   //Do necessary redrawing and set continueCode ver114-6e
+    if (graph->continueCode!=3)
+    {
+      graph->continueCode=0;
+    }
+
+    vars->steps=vars->globalSteps;   //transfer to non-global
+    vars->sweepDir=graph->gGetSweepDir();  //transfer to non-global
+    if (vars->calCanUseAutoWait==0 && vars->useAutoWait)
+    {
+      vars->useAutoWait=0;
+      vars->wate=100;
+    }
+    if (needRestart==1)
+    {
+      PartialRestart();
+    }
+    graph->continueCode=0;  //signal to keep going ver115-8d
+    /*if (vars->multiscanIsOpen)
+    {
+      multiscanSaveContexts(0); //zero means main graph  ver115-8d
+    }*/
   }
 }

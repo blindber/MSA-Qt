@@ -100,5 +100,13 @@ enum twoPortConstants
   constTwoPortMuStability=18
 };
 
+enum msaModes
+{
+  modeSA = 0,
+  modeVectorTrans = 1,
+  modeScalarTrans = 2,
+  modeRefelection = 3
+};
+
 
 #endif // CONSTANTS_H

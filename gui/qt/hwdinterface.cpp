@@ -1898,6 +1898,7 @@ void hwdInterface::ProcessAndPrintLastStep()
   ProcessAndPrint();//get raw data, process, print to the computer monitor ver111-22
   vars->thisstep = rememberstep;
 }
+
 void hwdInterface::WaitStatement()
 {
   //needed;wate,glitch()(p1,d1,p3,d3,pdm,hlt),glitchtime ; this slows the program //ver111-27

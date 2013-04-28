@@ -365,6 +365,8 @@ private slots:
 
   void on_actionPrimary_Axis_triggered();
 
+  void on_actionSweep_triggered();
+
 public slots:
   void updateView();
   void DisplayButtonsForHalted();

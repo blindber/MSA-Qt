@@ -140,7 +140,7 @@ public:
   QGraphicsTextItem *gPrintTextRightJust(QString t, int x, int y, QColor col);
   void gDrawVertTick(int x,int y, int L);
   void gDrawHorTick(int x, int y, int L);
-  void gPrintMessage(QString msg);
+  QGraphicsTextItem *gPrintMessage(QString msg);
   int gDoPrintLabel(QString style, int num, int nLines);
   void gPrintGridLabels();
   void gPrintTitle(int doClear);
@@ -218,6 +218,10 @@ public:
   void gDrawMarkers();
   void gEraseMarkers();
   void gDrawMarkerPix(QString style, QString markLabel, float x, float y);
+  void gDrawWedgePix(float x, float y);
+  void gDrawInvertedWedgePix(float x, float y);
+  void gDrawSmallInvertedWedgePix(float x, float y);
+  void gDrawHaltPointerPix(float x, float y);
   void gRefreshTraces();
   void gRefreshGridLinesOnly();
   void ImplementDisplayModes();

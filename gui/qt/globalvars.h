@@ -151,7 +151,7 @@ public:
                               // Xp(9), Cs(10), Ls(11), Cp(12), Lp(13), SWR(14),
                               //intermedDB(), intermedAng(15) (intermed= w/o R0 transform or plane ext) //ver115-2d
 
-      int uWorkReflectData[17]; //Same data as ReflectArray, but for only one entry  //ver115-1b //ver115-2d
+      float uWorkReflectData[17]; //Same data as ReflectArray, but for only one entry  //ver115-1b //ver115-2d
 
       Q2DfloatVector  S21DataArray;//Frequency (actual input freq) (0), mag(1), phase(2) and intermed phase(3) for VectorTrans and ScalarTrans modes. ver116-1b
                               //Intermed phase is phase before plane extension, saved in case of recalculation
@@ -171,11 +171,6 @@ public:
       float x1DBDown, x2DBDown;   //positive db values for x1 and x2 points SEWgraph
       QString filterPeakMarkID;//$     //Marker that indicates filter peak
 
-      //SEWgraph The following are used to manage a "working array" in the Utilities Module. This array is used for very
-      //temporary processing to deal with the fact that in LB you can//t pass arrays as arguments. So some routines,
-      //such as saving/retrieving data points to/from strings or files, utilize this specific array. The user is
-      //responsible for transferring data in and out of this array. Data can//t be left in the array for long, because
-      //another operation might utilize the array.
 
 
 
@@ -194,24 +189,18 @@ public:
 
       int contextTypes[30];    //Used in connection with save and retrieve context files
                               //indicating which contexts are involved ver114-3a
-      //Constants to specify context types in contextTypes()
-
-      //int constHardware, constGrid, constTrace, constSweep, constMarker, constBand, constBase, constGraphData, constModeData;
-
-//      constHardware=0 : constGrid=1 : constTrace=2 : constSweep=3 : constMarker=4 : constBand=5
-//      constBase=6 : constGraphData=7 : constModeData=8
 
    //Additional variables that need to be available to subroutines
           //Note "startfreq" is the x-axis start (left),
           //but sweepStartStep will be at the x-axis right end if we are going in reverse.
           //baseFrequency  is added when commanding the hardware, but does not affect graph display or file frequencies.
-      float startfreq, endfreq, baseFrequency; //ver116-4k
+      float startfreq, endfreq, baseFrequency;
       int wate, planeadj;
       float thisfreq;
       int freqBand; //1, 2 or 3, indicating bands 1G, 2G and 3G, or zero to use auto-band mode ver116-4s
       int bandEnd1G, bandEnd2G;     //Final frequencies for 1G and 2G when in auto-band mode. ver116-4s
       int lastSetBand;  //set to 1,2 or 3 each time the band switch is set, so we know its state ver116-4s
-      int sgout;   //signal generator output freq when in plain SA mode
+      float sgout;   //signal generator output freq when in plain SA mode
       int test;     //SEWgraph  Contents get printed to message box on halt
       int spurcheck;    //=1 to turn spur test on //ver114-4f
       int gentrk;   //=1 when TG is being used (depends on mode); 0 if SG is used or build does not have TG hardware

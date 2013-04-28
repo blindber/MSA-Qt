@@ -303,11 +303,25 @@ QString dialogGridappearance::gGetLastPresetColors()
   //Get last selected color preset
   return gGraphColorPreset;
 }
-void dialogGridappearance::FillAppearancesArray()
+void dialogGridappearance::FillAppearancesArray(QStringList &list)
 {
-  for (int i=0; i <= 10; i++)
+  list.clear();
+  list.append("DARK");
+  list.append("LIGHT");
+
+  for (int i=1; i < 5; i++)
+  {
+    QString customName=customPresetNames[i];
+    if (customName!="Empty")
+    {
+      list.append(customName);
+    }
+  }
+
+/*  for (int i=0; i <= 10; i++)
   {
     Appearances[i]="";
+  *
   } //Clear
   Appearances[0]="DARK";
   Appearances[1]="LIGHT";
@@ -319,6 +333,20 @@ void dialogGridappearance::FillAppearancesArray()
     {
       k=k+1;
       Appearances[k]=customName;
+    }
+  }*/
+}
+
+void dialogGridappearance::getcustomPresetNames(QStringList &list)
+{
+  list.clear();
+
+  for (int i=1; i < 5; i++)
+  {
+    QString customName=customPresetNames[i];
+    if (customName!="Empty")
+    {
+      list.append(customName);
     }
   }
 }
@@ -506,7 +534,8 @@ void dialogGridappearance::on_Save_clicked()
                          TextCol, XCol, Y1Col, Y2Col,
                          Y1Col, Y2Col, Y1ACol, Y2ACol, Y1BCol, Y2BCol);
   customPresetNames[savedAsPresetNum] = newName;
-  FillAppearancesArray();
+  QStringList list;
+  FillAppearancesArray(list);
 
   gUsePresetColors("Custom" + QString::number(savedAsPresetNum), currentPriAxis);  //To register that we are using this preset and implement it
   SetCycleColors();

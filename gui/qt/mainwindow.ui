@@ -221,7 +221,7 @@ Setups</string>
        <item row="1" column="4">
         <widget class="QPushButton" name="btnExpandLR">
          <property name="enabled">
-          <bool>false</bool>
+          <bool>true</bool>
          </property>
          <property name="minimumSize">
           <size>
@@ -517,7 +517,7 @@ Setups</string>
   </action>
   <action name="actionSweep">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Sweep</string>

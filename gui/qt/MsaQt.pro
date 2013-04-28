@@ -10,8 +10,8 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = msa-qt
 TEMPLATE = app
 
-QMAKE_CFLAGS_WARN_ON += -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable
-QMAKE_CXXFLAGS += -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable
+greaterThan(QT_MAJOR_VERSION, 4):QMAKE_CFLAGS_WARN_ON += -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable
+greaterThan(QT_MAJOR_VERSION, 4):QMAKE_CXXFLAGS += -Wno-unused-parameter -Wno-unused-but-set-variable -Wno-unused-variable
 
 target.path = /home/pi/msa-qt
 INSTALLS += target
@@ -65,7 +65,8 @@ SOURCES += main.cpp\
     debugmodule.cpp \
     complexmaths.cpp \
     dialogsavecustappearance.cpp \
-    dialogchooseprimaryaxis.cpp
+    dialogchooseprimaryaxis.cpp \
+    dialogFreqAxisPreference.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -89,7 +90,8 @@ HEADERS  += mainwindow.h \
     complexmaths.h \
     constants.h \
     dialogsavecustappearance.h \
-    dialogchooseprimaryaxis.h
+    dialogchooseprimaryaxis.h \
+    dialogFreqAxisPreference.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \
@@ -99,7 +101,8 @@ FORMS    += mainwindow.ui \
     dialogoslcal.ui \
     dialogvnacal.ui \
     dialogsavecustappearance.ui \
-    dialogchooseprimaryaxis.ui
+    dialogchooseprimaryaxis.ui \
+    dialogFreqAxisPreference.ui
 
 RESOURCES += \
     resource.qrc

@@ -54,10 +54,11 @@ public:
   void gGetInfoColors(QString &fore, QString &back);
   void SetCycleColors();
   QString gGetLastPresetColors();
-  void FillAppearancesArray();
+  void FillAppearancesArray(QStringList &list);
 
 
   QString customPresetNames[6];   //User names for custom color presets (1-5) ver115-2a
+  void getcustomPresetNames(QStringList &list);
 
 
 
@@ -155,7 +156,7 @@ private:
   QString XCol;
   QString TextCol;
 
-  QString Appearances[11];    //Names of Appearances
+  //QString Appearances[11];    //Names of Appearances
 
   int currentPriAxis;
 protected:

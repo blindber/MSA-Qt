@@ -251,7 +251,10 @@ void msagraph::gSetXIsLinear(int lin)
   if (lin==1)
   {
     //If changing from log X scale to linear, force horizontal divisions to 10 in case user doesn't adjust
-    if (gXIsLinear==0) gHorDiv=10;  //ver116-4a
+    if (gXIsLinear==0)
+    {
+      gHorDiv=10;
+    }
     gXIsLinear=1;    //changing to linear
   }
   else
@@ -1023,7 +1026,7 @@ void msagraph::gDrawHorTick(int x, int y, int L)
     #gGraphHandle$, "line "; x;" ";y;" ";x+L;" ";y
 end sub*/
 }
-void msagraph::gPrintMessage(QString msg)
+QGraphicsTextItem *msagraph::gPrintMessage(QString msg)
 {
   //Print message above top of marker info area; Limited to 75 characters; don't print if blank
   //The message is in msg$
@@ -1035,8 +1038,9 @@ void msagraph::gPrintMessage(QString msg)
   gPrintText(util.Space(140), x, y);   //note spaces are smaller than letters ver116-4j
   if (msg!="")
   {
-    gPrintText("MESSAGE: "+msg.left(75), x, y,textColor);
+    return gPrintText("MESSAGE: "+msg.left(75), x, y,textColor);
   } //don't print if blank
+  return NULL;
 }
 int msagraph::gDoPrintLabel(QString style, int num, int nLines)
 {
@@ -1125,7 +1129,7 @@ void msagraph::gPrintGridLabels()
 
 void msagraph::gPrintTitle(int doClear)
 {
-  QGraphicsItem * item;
+  QGraphicsItem *item;
   //Print title; if doClear=1 then first clear the title area
   //if (doClear==1)
   {
@@ -3091,7 +3095,22 @@ void msagraph::PrintMessage()
 {
   //Print message above top of marker info area; Limited to 75 characters; don't print if blank
   //The message is in message$
-  gPrintMessage(vars->message); //ver116-4i
+  QList<QGraphicsItem *> allItems = graphScene->items();
+  QGraphicsItem *item;
+  QListIterator<QGraphicsItem *> i(allItems);
+  while(i.hasNext())
+  {
+    item = i.next();
+    QString data = item->data(0).toString();
+    if (data == "message")
+    {
+      graphScene->removeItem(item);
+      delete item;
+    }
+  }
+
+  item = gPrintMessage(vars->message); //ver116-4i
+  item->setData(0,"message");
 }
 QString msagraph::gSweepContext()
 {
@@ -4107,7 +4126,6 @@ void msagraph::SetStartStopFreq(float startF, float stopF)
   }
   vars->centfreq=(util.usingF("####.######",(vars->startfreq+vars->endfreq)/2)).toFloat(); //ver114-5n
   vars->sweepwidth=vars->endfreq-vars->startfreq;
-  //ver115-1b deleted calc of stepfreq
   gSetXAxisRange(vars->startfreq, vars->endfreq);  //ver114-6d
 
 }
@@ -4148,37 +4166,114 @@ end sub
 void msagraph::gDrawMarkerPix(QString style, QString markLabel, float x, float y)    //Draw marker at pix coord (x,y)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-    'markLabel$ is the marker ID, for styles which draw the ID
-    style$=Trim$(Upper$(style$))
-        'We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
-        'If they have already been so rounded, this doesn't hurt
-    x=int(10*x+0.5)/10 : y=int(10*y+0.5)/10
-    #gGraphHandle$, "size 1"
-    select case style$
-        case "WEDGE"
-            call gDrawWedgePix x,y-1
-        case "LABELEDWEDGE" 'If too close to top, invert it ver114-5n
-            if y<gMarginTop+15 then call gDrawMarkerPix "LabeledInvertedWedge",markLabel$, x,y : exit sub
-            call gPrintTextCentered markLabel$,x+1,y-9
-            call gDrawWedgePix x,y-1
-        case "INVERTEDWEDGE"
-            call gDrawInvertedWedgePix x,y+1
-        case "LABELEDINVERTEDWEDGE" 'If too close to bottom, un-invert it ver114-5n
-            if y>gOriginY-15 then call gDrawMarkerPix "LabeledWedge",markLabel$, x,y : exit sub
-            call gPrintTextCentered markLabel$,x+1,y+19
-            call gDrawInvertedWedgePix x,y+1
-        case "SMALLINVERTEDWEDGE"
-            call gDrawSmallInvertedWedgePix, x, y+1
-        case "HALTPOINTER"  'ver114-5m
-            call gDrawHaltPointerPix, x, y+1 'ver114-5m
-        case "XOR"  'Draw black box in XOR mode to invert colors; Do it twice to restore to original ver116-4h
-            cmd$="rule xor; size 1; color black; place ";x-3;" ";y-3;";down;box ";x+3;" ";y+3;";rule over"
-            #gGraphHandle$, cmd$ : #gGraphHandle$, "discard"   'Actual draw, and discard so lots of these don't build up
-        case else
-    end select
-end sub
-*/
+
+  //markLabel$ is the marker ID, for styles which draw the ID
+  style=style.trimmed().toUpper();
+  //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
+  //If they have already been so rounded, this doesn//t hurt
+  //x=int(10*x+0.5)/10 : y=int(10*y+0.5)/10
+  if (style == "WEDGE")
+  {
+    gDrawWedgePix(x,y-1);
+  }
+  else if (style == "LABELEDWEDGE") //If too close to top, invert it ver114-5n
+  {
+    if (y<gMarginTop+15)
+    {
+      gDrawMarkerPix("LabeledInvertedWedge",markLabel, x,y);
+      return;
+    }
+    gPrintTextCentered(markLabel,x+1,y-9,QColor(Qt::magenta));
+    gDrawWedgePix(x,y-1);
+  }
+  else if (style == "INVERTEDWEDGE")
+  {
+    gDrawInvertedWedgePix(x,y+1);
+  }
+  else if (style == "LABELEDINVERTEDWEDGE") //If too close to bottom, un-invert it ver114-5n
+  {
+    if (y>gOriginY-15)
+    {
+      gDrawMarkerPix("LabeledWedge",markLabel, x,y);
+      return;
+    }
+    gPrintTextCentered(markLabel,x+1,y+19,QColor(Qt::magenta));
+    gDrawInvertedWedgePix(x,y+1);
+  }
+  else if (style == "SMALLINVERTEDWEDGE")
+  {
+    gDrawSmallInvertedWedgePix(x, y+1);
+  }
+  else if (style == "HALTPOINTER")
+  {
+    gDrawHaltPointerPix(x, y+1);
+  }
+  else if (style == "XOR")  //Draw black box in XOR mode to invert colors; Do it twice to restore to original ver116-4h
+  {
+    //cmd$="rule xor; size 1; color black; place ";x-3;" ";y-3;";down;box ";x+3;" ";y+3;";rule over"
+    //#gGraphHandle$, cmd$ : #gGraphHandle$, "discard"   //Actual draw, and discard so lots of these don't build up
+  }
+}
+
+void msagraph::gDrawWedgePix(float x, float y)  //Draw wedge pointing down at pixel coord (x,y)
+{
+  QPainterPath mark;
+  QPen pen;
+
+  mark.moveTo(x,y);
+  mark.lineTo(x-5,y-6);
+  mark.lineTo(x+5,y-6);
+  mark.lineTo(x,y);
+
+  pen.setBrush(QColor(Qt::magenta));
+  pen.setWidth(1);
+
+  graphScene->addPath(mark, pen);
+}
+void msagraph::gDrawInvertedWedgePix(float x, float y)  // Draw wedge pointing up at pixel coord (x,y)
+{
+  QPainterPath mark;
+  QPen pen;
+
+  mark.moveTo(x,y);
+  mark.lineTo(x-5,y+6);
+  mark.lineTo(x+5,y+6);
+  mark.lineTo(x,y);
+
+  pen.setBrush(QColor(Qt::magenta));
+  pen.setWidth(1);
+
+  graphScene->addPath(mark, pen);
+}
+void msagraph::gDrawSmallInvertedWedgePix(float x, float y)   //Draw small wedge pointing up at pixel coord (x,y)
+{
+  QPainterPath mark;
+  QPen pen;
+
+  mark.moveTo(x,y);
+  mark.lineTo(x-4,y+6);
+  mark.lineTo(x+4,y+6);
+  mark.lineTo(x,y);
+
+  pen.setBrush(QColor(Qt::magenta));
+  pen.setWidth(1);
+
+  graphScene->addPath(mark, pen);
+}
+void msagraph::gDrawHaltPointerPix(float x, float y)    //Draw pointer at pixel coord (x,y) pointing in sweep direction
+{
+  QPainterPath mark;
+  QPen pen;
+
+  int a = 4 * gSweepDir;
+  mark.moveTo(x,y);
+  mark.lineTo(x+a,y+4);
+  mark.lineTo(x,y+8);
+  mark.lineTo(x,y);
+
+  pen.setBrush(QColor(Qt::magenta));
+  pen.setWidth(1);
+  graphScene->addPath(mark, pen);
 }
 void msagraph::gRefreshTraces()  //Redraw traces from gTrace1$() and gTrace2$()
 {
@@ -5499,7 +5594,7 @@ void msagraph::InitGraphParams()
   {
     gridappearance->customPresetNames[i]="Empty";
   }
-  gridappearance->FillAppearancesArray();
+  //gridappearance->FillAppearancesArray();
   gSetPrimaryAxis(vars->primaryAxisNum);
   UpdateGraphParams();
 
@@ -5893,12 +5988,16 @@ void msagraph::RememberState()
     //Changes to these will require a complete Restart
   vars->prevFreqMode=vars->freqBand;       //ver115-1c
   vars->prevPath=vars->path; //ver116-4j
-  gGetXAxisRange(vars->prevStartF, vars->prevEndF); vars->prevBaseF=vars->baseFrequency;
+  gGetXAxisRange(vars->prevStartF, vars->prevEndF);
+  vars->prevBaseF=vars->baseFrequency;
   gGetIsLinear(vars->prevXIsLinear, vars->prevY1IsLinear, vars->prevY2IsLinear);
   vars->prevSteps=vars->globalSteps;
-  vars->prevSweepDir=gGetSweepDir(); vars->prevAlternate=vars->alternateSweep;
-  vars->prevGenTrk=vars->gentrk ; vars->prevSpurCheck=vars->spurcheck; //ver114-6k
-  vars->prevTGOff=vars->offset ; vars->prevSGFreq=vars->sgout; //ver115-1a
+  vars->prevSweepDir=gGetSweepDir();
+  vars->prevAlternate=vars->alternateSweep;
+  vars->prevGenTrk=vars->gentrk ;
+  vars->prevSpurCheck=vars->spurcheck; //ver114-6k
+  vars->prevTGOff=vars->offset ;
+  vars->prevSGFreq=vars->sgout; //ver115-1a
   vars->prevPath=vars->path; //ver115-1a
 
     //Changes to these will require calling gCalcGraphParams and then a full Redraw
