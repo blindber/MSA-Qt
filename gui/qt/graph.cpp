@@ -31,6 +31,7 @@ msagraph::msagraph(QWidget *parent)
 
   connect(this, SIGNAL(ChangeMode()), parent, SLOT(ChangeMode()));
   connect(this, SIGNAL(RequireRestart()), parent, SLOT(RequireRestart()));
+  connect(this, SIGNAL(updatevar(int)), parent, SLOT(updatevar(int)));
 
 
 //****************************
@@ -202,11 +203,13 @@ void msagraph::gGetYAxisRange(int axisNum, int &yMin, int &yMax)
   //This is the full axis min/max, not the min and max actual y values
   if (axisNum==1)
   {
-    yMin=gY1AxisMin; yMax=gY1AxisMax;
+    yMin=gY1AxisMin;
+    yMax=gY1AxisMax;
   }
   else
   {
-    yMin=gY2AxisMin; yMax=gY2AxisMax;
+    yMin=gY2AxisMin;
+    yMax=gY2AxisMax;
   }
 }
 void msagraph::gGetXAxisRange(float &xMin, float &xMax)
@@ -227,7 +230,10 @@ void msagraph::gSetIsLinear(int linX, int linY1, int linY2)
 {
   //Set linearity for each axis; lin=1 for linear, 0 for log.
   //If changing from log X scale to linear, force horizontal divisions to 10 in case user doesn't adjust
-  if (gXIsLinear==0 && linX==1) gHorDiv=10;  //ver116-4a
+  if (gXIsLinear==0 && linX==1)
+  {
+    gHorDiv=10;
+  }
   gXIsLinear=linX;
   gY1IsLinear=linY1;
   gY2IsLinear=linY2;
@@ -277,8 +283,14 @@ void msagraph::gGetNumDivisions(int &xDiv, int &yDiv)
 void msagraph::gSetTraceWidth(int wid1, int wid2)
 {
   //Set width of graph traces 'mod ver116-4b
-  if (wid1<=0) gTrace1Width=0; else gTrace1Width=wid1;
-  if (wid2<=0) gTrace2Width=0; else gTrace2Width=wid2;
+  if (wid1<=0)
+     gTrace1Width=0;
+  else
+    gTrace1Width=wid1;
+  if (wid2<=0)
+    gTrace2Width=0;
+  else
+    gTrace2Width=wid2;
 }
 void msagraph::gGetTraceWidth(int &wid1, int &wid2)
 {
@@ -470,7 +482,18 @@ float msagraph::gGetPointYVal(int N, int yNum)
     {
       float yMin, yMax;
       int isPhase;
-      if (yNum==1) {isPhase=gY1IsPhase; yMin=gY1AxisMin; yMax=gY1AxisMax;} else {isPhase=gY2IsPhase; yMin=gY2AxisMin; yMax=gY2AxisMax;}
+      if (yNum==1)
+      {
+        isPhase=gY1IsPhase;
+        yMin=gY1AxisMin;
+        yMax=gY1AxisMax;
+      }
+      else
+      {
+        isPhase=gY2IsPhase;
+        yMin=gY2AxisMin;
+        yMax=gY2AxisMax;
+      }
       if (isPhase)
       {
         //Note that angles in the main program are kept in the range -180 to +180, but
@@ -526,7 +549,10 @@ float msagraph::gGetPointXPix(float N)
     int whole=(int)N;
     float fract=N-whole;
     x=gGraphPix[whole][0];
-    if (fract>0) x=x+fract*(gGraphPix[whole+1][0]-x);
+    if (fract>0)
+    {
+      x=x+fract*(gGraphPix[whole+1][0]-x);
+    }
   }
   else
   {
@@ -1107,7 +1133,7 @@ void msagraph::gPrintGridLabels()
       thisLabel=gY1GridLabels[i];
       if (thisLabel!="")
       {
-        gPrintTextRightJust(thisLabel, gMarginLeft-6,gOriginY+3-gY1GridLines[i], gridappearance->gY1TextColor);
+        gPrintTextRightJust(thisLabel, gMarginLeft-6,gOriginY-gY1GridLines[i]-10, gridappearance->gY1TextColor);
       }
     }
   }
@@ -1121,7 +1147,7 @@ void msagraph::gPrintGridLabels()
       thisLabel=gY2GridLabels[i];
       if (thisLabel!="")
       {
-        gPrintText(thisLabel, gMarginLeft+gGridWidth+6, gOriginY+(-10)-gY2GridLines[i], gridappearance->gY2TextColor);
+        gPrintText(thisLabel, gMarginLeft+gGridWidth+6, gOriginY-gY2GridLines[i]-10, gridappearance->gY2TextColor);
       }
     }
   }
@@ -1258,7 +1284,14 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
   //boundary would cover them.)
   float axisLen;
   float span;
-  if (isX==1) axisLen=gGridWidth; else axisLen=gGridHeight;
+  if (isX==1)
+  {
+    axisLen=gGridWidth;
+  }
+  else
+  {
+    axisLen=gGridHeight;
+  }
   float gridStart;
   float gridStartPix;
   int doLabel;
@@ -1271,38 +1304,53 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
       //a method other than multiplying by a scale factor to step through
       //the x axis. And we force to linear scaling of the x axis, with scale of 1
       axisMax=axisMin;
-      if (isLin==0) {isLin=1; numDiv=10;} //Change log to linear with 10 divisions for zero span ver116-4a
+      if (isLin==0)    //Change log to linear with 10 divisions for zero span ver116-4a
+      {
+        isLin=1;
+        numDiv=10;
+      }
     }
     else
     {
       //For Y axes, pick min and max to center the graph
-      axisMin=axisMin-1; axisMax=axisMax+1 ; isLin=1;
+      axisMin=axisMin-1;
+      axisMax=axisMax+1;
+      isLin=1;
     }
   }
-  float includesZero=(axisMin<=0) && (axisMax>=0);
-  float crossesZero=axisMin*axisMax<0;
+  int includesZero=(axisMin<=0) && (axisMax>=0);
+  int crossesZero=axisMin*axisMax<0;
   if (isLin==0)  //log sweep ver116-4k
   {
     if (includesZero)    //Includes zero; may or may not cross zero
     {
       if (isX)
       {
-        if (crossesZero) {axisMin=0 ; crossesZero=0;}  //don't let x axis cross zero
-        if (qMax(abs(axisMin), abs(axisMax))<0.0001)
+        if (crossesZero)   //don't let x axis cross zero
+        {
+          axisMin=0;
+          crossesZero=0;
+        }
+        if (qMax(fabs(axisMin), fabs(axisMax))<(float)0.0001)
         {
           isLin=1; //small frequency values; make it linear
         }
         else
         {
-          float blackHolePower=-4 ; blackHoleRadius=0.0001;    //Use 100 Hz as blackHoleRadius for X axis if feasible
+          float blackHolePower=-4;
+          blackHoleRadius=0.0001;    //Use 100 Hz as blackHoleRadius for X axis if feasible
           float maxMag;
           if (axisMin==0)
           {
-            axisMin=blackHoleRadius ; blackHolePix=0 ; maxMag=axisMax;
+            axisMin=blackHoleRadius;
+            blackHolePix=0;
+            maxMag=axisMax;
           }
           else
           {
-            axisMax=0-blackHoleRadius ; blackHolePix=axisLen ; maxMag=0-axisMin;
+            axisMax=0-blackHoleRadius;
+            blackHolePix=axisLen;
+            maxMag=0-axisMin;
           }
           span=util.uSafeLog10(maxMag)-blackHolePower;
         }
@@ -1312,7 +1360,8 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
         //We choose a blackHoleRadius to provide a reasonable number of decades
         if (crossesZero)
         {
-          float gridTopPower=util.uRoundUp(util.uSafeLog10(axisMax)) ; float gridBotPower=util.uRoundUp(util.uSafeLog10(0-axisMin));
+          float gridTopPower=util.uRoundUp(util.uSafeLog10(axisMax));
+          float gridBotPower=util.uRoundUp(util.uSafeLog10(0-axisMin));
           float commonPower=qMin(gridTopPower, gridBotPower);
           //if we used 10^commonPower as blackHoleRadius, we would have (gridTopPower-commonPower)+ (gridBotPower-commonPower)
           //whole or partial decades.
@@ -1320,14 +1369,22 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
           float minDecades=(gridTopPower-commonPower)+ (gridBotPower-commonPower);
           if (minDecades>6)
           {
-            if (minDecades>9) blackHolePower=minDecades-9; else blackHolePower=commonPower;
+            if (minDecades>9)
+            {
+              blackHolePower=minDecades-9;
+            }
+            else
+            {
+              blackHolePower=commonPower;
+            }
           }
           else
           {
             blackHolePower=commonPower-(int)((6-minDecades)/2);
           }
           blackHoleRadius=util.uTenPower(blackHolePower);
-          float negativeSpan=util.uSafeLog10(0-axisMin)-blackHolePower  ; int positiveSpan=util.uSafeLog10(axisMax)-blackHolePower;
+          float negativeSpan=util.uSafeLog10(0-axisMin)-blackHolePower;
+          float positiveSpan=util.uSafeLog10(axisMax)-blackHolePower;
           span=negativeSpan+positiveSpan;   //Total whole or partial decades
           blackHolePix=(axisLen*negativeSpan/span); //negative span as proportion of total span, times axis len
         }
@@ -1338,7 +1395,7 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
           if (axisMin<0)
           {
             //absMin=0 ;
-            absMax=abs(axisMin);
+            absMax=fabs(axisMin);
           }
           else
           {
@@ -1349,14 +1406,34 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
           float blackHolePower=(int)(maxPower)-6;  //Provide for approx six decades
           blackHoleRadius=util.uTenPower(blackHolePower);
           //grid line for blackHoleRadius will be at one end of axis
-          if (axisMin==0) {axisMin=blackHoleRadius ; blackHolePix=0;} else {axisMax=0-blackHoleRadius ; blackHolePix=axisLen;}
+          if (axisMin==0)
+          {
+            axisMin=blackHoleRadius;
+            blackHolePix=0;
+          }
+          else
+          {
+            axisMax=0-blackHoleRadius;
+            blackHolePix=axisLen;
+          }
           span=maxPower-blackHolePower;    //number of decades in range
-          if (span<0.7) isLin=1;    //Too narrow a range--may cause trouble with grid lines
+          if (span<0.7)     //Too narrow a range--may cause trouble with grid lines
+          {
+            isLin=1;
+          }
           if (span>12)  //don't allow huge span--too many grid lines
           {
-            int excessSpan=span-12 ; blackHolePower=blackHolePower+excessSpan ; span=12;
+            float excessSpan=span-12;
+            blackHolePower=blackHolePower+excessSpan ; span=12;
             blackHoleRadius=util.uTenPower(blackHolePower);
-            if (axisMax>0) axisMin=blackHoleRadius; else axisMax=0-blackHoleRadius;
+            if (axisMax>0)
+            {
+              axisMin=blackHoleRadius;
+            }
+            else
+            {
+              axisMax=0-blackHoleRadius;
+            }
           }
           includesZero=0;  //no longer includes zero
         }
@@ -1364,18 +1441,36 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
     }
     else    //X or Y axis that does not include zero--check for acceptable span
     {
-      float absMax=qMax(abs(axisMax), abs(axisMin)) ; float absMin=qMin(abs(axisMax), abs(axisMin));
+      float absMax=qMax(fabs(axisMax), fabs(axisMin));
+      float absMin=qMin(fabs(axisMax), fabs(axisMin));
       if (isX && absMax>0.0001 && absMin<0.0001)
       {
         absMin=0.0001; //Min for x axis should be at least 100 Hz if feasible
-        if (axisMin<0) axisMax=0-absMin; else axisMin=absMin;
+        if (axisMin<0)
+        {
+          axisMax=0-absMin;
+        }
+        else
+        {
+          axisMin=absMin;
+        }
       }
       span=util.uSafeLog10(absMax/absMin);    //number of decades in range
-      if (span<0.7) isLin=1;    //Too narrow a range--may cause trouble with grid lines
+      if (span<0.7)     //Too narrow a range--may cause trouble with grid lines
+      {
+        isLin=1;
+      }
       if (span>12)  //don't allow huge span--too many grid lines, so adjust range
       {
         absMin=absMax/util.uTenPower(12); //Change the range limit closest to zero
-        if (axisMin<0) axisMax=0-absMin; else axisMin=absMin;
+        if (axisMin<0)
+        {
+          axisMax=0-absMin;
+        }
+        else
+        {
+          axisMin=absMin;
+        }
         span=util.uSafeLog10(absMax/absMin);
       }
     }
@@ -1387,8 +1482,16 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
     span=axisMax-axisMin;
     //If zero span (allowed only for x axis), scale is multiplied by the step number to get the pixel value
     //Otherwise, scale is multiplied by the x value minus the leftmost x value
-    if (span==0) scale=axisLen/gDynamicSteps; else scale=axisLen/span;  //ver116-1b
-    float divWidth=axisLen/numDiv ; float valInterval=(axisMax-axisMin)/numDiv;
+    if (span==0)
+    {
+      scale=axisLen/gDynamicSteps;
+    }
+    else
+    {
+      scale=axisLen/span;
+    }
+    float divWidth=axisLen/numDiv;
+    float valInterval=(axisMax-axisMin)/numDiv;
     float thisPix=0;
     gridLines="";
     //int firstLine=divWidth;
@@ -1403,7 +1506,10 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
       thisPix=thisPix+divWidth;    //To next line
       joint=",";
     }
-    if (isX==0) scale=0-scale; //Scale is negative so higher Y moves up on graph ver116-4k
+    if (isX==0)  //Scale is negative so higher Y moves up on graph ver116-4k
+    {
+      scale=0-scale;
+    }
     return;
   }
 
@@ -1422,10 +1528,20 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
 
   scale=axisLen/span; //"scale" here is the number of pixels per decade
 
-  int mult=10 ; if (scale>60)  mult=2;   //feasible density of grid lines depends on scale (pixels per decade)
-  if (scale>=120) mult=1;
+  int mult=10;
+  if (scale>60)     //feasible density of grid lines depends on scale (pixels per decade)
+  {
+    mult=2;
+  }
+  if (scale>=120)
+  {
+    mult=1;
+  }
 
-  if (isX==0) scale=0-scale; //Scale is negative so higher Y moves up on graph
+  if (isX==0)  //Scale is negative so higher Y moves up on graph
+  {
+    scale=0-scale;
+  }
   //gridStart will be the power of ten at which we begin. For all positive, it is at or to left of chart; for all negative
   //it is at or to right of chart. If zero is included, gridStart is at blackHoleRadius, which is actually labeled 0 and
   //is also equivalent to -blackHoleRadius.
@@ -1433,45 +1549,56 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
   {
     //For log scans that include zero, we calculate the positive side starting at blackHoleRadius
     //and mirror those to the negative side.
-    gridStart=blackHoleRadius ; gridStartPix=blackHolePix;
+    gridStart=blackHoleRadius;
+    gridStartPix=blackHolePix;
   }
   else
   {
-    if (axisMin<0) {gridStart=axisMax ; gridStartPix=axisLen;}  else {gridStart=axisMin ; gridStartPix=0;}
+    if (axisMin<0)
+    {
+      gridStart=axisMax;
+      gridStartPix=axisLen;
+    }
+    else
+    {
+      gridStart=axisMin;
+      gridStartPix=0;
+    }
   }
-  numDiv=0 ; int absGridStart=abs(gridStart);
+  numDiv=0 ;
+  float absGridStart=abs(gridStart);
   float currTenPower=util.uRoundDownToPower(absGridStart,10);  //We run through positive currTenPower starting here
   //First grid line is for the axis beginning at axisMin, 0 pixel val, doLabel=1
   gridLines=QString::number(axisMin) + ",0,1";
-  int currVal;
-  for (int decadeNum=1; decadeNum < 200;decadeNum++)  //we will never do all 200
+  float currVal;
+  for (int decadeNum=1; decadeNum <= 200; decadeNum++)  //we will never do all 200
   {
-    for (int i=1; i< 9; i++)    //one for each multiple of a power of ten.
+    for (int i=1; i<= 9; i++)    //one for each multiple of a power of ten.
     {
       //We run through increasing positive grid values, starting at or below |gridStart|. Once we are at or above
       //|gridStart| we start "drawing" the grid line for positive values, and if appropriate for the negative
       //of that value. We keep going until we are past both the postive and negative ends of the chart.
-      if (i==1 || mult==1 || (mult==2 and int(i/2)*2==i))   //do only for lines at desired multiples
+      if (i==1 || mult==1 || (mult==2 && (int)((i/2)*2)==i))   //do only for lines at desired multiples
       {
         currVal=currTenPower*i;
         if (i==1 && decadeNum==1 && crossesZero)
         {
           //If zero is crossed, we label the starting point 0.
-          gridLines=gridLines+",0,"+gridStartPix+","+doLabel;    //enter a grid line
+          gridLines=gridLines+",0,"+QString::number(gridStartPix)+","+QString::number(doLabel);    //enter a grid line
         }
         else
         {
           if (currVal>=absGridStart)
           {
-            int currPosPix=gridStartPix+scale*(util.uSafeLog10(currVal/absGridStart));
-            int currNegPix=int(0.5+10*(2*gridStartPix-currPosPix))/10;   //reflect through gridStartPix and round to tenth of pixel
-            currPosPix=int(0.5+10*currPosPix)/10;   //round to tenth of pixel
+            float currPosPix=gridStartPix+scale*(util.uSafeLog10(currVal/absGridStart));
+            float currNegPix=int(0.5+10*(2*gridStartPix-currPosPix))/10;   //reflect through gridStartPix and round to tenth of pixel
+            currPosPix=((int)(0.5+10*currPosPix))/10;   //round to tenth of pixel
             if ((axisMax>0) && (currVal<=axisMax))
             {
               if (currPosPix>=2 && currPosPix<=axisLen-2)  //don't want to do very ends; we do that below
               {
                 doLabel=(i==1 && (isX==0 || (currPosPix>=40 && currPosPix<=axisLen-40)));   //label powers of ten if not too close to end of x-axis
-                gridLines=gridLines+","+currVal+","+currPosPix+","+doLabel;    //enter a grid line
+                gridLines=gridLines+","+QString::number(currVal)+","+QString::number(currPosPix)+","+QString::number(doLabel);    //enter a grid line
                 numDiv=numDiv+1;
               }
             }
@@ -1480,7 +1607,7 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
               if (currNegPix>=2 && currNegPix<axisLen-2)  //don't want to do very ends; we do that below
               {
                 doLabel=(i==1 && (isX==0 || (currNegPix>=40 && currNegPix<=axisLen-40)));   //label powers of ten if not too close to end of x-axis
-                gridLines=gridLines+","+(0-currVal)+","+currNegPix+","+doLabel;    //enter a grid line
+                gridLines=gridLines+","+QString::number(0-currVal)+","+QString::number(currNegPix)+","+QString::number(doLabel);    //enter a grid line
                 numDiv=numDiv+1;
               }
             }
@@ -1488,10 +1615,13 @@ void msagraph::gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv
         }
       }
     }
-    if (currVal>=axisMax && 0-currVal<=axisMin) break;    //End loop if at or outside both ends of chart
+    if (currVal>=axisMax && 0-currVal<=axisMin)
+    {
+      break;    //End loop if at or outside both ends of chart
+    }
     currTenPower=10*currTenPower;
   }
-  gridLines=gridLines+","+axisMax+","+axisLen+",1";    //Final grid line
+  gridLines=gridLines+","+QString::number(axisMax)+","+QString::number(axisLen)+",1";    //Final grid line
   numDiv=numDiv+1; //1 less than number of grid lines
 }
 void msagraph::gCalcGraphParams()
@@ -1511,7 +1641,7 @@ void msagraph::gCalcGraphParams()
   float dumBlackHolePix, dumRadius;
 
   gCalcAxis(1, gXGridStyle, gXIsLinear, gHorDiv, gXAxisMin, gXAxisMax
-            , gXScale, dumRadius, dumBlackHolePix, gridLines); //ver116-4k
+            , gXScale, dumRadius, dumBlackHolePix, gridLines);
 
   for (int i=1; i<= gHorDiv+1; i++)  //Save grid line locations and labels
   {
@@ -1526,13 +1656,12 @@ void msagraph::gCalcGraphParams()
     {
       gXGridLabels[i] =""; //If no label, enter blank
     }
-   }
+  }
 
   //Y parameters are set to accommodate Y1 unless only Y2 is graphed
   //gCalcAxis may change gY1IsLinear and gVertDiv
   if (gDoY1==1)
   {
-    QString gridLines;
     gCalcAxis(0, gY1GridStyle,gY1IsLinear, gVertDiv, gY1AxisMin, gY1AxisMax
               , gY1Scale, gY1BlackHoleRadius, gY1BlackHolePix, gridLines); //ver116-4k
     for (int i=1; i <= gVertDiv+1; i++)  //Save grid line locations and labels
@@ -1556,21 +1685,35 @@ void msagraph::gCalcGraphParams()
     //forcing the isLinear param to 1. The only situation that doesn//t work is if Y1
     //is linear and Y2 is log, in which case Y2 would like to recalculate gVertDiv
     int lin;
-    if (gDoY1==0) lin=gY2IsLinear; else lin=1;
-        //gCalcAxis may change gY2IsLinear and gVertDiv
+    if (gDoY1==0)
+    {
+      lin=gY2IsLinear;
+    }
+    else
+    {
+      lin=1;
+    }
+    //gCalcAxis may change gY2IsLinear and gVertDiv
     gCalcAxis(0, gY2GridStyle, lin, gVertDiv, gY2AxisMin, gY2AxisMax
               , gY2Scale, gY2BlackHoleRadius, gY2BlackHolePix, gridLines); //ver116-4k
     for (int i=1; i <= gVertDiv+1; i++)  //Save grid line locations and labels
     {
       float gridVal, gridPix, doLabel;
       util.uExtractNumericItems(3,gridLines, ",", gridVal, gridPix, doLabel);
-      gY2GridLines[i]=gridPix;;
+      gY2GridLines[i]=gridPix;
       if (doLabel==1)
-          gY2GridLabels[i]=gGridBoundaryLabel(gridVal, gY2AxisForm);
+      {
+        gY2GridLabels[i]=gGridBoundaryLabel(gridVal, gY2AxisForm);
+      }
       else
-          gY2GridLabels[i] ="";
+      {
+        gY2GridLabels[i] ="";
+      }
     }
-    if (gDoY1==0)  gY2IsLinear=lin;     //May have been forced to linear by gCalcAxis
+    if (gDoY1==0)
+    {
+      gY2IsLinear=lin;     //May have been forced to linear by gCalcAxis
+    }
   }
   //if gDoY1=0 and gDoY2=0 then gVertDiv=0 //delver115-2c
   //Y parameters are set to accommodate Y1; Y2 will be scaled to fit those
@@ -2803,20 +2946,28 @@ void msagraph::RefreshGraph(int restoreErase)
     if (recreateReferences || refreshTracesDirty==1)
     {
       if (referenceLineType>1)
+      {
         CreateReferenceSource();
+      }
       CreateReferenceTransform();
       gClearAllReferences();
       if (referenceDoMath==0)   //don't draw if we are using ref for math ver114-8b
       {
         if (referenceTrace & 2)
+        {
           gAddReference(1,CreateReferenceTraces(referenceColor2,referenceWidth2,2, &refLine[2]));  //Do Y2 reference
+        }
         if (referenceTrace & 1)
+        {
           gAddReference(2,CreateReferenceTraces(referenceColor1,referenceWidth1,1, &refLine[1]));
+        }
       }
     }
     PrintReferenceHeading();
     if (referenceDoMath==0)
+    {
       gDrawReferences();  //don't draw if we are using ref for math ver115-5d
+    }
   }
 
   gPauseDynamicScan();  //Keeps the trace redraws from accumulating
@@ -2829,7 +2980,9 @@ void msagraph::RefreshGraph(int restoreErase)
     gRefreshTraces(); //Draw from accumulated trace draw commands  //ver114-6e
   }
   if (restoreErase)
+  {
     gRestoreErasure();
+  }
   gResumeDynamicScan();
         //Discard draw commands if scan is still in progress; otherwise we flush a bit later
   if (haltsweep==1)
@@ -2840,7 +2993,9 @@ void msagraph::RefreshGraph(int restoreErase)
     //to maintain their prior frequencies, if possible. We do this on every Refresh or Redraw
     //through the end of the first scan.
   if (refreshMarkersDirty || refreshRedrawFromScratch)
+  {
     gDetermineMarkerPointNumbers();   //locate floating markers
+  }
   gUpdateMarkerXVal();  //Save frequency values for markers
   mDrawMarkerInfo(); //Draw marker info under the x axis; also updates marker locations
   if (doGraphMarkers)
@@ -2967,27 +3122,40 @@ void msagraph::DrawSetupInfo()
   }
   else
   {
-
     if (vars->msaMode=="ScalarTrans")
+    {
       gPrintText("SNA Transmission", InfoX-10,16,textColor);   //ver115-4e
+    }
     if (vars->msaMode=="VectorTrans")
+    {
       gPrintText("VNA Transmission", InfoX-10,16,textColor);
+    }
         //ver115-1c revised the printing of the cal level
     if (vars->msaMode=="Reflection")
       gPrintText("VNA Reflection", InfoX-10,16,textColor);
     QColor col;
-    if (vnaCal->applyCalLevel < vnaCal->desiredCalLevel) col = Qt::red;   //ver115-1b if downgraded cal, print in red
+    if (vnaCal->applyCalLevel < vnaCal->desiredCalLevel)
+    {
+      col = Qt::red;   //if downgraded cal, print in red
+    }
     if (vnaCal->applyCalLevel==0)
     {
-        if (vars->msaMode=="Reflection") col = Qt::red;  //no reflection cal, print in red
-          vnaCal->calLevel="None";
+        if (vars->msaMode=="Reflection")
+        {
+          col = Qt::red;  //no reflection cal, print in red
+        }
+        vnaCal->calLevel="None";
     }
     else
     {
         if (vnaCal->applyCalLevel==1)
+        {
           vnaCal->calLevel="Base";
+        }
         else
+        {
           vnaCal->calLevel="Band";  //ver115-1d
+        }
     }
     gPrintText("Cal=" + vnaCal->calLevel,InfoX, InfoY, col);
     InfoY=InfoY+16;
@@ -2995,23 +3163,27 @@ void msagraph::DrawSetupInfo()
   }
 
   if (vars->freqBand!=0)
-    gPrintText(QString::number(vars->freqBand) + "G", InfoX, 30,textColor);   //ver116-4s
+  {
+    gPrintText(QString::number(vars->freqBand) + "G", InfoX, 30,textColor);
+  }
   if (vars->suppressHardware)
-    gPrintText( "No MSA", InfoX, 44,textColor);   //ver115-6c
+  {
+    gPrintText( "No MSA", InfoX, 44,textColor);
+  }
 
             //Base frequency, if not zero
   if (vars->baseFrequency!=0)
   {
     gPrintText("Base Freq(MHz)=", InfoX, InfoY,textColor);
-    InfoY=InfoY+16;     //ver116-4k
+    InfoY=InfoY+16;
     gPrintText(QString::number(vars->baseFrequency,'g',3), InfoX+5, InfoY,textColor);
-    InfoY=InfoY+16; //ver116-4k
+    InfoY=InfoY+16;
   }
 
   gPrintText( "RBW=" + QString::number(activeConfig->finalbw,'g',6)+"kHz",InfoX, InfoY,textColor);
-  InfoY=InfoY+16;    //ver116-1b
+  InfoY=InfoY+16;
   gPrintText( "Vid="+vars->videoFilter,InfoX, InfoY,textColor);
-  InfoY=InfoY+16; //ver116-1b put this back in
+  InfoY=InfoY+16;
 
   QString wait;
   if (vars->useAutoWait) wait=vars->autoWaitPrecision; else wait=QString::number(vars->wate)+" ms";
@@ -3109,7 +3281,7 @@ void msagraph::PrintMessage()
     }
   }
 
-  item = gPrintMessage(vars->message); //ver116-4i
+  item = gPrintMessage(vars->message);
   item->setData(0,"message");
 }
 QString msagraph::gSweepContext()
@@ -3987,10 +4159,10 @@ void msagraph::CalcReflectDerivedData(int currStep)
 
     call uRefcoToImpedance S11GraphR0, rho, ang, serR, serReact
     call uEquivSeriesLC trueFreq, serR, serReact, serL, serC
-    if abs(serReact)<0.001 then serReact=0  'ver115-5d
+    if fabs(serReact)<0.001 then serReact=0  'ver115-5d
     if serR<0.001 then serR=0 'ver115-5d
     call uEquivParallelImped serR, serReact, parR, parReact 'Convert imped to equivalent parallel resistance and reactance ver114-7b
-    if abs(parReact)<0.001 then parReact=0 'ver115-5d
+    if fabs(parReact)<0.001 then parReact=0 'ver115-5d
     if parR<0.001 then parR=0 'ver115-5d
     if trueFreq=0 then
         parR=constMaxValue: parL=constMaxValue: parC=0   'Set for max impedance
@@ -5843,10 +6015,7 @@ void msagraph::PlotDataToScreen()
     vars->doSpecialRandom=(rand() % 100) / 100;  //Random number for doSpecialGraph ver115-1b
   }
 
-  if (vars->varwindow == 1)
-  {
-    //updatevar(); //moved here from [ProcessAndPrint] ver111-34a
-  }
+  updatevar(vars->thisstep); //moved here from [ProcessAndPrint] ver111-34a
 }
 
 void msagraph::mMarkToCenter()

@@ -66,7 +66,8 @@ SOURCES += main.cpp\
     complexmaths.cpp \
     dialogsavecustappearance.cpp \
     dialogchooseprimaryaxis.cpp \
-    dialogFreqAxisPreference.cpp
+    dialogFreqAxisPreference.cpp \
+    dialogshowvars.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -91,7 +92,8 @@ HEADERS  += mainwindow.h \
     constants.h \
     dialogsavecustappearance.h \
     dialogchooseprimaryaxis.h \
-    dialogFreqAxisPreference.h
+    dialogFreqAxisPreference.h \
+    dialogshowvars.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \
@@ -102,7 +104,8 @@ FORMS    += mainwindow.ui \
     dialogvnacal.ui \
     dialogsavecustappearance.ui \
     dialogchooseprimaryaxis.ui \
-    dialogFreqAxisPreference.ui
+    dialogFreqAxisPreference.ui \
+    dialogshowvars.ui
 
 RESOURCES += \
     resource.qrc

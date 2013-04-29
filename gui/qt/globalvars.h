@@ -85,7 +85,8 @@ public:
 
       int thisstep; //keeps track of current step number during a sweep
       int globalSteps;    //SEWgraph; Number of steps set by user. Set in calcWindoInfo. global version of steps.
-      int varwindow, datawindow;    //=1 when indicated window is open   //ver115-1b
+      //int varwindow,
+      int datawindow;    //=1 when indicated window is open   //ver115-1b
 
       float doSpecialGraph; //=0 for normal operation; for other values see [doSpecialGraph]
       float doSpecialRandom;  //Random number generated at start of each sweep, for doSpecialGraph ver 114-3g
@@ -411,12 +412,12 @@ public:
           //Note: magarray(x,1) is no longer used; magarray(x,2) is never actually used to store magnitude ver116-1b
       Q2DintVector magarray;    //magni pixels for each step#: (0)thispointx, (1)oldmagpixel,(2)thispointmag(3)magdata
           //Note: phaarray(x,1) is no longer used; phaarray(x,2) is never actually used to store phase ver116-1b
-      Q2DintVector phaarray;    //(0)pdmcmd; phase pixels for each step#:(1)oldphapixel,(2)thispointphase,(3)phadata,(4)pdmread ver111-39d
+      Q2DfloatVector phaarray;    //(0)pdmcmd; phase pixels for each step#:(1)oldphapixel,(2)thispointphase,(3)phadata,(4)pdmread ver111-39d
 
-      Q2DintVector PLL1array;  //(0-23)N23thruN0,(24-39)notused,(40)pdf1,(43)LO1freq,(45)ncounter,(46)Fcounter,(47)Acounter,(48)Bcounter. ver111-30a
-      Q2DintVector PLL3array;  //(0-23)N23thruN0,(24-39)notused,(40)pdf3,(43)LO3freq,(45)ncounter,(46)Fcounter,(47)Acounter,(48)Bcounter. ver111-30a
-      Q2DintVector DDS1array;  //(0-39)sw0-sw39,(40-44)w0-w4,(45)base,(46)actualdds1output
-      Q2DintVector DDS3array;  //(0-39)sw0-sw39,(40-44)w0-w4,(45)base,(46)actualdds3output
+      //Q2DfloatVector PLL1array;  //(0-23)N23thruN0,(24-39)notused,(40)pdf1,(43)LO1freq,(45)ncounter,(46)Fcounter,(47)Acounter,(48)Bcounter. ver111-30a
+      //Q2DfloatVector PLL3array;  //(0-23)N23thruN0,(24-39)notused,(40)pdf3,(43)LO3freq,(45)ncounter,(46)Fcounter,(47)Acounter,(48)Bcounter. ver111-30a
+      //Q2DfloatVector DDS1array;  //(0-39)sw0-sw39,(40-44)w0-w4,(45)base,(46)actualdds1output
+      //Q2DfloatVector DDS3array;  //(0-39)sw0-sw39,(40-44)w0-w4,(45)base,(46)actualdds3output
       QVector<int> freqCorrection; //freq correction factors for frequency of each step in current sweep; added to raw data
           //frontEndCalData is the raw data, freq and dBm, for the current front end. It is interpolated to frontEndCorrection
           //on Restart to match the current scan points. It is resized if necessary when a front end file is loaded

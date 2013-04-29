@@ -465,7 +465,7 @@ private:
 signals:
   void ChangeMode();
   void RequireRestart();
-
+  void updatevar(int);
 
 };
 

@@ -42,7 +42,7 @@
 #include "graph.h"
 #include "hwdinterface.h"
 #include "debugmodule.h"
-
+#include "dialogshowvars.h"
 
 namespace Ui {
 class MainWindow;
@@ -75,6 +75,7 @@ private:
   DebugModule debug;
   QTimer *timerStart;
   QTimer *timerStart2;
+  dialogShowVars *showVars;
 
 
   void CalcFreqCorrection();
@@ -83,7 +84,6 @@ private:
   void CommandThisStep();
   void PostScan();
   void IncrementOneStep();
-  void Halted();
   void FinishSweeping();
   void ReverseSweepDirection();
 
@@ -155,11 +155,7 @@ private:
   void HideButtonsOnGraph();
   void ShowButtonsOnGraph();
   void menuRLCAnalysis();
-
-
-
   void menuS11ToS21();
-
   void ImpedToRLC(); // connect$,centerStep, nLeft,nRight, resonStep, byref R, byref L, byref C
   void DetermineLCEquiv(); // connect$,startStep, endStep, resonStep
   void menuQ();
@@ -170,117 +166,21 @@ private:
   void RestoreVNAData();
   void regraphDatatable();
   void menuLoadDataFile();
-
-
-
   void LoadDataFileWithContext(QString dataFileName);
-
-
-
 //===============Configuration Manager Module=======================
 
   msaConfig activeConfig;
-
-
-
-
-
-
-
-
-
-
-
 //===========================Real-Time Graphing Module=====================================
   // see the global file for the variables
 
   void gChangeTextSpecs(QString btn, QString &newTxt);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   bool CoaxCreateFile();
-
   void smithFinished(QString );
   void multiscanCloseAll();
-
-
-
-
-
-
-
-
-
-
-
-
-
   QString smithGraphHndl();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   void CloseSpecial(int returnflag);
-
-
-
   QString DefaultDir;
-
-
-
-
-
-
-
-
-
-
-  //QString msaVersion, msaRevision;  //Version and revision numbers of this release
-
   int special;
-
-
   QString SweepContext();
   void RestoreSweepContext();
   void FilterDataType(int &t, int axisNum);
@@ -381,6 +281,12 @@ public slots:
   void PartialRestart();
   void ProcessAndPrint();
   void PrintMessage();
+
+  void Showvar();
+  void updatevar(int);
+  void Halted();
+
+
 };
 
 #endif // MAINWINDOW_H

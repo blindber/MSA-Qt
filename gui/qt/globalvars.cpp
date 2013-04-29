@@ -25,10 +25,10 @@ globalVars::globalVars()
   magarray.mresize(802,4);
   phaarray.mresize(802,5);
   lineCalArray.mresize(802,3);
-  PLL1array.mresize(802,47);
-  PLL3array.mresize(802,47);
-  DDS1array.mresize(802,47);
-  DDS3array.mresize(802,47);
+//  PLL1array.mresize(802,49);
+  //PLL3array.mresize(802,49);
+  //DDS1array.mresize(802,49);
+  //DDS3array.mresize(802,49);
   cmdallarray.mresize(802,40);
 
 
@@ -126,7 +126,7 @@ void globalVars::zeroVars()
   steps = 0;
   thisstep = 0;
   globalSteps = 0;
-  varwindow = 0;
+  //varwindow = 0;
   datawindow = 0;
   doSpecialGraph = 0;
   doSpecialRandom = 0;

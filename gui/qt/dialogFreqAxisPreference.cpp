@@ -382,16 +382,16 @@ void dialogFreqAxisPreference::FreqAxisPreference()
 }
 */
 
-void dialogFreqAxisPreference::setDUTForward()
+void dialogFreqAxisPreference::setDUTForward(bool checked)
 {
-  ui->DirectionF->setChecked(false);
-  ui->DirectionR->setChecked(true);
+  ui->DirectionF->setChecked(checked);
+  ui->DirectionR->setChecked(!checked);
 }
 
-void dialogFreqAxisPreference::setDUTReverse()
+void dialogFreqAxisPreference::setDUTReverse(bool checked)
 {
-  ui->DirectionF->setChecked(true);
-  ui->DirectionR->setChecked(false);
+  ui->DirectionF->setChecked(!checked);
+  ui->DirectionR->setChecked(checked);
 }
 void dialogFreqAxisPreference::setAutoWait()
 {
@@ -711,7 +711,7 @@ void dialogFreqAxisPreference::axisXFinished()
     float temp2 = util.uCompact(ui->SweepSpan->text()).toFloat();
     //Enter new freq, but only if there is a material change. Otherwise,
     //tiny differences between using center/span and start/stop will trigger a restart.  //ver115-1b
-    if (abs(temp1-cfg->centfreq) > 1e-12 || abs(temp2-cfg->sweepwidth)>1e-12)
+    if (fabs(temp1-cfg->centfreq) > 1e-12 || fabs(temp2-cfg->sweepwidth)>1e-12)
     {
       SetCenterSpanFreq(temp1, temp2); //new center and span
     }
@@ -724,7 +724,7 @@ void dialogFreqAxisPreference::axisXFinished()
     float temp1 = util.uCompact(ui->SweepStart->text()).toFloat();
     float temp2 = util.uCompact(ui->SweepStop->text()).toFloat();
     //Enter new freq, but only if there is a material change.
-    if (abs(temp1-cfg->startfreq) > 1e-12 || abs(temp2-cfg->endfreq) > 1e-12)
+    if (fabs(temp1-cfg->startfreq) > 1e-12 || fabs(temp2-cfg->endfreq) > 1e-12)
     {
       SetStartStopFreq(temp1, temp2); //new center and span
     }
@@ -975,14 +975,14 @@ void dialogFreqAxisPreference::axisXFinished()
   }*/
 }
 
-void dialogFreqAxisPreference::on_DirectionF_clicked()
+void dialogFreqAxisPreference::on_DirectionF_clicked(bool checked)
 {
-  setDUTForward();
+  setDUTForward(checked);
 }
 
-void dialogFreqAxisPreference::on_DirectionR_clicked()
+void dialogFreqAxisPreference::on_DirectionR_clicked(bool checked)
 {
-  setDUTReverse();
+  setDUTReverse(checked);
 }
 
 void dialogFreqAxisPreference::on_cbAutoWait_clicked(bool checked)

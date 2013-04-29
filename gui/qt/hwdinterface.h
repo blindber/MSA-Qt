@@ -15,6 +15,28 @@
 #include "interpolation.h"
 
 
+//(0-39)sw0-sw39,(40-44)w0-w4,(45)base,(46)actualdds1output
+class cDDS
+{
+public:
+  quint32 array[45];
+  quint32  base;
+  double freq;
+};
+
+class cPLL
+{
+public:
+  //(0-23)N23thruN0,(24-39)notused,(40)pdf1,(43)LO1freq,(45)ncounter,(46)Fcounter,(47)Acounter,(48)Bcounter. ver111-30a
+  quint32 array[40];
+  double pdf;
+  double freq;
+  quint32 ncounter;
+  quint32 fcounter;
+  quint32 Acounter;
+  quint32 Bcounter;
+};
+
 class hwdInterface  : public QObject
 {
    Q_OBJECT
@@ -27,8 +49,6 @@ public:
   void setFilePath(QString Dir);
   void setVna(dialogVNACal *newVnaCal);
 
-
-
   usbFunctions *usb;
   touchStone touch;
   dialogCalManager *calMan;
@@ -40,9 +60,6 @@ public:
   void titleCancel();
   void titleFinished();
   void ClearAuxData();
-  void Showvar();
-  void updatevar();
-  void Closevarwin();
   void finished();
   void SpecialTests();
   void CloseSpecial();
@@ -94,16 +111,16 @@ public:
   float ActualSignalFrequency(float f, int aBand);
   void CalculateAllStepsForLO1Synth();
   void CalculateAllStepsForLO3Synth();
-  void FillPLL1array();
-  void FillPLL3array();
-  void FillDDS1array();
-  void FillDDS3array();
+  void FillPLL1array(int step);
+  void FillPLL3array(int step);
+  void FillDDS1array(int step);
+  void FillDDS3array(int);
   void CreateCmdAllArray();
   void CommandPLL();
 
   void CommandPLLslimUSB();
 
-  void DetermineModule();
+  void DetermineModule(int step);
   void CommandPDMonly();
   void CommandPDMSlimUSB() ;
   void CommandAllSlimsUSB() ;
@@ -154,32 +171,57 @@ public:
   int scanResumed; //used to indicate whether we start with a new scan(0) or resume where we left off(1)SEW
   int suppressSweepTime;
 
-  int pdf;
-  int rcounter;
   float appxpdf;
-  int pdf3;
   int datavalue;
   int levalue;
-  float pdf2;
-  float LO1;
-  float appxVCO;
-  float appxLO2;
-  int ncounter2;
+
+  QVector <cPLL> pll_1;
+
+  double LO1;
+  double pdf;
   int ncounter;
+  int Bcounter;
+  int Acounter;
   int fcounter;
+
+
+  int ncounter1;
   int fcounter1;
-  int lastfcounter1;
+  int rcounter;
+  int rcounter1;
+
+
+
+  QVector <cPLL> pll_2;
+  double LO2;
+  double pdf2;
+  int ncounter2;
+  int Bcounter2;
+  int Acounter2;
   int fcounter2;
+  int rcounter2;
+  float appxLO2;
+
+
+
+  QVector <cPLL> pll_3;
+  double LO3;
+  double pdf3;
+  int ncounter3;
   int fcounter3;
   int lastfcounter3;
-
-  int lastncounter1;
   int lastncounter3;
-  int ncounter1;
-  int ncounter3;
   int rcounter3;
-  int rcounter2;
-  int rcounter1;
+
+  int lastfcounter1;
+  int lastncounter1;
+  float appxVCO;
+
+
+  QVector <cDDS> dds_1;
+  QVector <cDDS> dds_3;
+
+
   int phasepolarity;
   int fractional;
   int preselector;
@@ -190,11 +232,6 @@ public:
 
   int pdmcmd;
 
-  int Bcounter;
-  int Bcounter2;
-  int Acounter;
-  int Acounter2;
-  int LO2;
 
   QString error;
   QString errora;
@@ -269,6 +306,101 @@ private:
   Int64N cmdForUsb;
   float ddsoutput;
   float ddsclock;
+  int PLL;
+  quint32 base;
+
+
+
+
+
+  int N0;
+  int N1;
+  int N2;
+  int N3;
+  int N4;
+  int N5;
+  int N6;
+  int N7;
+  int N8;
+  int N9;
+  int N10;
+  int N11;
+  int N12;
+  int N13;
+  int N14;
+  int N15;
+  int N16;
+  int N17;
+  int N18;
+  int N19;
+  int N20;
+  int N21;
+  int N22;
+  int N23;
+
+  int nb0;
+  int nb1;
+  int nb2;
+  int nb3;
+  int nb4;
+  int nb5;
+  int nb6;
+  int nb7;
+  int nb8;
+  int nb9;
+  int nb10;
+  int nb11;
+  int nb12;
+  int nb13;
+  int nb14;
+  int nb15;
+  int nb16;
+  int nb17;
+  int nb18;
+  int nb19;
+  int nb20;
+  int nb21;
+  int nb22;
+  int nb23;
+
+  int na0;
+  int na1;
+  int na2;
+  int na3;
+  int na4;
+
+
+  int ra0;
+  int ra1;
+  int ra2;
+  int ra3;
+  int ra4;
+  int ra5;
+  int ra6;
+  int ra7;
+  int ra8;
+  int ra9;
+  int ra10;
+  int ra11;
+  int ra12;
+  int ra13;
+
+  quint32 sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10,;
+  quint32 sw11, sw12, sw13, sw14, sw15, sw16, sw17, sw18, sw19, sw20;
+  quint32 sw21, sw22, sw23, sw24, sw25, sw26, sw27, sw28, sw29, sw30;
+  quint32 sw31, sw32, sw33, sw34, sw35, sw36, sw37, sw38, sw39;
+
+  quint32 b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10,;
+  quint32 b11, b12, b13, b14, b15, b16, b17, b18, b19, b20;
+  quint32 b21, b22, b23, b24, b25, b26, b27, b28, b29, b30;
+  quint32 b31, b32, b33, b34, b35, b36, b37, b38, b39;
+
+
+  quint32 w0;
+  quint32 w1;
+  quint32 w2;
+  quint32 w3;
+  quint32 w4;
 
 public slots:
 
@@ -283,6 +415,7 @@ signals:
   void ResizeArrays(int);
   void ProcessAndPrint();
   void PrintMessage();
+  void Halted();
 };
 
 #endif // HWDINTERFACE_H

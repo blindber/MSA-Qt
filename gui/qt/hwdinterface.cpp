@@ -18,6 +18,7 @@ hwdInterface::hwdInterface(QWidget *parent)
   connect(this, SIGNAL(ResizeArrays(int)), parent, SLOT(ResizeArrays(int)));
   connect(this, SIGNAL(ProcessAndPrint()), parent, SLOT(ProcessAndPrint()));
   connect(this, SIGNAL(PrintMessage()), parent, SLOT(PrintMessage()));
+  connect(this, SIGNAL(Halted()), parent, SLOT(Halted()));
 
 
   port = 0;
@@ -58,19 +59,15 @@ hwdInterface::hwdInterface(QWidget *parent)
   startTime = 0;
   scanResumed = 0;
   suppressSweepTime = 0;
-  pdf = 0;
   rcounter = 0;
   appxpdf = 0;
   pdf3 = 0;
   datavalue = 0;
   levalue = 0;
   pdf2 = 0;
-  LO1 = 0;
   appxVCO = 0;
   appxLO2 = 0;
   ncounter2 = 0;
-  ncounter = 0;
-  fcounter = 0;
   fcounter1 = 0;
   lastfcounter1 = 0;
   fcounter2 = 0;
@@ -89,11 +86,9 @@ hwdInterface::hwdInterface(QWidget *parent)
   Jcontrol = 0;
   filtbank = 0;
   pdmcmd = 0;
-  Bcounter = 0;
-  Bcounter2 = 0;
-  Acounter = 0;
   Acounter2 = 0;
   LO2 = 0;
+  Bcounter2 = 0;
 
   //private vars
   enterPLL2phasefreq = 0;
@@ -103,6 +98,12 @@ hwdInterface::hwdInterface(QWidget *parent)
   ddsoutput = 0;
   ddsclock = 0;
 
+  pdf = 0;
+  LO1 = 0;
+  ncounter = 0;
+  fcounter = 0;
+  Bcounter = 0;
+  Acounter = 0;
 
 }
 
@@ -303,21 +304,26 @@ void hwdInterface::ManSpur()
 
 void hwdInterface::CreatePLL1N()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[CreatePLL1N]'needed:ncounter,fcounter,PLL1mode,PLL1
-    preselector = 32 : if PLL1mode = 1 then preselector = 16
-    PLL = PLL1
-    gosub [CreateNBuffer]'needs:ncounter,fcounter,PLL,preselector;creates:Bcounter,Acounter, and N Bits N0-Nx
-    if len(errora$)>0 then
-        error$ = "PLL 1, " + errora$
-        message$=error$ : call PrintMessage 'ver114-4e
-        call RequireRestart   'ver115-1c
-        wait
-    end if
-    Bcounter1=Bcounter: Acounter1=Acounter
-    return 'returns with Bcounter1,Acounter1,N0thruNx
-    */
+  //needed:ncounter,fcounter,PLL1mode,PLL1
+  preselector = 32;
+  if (activeConfig->PLL1mode == 1)
+  {
+    preselector = 16;
+  }
+  PLL = activeConfig->PLL1;
+  CreateNBuffer();  //needs:ncounter,fcounter,PLL,preselector;creates:Bcounter,Acounter, and N Bits N0-Nx
+  if (errora.length()>0)
+  {
+    error = "PLL 1, " + errora;
+    vars->message=error;
+    PrintMessage();
+    RequireRestart();
+    return;
+  }
+  //Bcounter1=Bcounter;
+  //Acounter1=Acounter;
+  return; //returns with Bcounter1,Acounter1,N0thruNx
+
 }
 void hwdInterface::CreatePLL2N()
 {
@@ -337,21 +343,24 @@ void hwdInterface::CreatePLL2N()
 
 void hwdInterface::CreatePLL3N()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[CreatePLL3N]'needed:ncounter,fcounter,PLL3mode,PLL3  ver111-14
-    preselector = 32 : if PLL3mode = 1 then preselector = 16
-    PLL = PLL3
-    gosub [CreateNBuffer]'needs:ncounter,fcounter,PLL,preselector;creates:Bcounter,Acounter, and N Bits N0-Nx
-    if len(errora$)>0 then
-        error$ = "PLL 3, " + errora$
-        message$=error$ : call PrintMessage 'ver114-4e
-        call RequireRestart   'ver115-1c
-        wait
-    end if
-    Bcounter3=Bcounter: Acounter3=Acounter
-    return 'returns with Bcounter3,Acounter3,N0thruNx
-*/
+  //needed:ncounter,fcounter,PLL3mode,PLL3  ver111-14
+  preselector = 32;
+  if (activeConfig->PLL3mode == 1)
+  {
+    preselector = 16;
+  }
+  PLL = activeConfig->PLL3;
+  CreateNBuffer();//needs:ncounter,fcounter,PLL,preselector;creates:Bcounter,Acounter, and N Bits N0-Nx
+  if (errora.length()>0)
+  {
+    error = "PLL 3, " + errora;
+    vars->message=error;
+    PrintMessage();
+    RequireRestart();
+    return;
+  }
+  //    Bcounter3=Bcounter: Acounter3=Acounter
+  return; //returns with Bcounter3,Acounter3,N0thruNx
 }
 
 
@@ -406,42 +415,77 @@ void hwdInterface::Create2325N()
 
 void hwdInterface::Create2326N()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'needed:ncounter ; creates LMX2326 n buffer  ver111
-    Bcounter = int(ncounter/32)
-    Acounter = int(ncounter-(Bcounter*32))
-    if Bcounter < 3 then beep:errora$="2326 Bcounter <3":return 'with errora$ ver111-37c
-    if Bcounter > 8191 then beep:errora$="2326 Bcounter >8191":return 'with errora$ ver111-37c
-    if Bcounter < Acounter then beep:errora$="2326 Bcounter<Acounter":return 'with errora$ ver111-37c
-    'ver116-4o deleted "if" block, per Lrev1
-    N0 = 1       'n address bit 0, must be 1
-    N1 = 0       'n address bit 1, must be 0
-    na0 = int(Acounter/2):N2 = Acounter- 2*na0      'Acounter bit 0 LSB
-    na1 = int(na0/2):N3 = na0 - 2*na1
-    na2 = int(na1/2):N4 = na1 - 2*na2
-    na3 = int(na2/2):N5 = na2 - 2*na3
-    na4 = int(na3/2):N6 = na3 - 2*na4               'Acounter bit 4 MSB
-    nb0 = int(Bcounter/2):N7 = Bcounter- 2*nb0      'Bcounter bit 0 LSB
-    nb1 = int(nb0/2):N8 = nb0 - 2*nb1
-    nb2 = int(nb1/2):N9 = nb1 - 2*nb2
-    nb3 = int(nb2/2):N10 = nb2 - 2*nb3
-    nb4 = int(nb3/2):N11 = nb3 - 2*nb4
-    nb5 = int(nb4/2):N12 = nb4 - 2*nb5
-    nb6 = int(nb5/2):N13 = nb5 - 2*nb6
-    nb7 = int(nb6/2):N14 = nb6 - 2*nb7
-    nb8 = int(nb7/2):N15 = nb7 - 2*nb8
-    nb9 = int(nb8/2):N16 = nb8 - 2*nb9
-    nb10 = int(nb9/2):N17 = nb9 - 2*nb10
-    nb11 = int(nb10/2):N18 = nb10 - 2*nb11
-    nb12 = int(nb11/2):N19 = nb11 - 2*nb12          'Bcounter bit 12 MSB
-    N20 = 1    'Phase Det Current, 1= 1 ma, 0= 250 ua
-    if cb = 3 then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
-            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
-            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 'ver116-4o per Lrev1
-    if cb = 3 then Int64N.msLong.struct = 0 'ver116-4o per Lrev1
-    return
-*/
+  //needed:ncounter ; creates LMX2326 n buffer  ver111
+  Bcounter = int(ncounter/32);
+  Acounter = int(ncounter-(Bcounter*32));
+  if (Bcounter < 3)
+  {
+    util.beep();
+    errora="2326 Bcounter <3";
+    return; //with errora
+  }
+  if (Bcounter > 8191)
+  {
+    util.beep();
+    errora="2326 Bcounter >8191";
+    return; //with errora
+  }
+  if (Bcounter < Acounter)
+  {
+    util.beep();
+    errora="2326 Bcounter<Acounter";
+    return; //with errora
+  }
+  //ver116-4o deleted "if" block, per Lrev1
+  N0 = 1;       //n address bit 0, must be 1
+  N1 = 0;       //n address bit 1, must be 0
+  na0 = int(Acounter/2);
+  N2 = Acounter- 2*na0;      //Acounter bit 0 LSB
+  na1 = int(na0/2);
+  N3 = na0 - 2*na1;
+  na2 = int(na1/2);
+  N4 = na1 - 2*na2;
+  na3 = int(na2/2);
+  N5 = na2 - 2*na3;
+  na4 = int(na3/2);
+  N6 = na3 - 2*na4;              //Acounter bit 4 MSB
+  nb0 = int(Bcounter/2);
+  N7 = Bcounter- 2*nb0;      //Bcounter bit 0 LSB
+  nb1 = int(nb0/2);
+  N8 = nb0 - 2*nb1;
+  nb2 = int(nb1/2);
+  N9 = nb1 - 2*nb2;
+  nb3 = int(nb2/2);
+  N10 = nb2 - 2*nb3;
+  nb4 = int(nb3/2);
+  N11 = nb3 - 2*nb4;
+  nb5 = int(nb4/2);
+  N12 = nb4 - 2*nb5;
+  nb6 = int(nb5/2);
+  N13 = nb5 - 2*nb6;
+  nb7 = int(nb6/2);
+  N14 = nb6 - 2*nb7;
+  nb8 = int(nb7/2);
+  N15 = nb7 - 2*nb8;
+  nb9 = int(nb8/2);
+  N16 = nb8 - 2*nb9;
+  nb10 = int(nb9/2);
+  N17 = nb9 - 2*nb10;
+  nb11 = int(nb10/2);
+  N18 = nb10 - 2*nb11;
+  nb12 = int(nb11/2);
+  N19 = nb11 - 2*nb12;          //Bcounter bit 12 MSB
+  N20 = 1;    //Phase Det Current, 1= 1 ma, 0= 250 ua
+  if (activeConfig->cb == 3)
+  {
+//      then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
+//            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
+//            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
+  }
+    if (activeConfig->cb == 3)
+  {
+      //then Int64N.msLong.struct = 0 //ver116-4o per Lrev1
+  }
 }
 
 void hwdInterface::Create2350N()
@@ -575,63 +619,118 @@ void hwdInterface::Create4112N()
 
 void hwdInterface::CreateBaseForDDSarray()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[CreateBaseForDDSarray]'needed:ddsoutput,ddsclock ; creates: base,sw0thrusw30,w0thruw4
-    'the formula for the frequency output of the DDS(AD9850, 9851, or any 32 bit DDS) is:
-    'ddsoutput = base*ddsclock/2^32, where "base" is the decimal equivalent of command words
-    'to find "base": first, use: fullbase = (ddsoutput*2^32/ddsclock)
-        fullbase=(ddsoutput*2^32/ddsclock) 'decimal number, including fraction
-    'then, round it off to the nearest whole bit
-            '(the following has a problem) 11-03-08
-            'if ddsoutput is greater than ddsclock/2, the program will error out. I don't know why but
-                'halt and create an error message
-    if ddsoutput >= ddsclock/2 then
-        beep:message$="Error, ddsoutput > .5 ddsclock" : call PrintMessage :goto [Halted] 'ver114-4e
-    end if
-        base = int(fullbase) 'rounded down to whole number
-        if fullbase - base >= .5 then base = base + 1 'rounded to nearest whole number
-    'now, the actual ddsoutput can be determined by: ddsoutput = base*ddsclock/2^32
-  'Create Parallel Words 'needed:base
-        w0= 0 'a "1" here will activate the x4 internal multiplier, but not recommended
-        w1= int(base/2^24)  'w1 thru w4 converts decimal base code to 4 words, each are 8 bit binary
-        w2= int((base-(w1*2^24))/2^16)
-        w3= int((base-(w1*2^24)-(w2*2^16))/2^8)
-        w4= int(base-(w1*2^24)-(w2*2^16)-(w3*2^8))
-    if cb = 3 then 'USB:05/12/2010
-        Int64SW.msLong.struct = 0 'USB:05/12/2010
-        Int64SW.lsLong.struct = int( base ) 'USB:05/12/2010
-    else 'USB:05/12/2010
-        'Create Serial Bits'needed:base ; creates serial word bits; sw0 thru sw39
-        b0 = int(base/2):sw0 = base - 2*b0  'LSB, Freq-b0.  sw is serial word bit
-        b1 = int(b0/2):sw1 = b0 - 2*b1:b2 = int(b1/2):sw2 = b1 - 2*b2
-        b3 = int(b2/2):sw3 = b2 - 2*b3:b4 = int(b3/2):sw4 = b3 - 2*b4
-        b5 = int(b4/2):sw5 = b4 - 2*b5:b6 = int(b5/2):sw6 = b5 - 2*b6
-        b7 = int(b6/2):sw7 = b6 - 2*b7:b8 = int(b7/2):sw8 = b7 - 2*b8
-        b9 = int(b8/2):sw9 = b8 - 2*b9:b10 = int(b9/2):sw10 = b9 - 2*b10
-        b11 = int(b10/2):sw11 = b10 - 2*b11:b12 = int(b11/2):sw12 = b11 - 2*b12
-        b13 = int(b12/2):sw13 = b12 - 2*b13:b14 = int(b13/2):sw14 = b13 - 2*b14
-        b15 = int(b14/2):sw15 = b14 - 2*b15:b16 = int(b15/2):sw16 = b15 - 2*b16
-        b17 = int(b16/2):sw17 = b16 - 2*b17:b18 = int(b17/2):sw18 = b17 - 2*b18
-        b19 = int(b18/2):sw19 = b18 - 2*b19:b20 = int(b19/2):sw20 = b19 - 2*b20
-        b21 = int(b20/2):sw21 = b20 - 2*b21:b22 = int(b21/2):sw22 = b21 - 2*b22
-        b23 = int(b22/2):sw23 = b22 - 2*b23:b24 = int(b23/2):sw24 = b23 - 2*b24
-        b25 = int(b24/2):sw25 = b24 - 2*b25:b26 = int(b25/2):sw26 = b25 - 2*b26
-        b27 = int(b26/2):sw27 = b26 - 2*b27:b28 = int(b27/2):sw28 = b27 - 2*b28
-        b29 = int(b28/2):sw29 = b28 - 2*b29:b30 = int(b29/2):sw30 = b29 - 2*b30
-        b31 = int(b30/2):sw31 = b30 - 2*b31  'MSB, Freq-b31
-        sw32 = 0 'x4 multiplier, 1=enable, but not recommended
-        sw33 = 0 'control bit
-        sw34 = 0 'power down bit
-        sw35 = 0 'phase data
-        sw36 = 0 'phase data
-        sw37 = 0 'phase data
-        sw38 = 0 'phase data
-        sw39 = 0 'phase data
-    end if 'USB:05/12/2010
-    return
-'[endCreateBaseForDDSarray]
-    */
+  //needed:ddsoutput,ddsclock ; creates: base,sw0thrusw30,w0thruw4
+  //the formula for the frequency output of the DDS(AD9850, 9851, or any 32 bit DDS) is:
+  //ddsoutput = base*ddsclock/2^32, where "base" is the decimal equivalent of command words
+  //to find "base": first, use: fullbase = (ddsoutput*2^32/ddsclock)
+  double fullbase=(ddsoutput*pow(2,32)/ddsclock); //decimal number, including fraction
+  //then, round it off to the nearest whole bit
+  //(the following has a problem) 11-03-08
+  //if ddsoutput is greater than ddsclock/2, the program will error out. I don//t know why but
+  //halt and create an error message
+  if (ddsoutput >= ddsclock/2)
+  {
+    util.beep();
+    vars->message="Error, ddsoutput > .5 ddsclock";
+    PrintMessage();
+    Halted();
+    return;
+  }
+  base = int(fullbase); //rounded down to whole number
+  if (fullbase - base >= .5)
+  {
+    base = base + 1; //rounded to nearest whole number
+  }
+  //now, the actual ddsoutput can be determined by: ddsoutput = base*ddsclock/2^32
+  //Create Parallel Words //needed:base
+  w0= 0; //a "1" here will activate the x4 internal multiplier, but not recommended
+  w1= int(base/pow(2,24));  //w1 thru w4 converts decimal base code to 4 words, each are 8 bit binary
+  w2= int((base-(w1*pow(2,24)))/pow(2,16));
+  w3= int((base-(w1*pow(2,24))-(w2*pow(2,16)))/pow(2,8));
+  w4= int(base-(w1*pow(2,24))-(w2*pow(2,16))-(w3*pow(2,8)));
+  if (activeConfig->cb == 3)
+  {
+    //   Int64SW.msLong.struct = 0 //USB:05/12/2010
+    //        Int64SW.lsLong.struct = int( base ) //USB:05/12/2010
+  }
+  else
+  {
+    //Create Serial Bits//needed:base ; creates serial word bits; sw0 thru sw39
+    b0 = int(base/2);
+    sw0 = base - 2*b0;  //LSB, Freq-b0.  sw is serial word bit
+    b1 = int(b0/2);
+    sw1 = b0 - 2*b1;
+    b2 = int(b1/2);
+    sw2 = b1 - 2*b2;
+    b3 = int(b2/2);
+    sw3 = b2 - 2*b3;
+    b4 = int(b3/2);
+    sw4 = b3 - 2*b4;
+    b5 = int(b4/2);
+    sw5 = b4 - 2*b5;
+    b6 = int(b5/2);
+    sw6 = b5 - 2*b6;
+    b7 = int(b6/2);
+    sw7 = b6 - 2*b7;
+    b8 = int(b7/2);
+    sw8 = b7 - 2*b8;
+    b9 = int(b8/2);
+    sw9 = b8 - 2*b9;
+    b10 = int(b9/2);
+    sw10 = b9 - 2*b10;
+    b11 = int(b10/2);
+    sw11 = b10 - 2*b11;
+    b12 = int(b11/2);
+    sw12 = b11 - 2*b12;
+    b13 = int(b12/2);
+    sw13 = b12 - 2*b13;
+    b14 = int(b13/2);
+    sw14 = b13 - 2*b14;
+    b15 = int(b14/2);
+    sw15 = b14 - 2*b15;
+    b16 = int(b15/2);
+    sw16 = b15 - 2*b16;
+    b17 = int(b16/2);
+    sw17 = b16 - 2*b17;
+    b18 = int(b17/2);
+    sw18 = b17 - 2*b18;
+    b19 = int(b18/2);
+    sw19 = b18 - 2*b19;
+    b20 = int(b19/2);
+    sw20 = b19 - 2*b20;
+    b21 = int(b20/2);
+    sw21 = b20 - 2*b21;
+    b22 = int(b21/2);
+    sw22 = b21 - 2*b22;
+    b23 = int(b22/2);
+    sw23 = b22 - 2*b23;
+    b24 = int(b23/2);
+    sw24 = b23 - 2*b24;
+    b25 = int(b24/2);
+    sw25 = b24 - 2*b25;
+    b26 = int(b25/2);
+    sw26 = b25 - 2*b26;
+    b27 = int(b26/2);
+    sw27 = b26 - 2*b27;
+    b28 = int(b27/2);
+    sw28 = b27 - 2*b28;
+    b29 = int(b28/2);
+    sw29 = b28 - 2*b29;
+    b30 = int(b29/2);
+    sw30 = b29 - 2*b30;
+    b31 = int(b30/2);
+    sw31 = b30 - 2*b31;  //MSB, Freq-b31
+    sw32 = 0; //x4 multiplier, 1=enable, but not recommended
+    sw33 = 0; //control bit
+    sw34 = 0; //power down bit
+    sw35 = 0; //phase data
+    sw36 = 0; //phase data
+    sw37 = 0;//phase data
+    sw38 = 0; //phase data
+    sw39 = 0; //phase data
+  }
+  return;
+
 }
 void hwdInterface::ResetDDS1serUSB()
 {
@@ -1117,114 +1216,111 @@ void hwdInterface::Command2325R()
 
 void hwdInterface::Command2326R()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-
-
   if (activeConfig->cb == 3)
   {
     cmdForUsb.lsLong = 0x00000003 | (phasepolarity << 7);
     cmdForUsb.msLong = 0;
   }
 
-  /*
-//needed:rcounter,phasepolarity,control,Jcontrol,port,LEPLL,contclear ; commands LMX2326 rcounter and registers
-    //[Create2326InitBuffer]//need phasepolarity
-    //ver116-4o deleted "if" block, per Lrev1
-    N20=0;     //Test, use 0
-    N19=0;     //1=Power Down Mode, use 0
-    N18=0;     //Test, use 0
-    N17=0;     //Test, use 0
-    N16=0;     //Test, use 0
-    N15=0;     //Fastlock Time out value, use 0
-    N14=0;     //Fastlock Time out value, use 0
-    N13=0;     //Fastlock Time out value, use 0
-    N12=0;     //Fastlock Time out value, use 0
-    N11=0;     //1=Time out enable, use 0
-    N10=0;     //Fastlock control, use 0
-    N9=0;    //1=Fastlock enable, use 0
-    N8=0;    //1=Tristate the phase det output, use 0
-    N7 = phasepolarity;     //Phase det polarity, 1=pos  0=neg
-    N6=0;        //FoLD control(pin14 output), 0= tristate, 1= R Divider out
-    N5=0;        //2= N Divider out, 3= Serial Data Output, 4= Digital Lock Detect
-    N4=0;        //5= Open drain lock detect, 6= High output, 7= Low output
-    N3=0;        //1= Power Down, use 0
-    N2=0;        //1= Counter Reset Enable, allows reset of R,N counters,use 0
-    N1=1;        //F1 address bit 1, must be 1
-    N0=1;        //F1 address bit 0, must be 1
-    if (activeConfig->cb == 3)
-    {
-      Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
-            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
-            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
-    }
-    if (activeConfig->cb == 3)
-    {
-      Int64N.msLong.struct = 0; //ver116-4o per Lrev1
-    }*/
+
+  //needed:rcounter,phasepolarity,control,Jcontrol,port,LEPLL,contclear ; commands LMX2326 rcounter and registers
+  //[Create2326InitBuffer]//need phasepolarity
+  //ver116-4o deleted "if" block, per Lrev1
+  N20=0;     //Test, use 0
+  N19=0;     //1=Power Down Mode, use 0
+  N18=0;     //Test, use 0
+  N17=0;     //Test, use 0
+  N16=0;     //Test, use 0
+  N15=0;     //Fastlock Time out value, use 0
+  N14=0;     //Fastlock Time out value, use 0
+  N13=0;     //Fastlock Time out value, use 0
+  N12=0;     //Fastlock Time out value, use 0
+  N11=0;     //1=Time out enable, use 0
+  N10=0;     //Fastlock control, use 0
+  N9=0;    //1=Fastlock enable, use 0
+  N8=0;    //1=Tristate the phase det output, use 0
+  N7 = phasepolarity;     //Phase det polarity, 1=pos  0=neg
+  N6=0;        //FoLD control(pin14 output), 0= tristate, 1= R Divider out
+  N5=0;        //2= N Divider out, 3= Serial Data Output, 4= Digital Lock Detect
+  N4=0;        //5= Open drain lock detect, 6= High output, 7= Low output
+  N3=0;        //1= Power Down, use 0
+  N2=0;        //1= Counter Reset Enable, allows reset of R,N counters,use 0
+  N1=1;        //F1 address bit 1, must be 1
+  N0=1;        //F1 address bit 0, must be 1
+  if (activeConfig->cb == 3)
+  {
+    //Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
+    //            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
+    //            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
+  }
+  if (activeConfig->cb == 3)
+  {
+    //    Int64N.msLong.struct = 0; //ver116-4o per Lrev1
+  }
   //[Command2326InitBuffer]//need Jcontrol,LEPLL,contclear
-    CommandPLL();//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
+  CommandPLL();//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
   //[Create2326Rbuffer]//need rcounter
-    if (rcounter <3)
-    {
-      util.beep();
-      errora ="2326 R counter <3";
-      return;
-    }
-    if (rcounter >16383)
-    {
-      util.beep();
-      errora="2326 R counter >16383";
-      return;
-    }
-    //ver116-4o deleted "if" block, per Lrev1
-  /*  int N0 = 0;                   //R address bit 0, must be 0
-    int N1 = 0;                   //R address vit 1, must be 0
-    int ra0 = (int)(rcounter/2);
-    int N2 = rcounter- 2*ra0;    //LSB
-    int ra1 = (int)(ra0/2);
-    int N3 = ra0- 2*ra1;
-    int ra2 = (int)(ra1/2);
-    int N4 = ra1- 2*ra2;
-    int ra3 = (int)(ra2/2);
-    int N5 = ra2- 2*ra3;
-    int ra4 = (int)(ra3/2);
-    int N6 = ra3- 2*ra4;
-    int ra5 = (int)(ra4/2);
-    int N7 = ra4- 2*ra5;
-    int ra6 = (int)(ra5/2);
-    int N8 = ra5- 2*ra6;
-    int ra7 = (int)(ra6/2);
-    int N9 = ra6- 2*ra7;
-    int ra8 = (int)(ra7/2);
-    int N10 = ra7- 2*ra8;
-    int ra9 = (int)(ra8/2);
-    int N11 = ra8- 2*ra9;
-    int ra10 = (int)(ra9/2);
-    int N12 = ra9- 2*ra10;
-    int ra11 = (int)(ra10/2);
-    int N13 = ra10- 2*ra11;
-    int ra12 = (int)(ra11/2);
-    int N14 = ra11- 2*ra12;
-    int ra13 = (int)(ra12/2);
-    int N15 = ra12- 2*ra13;  //MSB
-    int N16 = 0;     //Test Bit
-    int N17 = 0;     //Test Bit
-    int N18 = 0;     //Test Bit
-    int N19 = 0;     //Test Bit
-    int N20 = 0;     //Lock Detector Mode, 0=3 refcycles, 1=5 cycles
-*/
+  if (rcounter <3)
+  {
+    util.beep();
+    errora ="2326 R counter <3";
+    return;
+  }
+  if (rcounter >16383)
+  {
+    util.beep();
+    errora="2326 R counter >16383";
+    return;
+  }
+  //ver116-4o deleted "if" block, per Lrev1
+  N0 = 0;                   //R address bit 0, must be 0
+  N1 = 0;                   //R address vit 1, must be 0
+  ra0 = (int)(rcounter/2);
+  N2 = rcounter- 2*ra0;    //LSB
+  ra1 = (int)(ra0/2);
+  N3 = ra0- 2*ra1;
+  ra2 = (int)(ra1/2);
+  N4 = ra1- 2*ra2;
+  ra3 = (int)(ra2/2);
+  N5 = ra2- 2*ra3;
+  ra4 = (int)(ra3/2);
+  N6 = ra3- 2*ra4;
+  ra5 = (int)(ra4/2);
+  N7 = ra4- 2*ra5;
+  ra6 = (int)(ra5/2);
+  N8 = ra5- 2*ra6;
+  ra7 = (int)(ra6/2);
+  N9 = ra6- 2*ra7;
+  ra8 = (int)(ra7/2);
+  N10 = ra7- 2*ra8;
+  ra9 = (int)(ra8/2);
+  N11 = ra8- 2*ra9;
+  ra10 = (int)(ra9/2);
+  N12 = ra9- 2*ra10;
+  ra11 = (int)(ra10/2);
+  N13 = ra10- 2*ra11;
+  ra12 = (int)(ra11/2);
+  N14 = ra11- 2*ra12;
+  ra13 = (int)(ra12/2);
+  N15 = ra12- 2*ra13;  //MSB
+  N16 = 0;     //Test Bit
+  N17 = 0;     //Test Bit
+  N18 = 0;     //Test Bit
+  N19 = 0;     //Test Bit
+  N20 = 0;     //Lock Detector Mode, 0=3 refcycles, 1=5 cycles
+
   if (activeConfig->cb == 3)
   {
     cmdForUsb.lsLong = rcounter << 2;
     cmdForUsb.msLong = 0;
-  /*if cb = 3 then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
+    /*if cb = 3 then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
             2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
             2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
     if cb = 3 then Int64N.msLong.struct = 0 //ver116-4o per Lrev1
     */
-}
+  }
   //[Command2326Rbuffer]//need Jcontrol,LEPLL,contclear
-   CommandPLL();//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
+  CommandPLL();//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
 }
 
 void hwdInterface::Command2350R()
@@ -1637,23 +1733,25 @@ void hwdInterface::CommandCurrentStep()
   //a. first, check to see if any or all the 5 module commands are necessary [DetermineModule]
   //b. calculate how much delay is needed for each module[DetermineModule], but use only the largest one[WaitStatement].
   //c. send individual data, clocks, and latch commands that are necessary for[CommandOrigCB]
-  //or for SLIM, use [CommandAllSlims] for commanding concurrently //ver111-31c
+  //or for SLIM, use [CommandAllSlims] for commanding concurrently
   if (vars->suppressHardware==0)
   {
     int thisBand=vars->datatable[vars->thisstep][4];
     if (thisBand!=vars->lastSetBand)
-      SelectLatchedSwitches(thisBand);   //Set band switch ver116-4s
-    DetermineModule(); //determine which, if any, module needs commanding.
+    {
+      SelectLatchedSwitches(thisBand);   //Set band switch
+    }
+    DetermineModule(vars->thisstep); //determine which, if any, module needs commanding.
     int cmdneeded = glitchp1 + glitchd1 + glitchp3 + glitchd3 + glitchpdm;
     if (cmdneeded > 0 && activeConfig->cb == 0)
       lpt.CommandOrigCB();//old Control (150 usec, 0 SW) //ver111-28ver111-38a
     //if cb = 1 then gosub [CommandRevB]//old Control looking like SLIM  //not created yet
     if (cmdneeded > 0 && activeConfig->cb == 2)
-      lpt.CommandAllSlims();//ver111-38a
+      lpt.CommandAllSlims();
     if (cmdneeded > 0 && activeConfig->cb == 3)
-      CommandAllSlimsUSB(); //USB:01-08-2010
+      CommandAllSlimsUSB();
     if (cftest==1)
-      CommandLO2forCavTest(); //cav ver116-4c
+      CommandLO2forCavTest();
   }
 }
 
@@ -3113,104 +3211,6 @@ void hwdInterface::ClearAuxData()
   }
 }
 
-void hwdInterface::Showvar()
-{
-  //modified by ver114-4f to avoid halting sweep and to operate from menu
-    /*if varwindow=1 then  close #varwin:varwindow = 0  //close existing window //ver114-4f
-    WindowWidth = 200
-    WindowHeight = 450 //ver111-26
-    UpperLeftX = DisplayWidth-WindowWidth-10    //ver114-4f
-    UpperLeftY = 10    //ver114-4f
-
-    BackgroundColor$ = "darkblue"
-    ForegroundColor$ = "white"
-  */
-  QString var = "";
-  var = var + "this step = " +  QString::number(vars->thisstep) + "\n";
-  var = var + "dds1output = "+QString::number(vars->DDS1array[vars->thisstep][46])+" MHz" + "\n";
-  var = var + "LO 1 = "+QString::number(vars->PLL1array[vars->thisstep][43])+" MHz" + "\n";
-  var = var + "pdf1 = "+QString::number(vars->PLL1array[vars->thisstep][40])+" MHz" + "\n";
-  var = var + "ncounter1 = "+QString::number(vars->PLL1array[vars->thisstep][45]) + "\n";
-  var = var + "Bcounter1 = "+QString::number(vars->PLL1array[vars->thisstep][48]) + "\n";
-  var = var + "Acounter1 = "+QString::number(vars->PLL1array[vars->thisstep][47]) + "\n";
-  var = var + "fcounter1 = "+QString::number(vars->PLL1array[vars->thisstep][46]) + "\n";
-  var = var + "rcounter1 = "+QString::number(rcounter1) + "\n";
-  var = var + "LO2 = "+QString::number(vars->LO2)+" MHz" + "\n";
-  var = var + "pdf2 = "+QString::number(pdf2)+" MHz" + "\n";
-  var = var + "ncounter2 = "+QString::number(ncounter2) + "\n";
-  var = var + "Bcounter2 = "+QString::number(Bcounter2) + "\n";
-  var = var + "Acounter2 = "+QString::number(Acounter2) + "\n";
-  var = var + "rcounter2 = "+QString::number(rcounter2) + "\n";
-  var = var + "LO3 = "+QString::number(vars->PLL3array[vars->thisstep][43])+" MHz" + "\n";
-  var = var + "pdf3 = "+QString::number(vars->PLL3array[vars->thisstep][40])+" MHz" + "\n";
-  var = var + "ncounter3 = "+QString::number(vars->PLL3array[vars->thisstep][45]) + "\n";
-  var = var + "Bcounter3 = "+QString::number(vars->PLL3array[vars->thisstep][48]) + "\n";
-  var = var + "Acounter3 = "+QString::number(vars->PLL3array[vars->thisstep][47]) + "\n";
-  var = var + "fcounter3 = "+QString::number(vars->PLL3array[vars->thisstep][46]) + "\n";
-  var = var + "rcounter3 = "+QString::number(rcounter3) + "\n";
-  var = var + "dds3output = "+QString::number(vars->DDS3array[vars->thisstep][46]) + "\n";
-  var = var + "Magdata="+QString::number(vars->magarray[vars->thisstep][3])+"  magpower="
-      +util.usingF("####.###",vars->datatable[vars->thisstep][2]) + "\n";
-  var = var + "Phadata = "+QString::number(vars->phaarray[vars->thisstep][3])+"     PDM = "+QString::number(vars->phaarray[vars->thisstep][4])+ "\n";
-  var = var + "Real Final I.F. = "+QString::number(
-        vars->LO2 - (vars->PLL1array[vars->thisstep][45]*vars->DDS1array[vars->thisstep][46]/rcounter1)
-          + vars->datatable[vars->thisstep][1]+vars->baseFrequency) + "\n";
-  //real final IF = LO2-[LO1-thisfreq]
-  var = var + "glitchtime = "+QString::number(vars->glitchtime) + "\n";
-  //open "Variables Window" for dialog as #varwin:varwindow = 1
-  //print #varwin, "trapclose Closevarwin" //goto Closevarwin if xit is clicked  ver115-1b changed to subroutine
-  //if haltsweep=1 then goto [PostScan]
-  //wait
-  QMessageBox::about(0,"Variables Window",var);
-}
-
-void hwdInterface::updatevar()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[updatevar]
-    print #varwin.variable1, "this step = ";thisstep 'ver111-35
-    print #varwin.variable2, "dds1output = ";DDS1array(thisstep,46);" MHz"
-    print #varwin.variable3, "LO 1 = ";PLL1array(thisstep,43);" MHz"
-    print #varwin.variable4, "pdf1 = ";PLL1array(thisstep,40);" MHz"
-    print #varwin.variable5, "ncounter1 = ";PLL1array(thisstep,45)
-    print #varwin.variable6, "Bcounter1 = ";PLL1array(thisstep,48)
-    print #varwin.variable7, "Acounter1 = ";PLL1array(thisstep,47)
-    print #varwin.variable8, "fcounter1 = ";PLL1array(thisstep,46)
-    print #varwin.variable9, "rcounter1 = ";rcounter1
-    print #varwin.variable10, "LO2 = ";LO2;" MHz"
-    print #varwin.variable11, "pdf2 = ";pdf2;" MHz"
-    print #varwin.variable12, "ncounter2 = ";ncounter2
-    print #varwin.variable13, "Bcounter2 = ";Bcounter2
-    print #varwin.variable14, "Acounter2 = ";Acounter2
-    print #varwin.variable15, "rcounter2 = ";rcounter2
-    print #varwin.variable16, "LO3 = ";PLL3array(thisstep,43);" MHz"
-    print #varwin.variable17, "pdf3 = ";PLL3array(thisstep,40);" MHz"
-    print #varwin.variable18, "ncounter3 = ";PLL3array(thisstep,45)
-    print #varwin.variable19, "Bcounter3 = ";PLL3array(thisstep,48)
-    print #varwin.variable20, "Acounter3 = ";PLL3array(thisstep,47)
-    print #varwin.variable21, "fcounter3 = ";PLL3array(thisstep,46)
-    print #varwin.variable22, "rcounter3 = ";rcounter3
-    print #varwin.variable23, "dds3output = ";DDS3array(thisstep,46)
-    print #varwin.variable24, "Magdata= ";magarray(thisstep,3);" magpower=";using("####.###",datatable(thisstep,2))' ver115-5b raw magdata bits, MSA input power(massaged) 'ver111-39b
-    print #varwin.variable25, "Phadata = ";phaarray(thisstep,3);"     PDM = ";phaarray(thisstep,4) 'ver111-39d
-    print #varwin.variable26, "Real Final I.F. = ";LO2 - (PLL1array(thisstep,45)*DDS1array(thisstep,46)/rcounter1) + datatable(thisstep,1) 'ver112-2b
-    print #varwin.variable27, "glitchtime = ";glitchtime 'ver114-7b
-
-    return
-*/
-}
-
-void hwdInterface::Closevarwin()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub Closevarwin hndl$ 'ver115-1b changed to subroutine
-    close #varwin:varwindow = 0     'close out variables window
-end sub*/
-}
-
-
 float hwdInterface::Equiv1GFreq(float f, int aBand)
 {
   float retVal;
@@ -3237,7 +3237,6 @@ float hwdInterface::Equiv1GFreq(float f, int aBand)
   }
   return retVal;
 }
-
 float hwdInterface::ActualSignalFrequency(float f, int aBand)
 {
   //Return actual signal frequency for equiv 1G freq f, based on aBand (1,2 or 3) ver116-4s
@@ -3290,7 +3289,7 @@ void hwdInterface::CalculateAllStepsForLO1Synth()
     //[ManSpur] is a continuation of [CreateFractionalNcounter], used only in MSA when PLL 1 is Fractional
     //if Spur Test Button On, will return with new ncounter,fcounter,pdf,dds1output
     CreatePLL1N();//needs:ncounter,fcounter,PLL1mode,PLL1 ; creates PLL NBuffer N0-Nx
-    FillPLL1array();//need:N0-Nx,pdf,dds1output,LO1,ncount,ncounter,Fcounter,Acounter,Bcounter;creates samePLL1
+    FillPLL1array(vars->thisstep);//need:N0-Nx,pdf,dds1output,LO1,ncount,ncounter,Fcounter,Acounter,Bcounter;creates samePLL1
     //[endCalculateThisStepPLL1]
     //[CalculateThisStepDDS1]//need:dds1output,masterclock,appxdds1,dds1filbw
     ddsoutput = vars->dds1output;
@@ -3304,7 +3303,7 @@ void hwdInterface::CalculateAllStepsForLO1Synth()
       RequireRestart();
       return;
     }
-    if (activeConfig->appxdds1-vars->dds1output > activeConfig->dds1filbw/2)
+    if (activeConfig->appxdds1 - vars->dds1output > activeConfig->dds1filbw/2)
     {
       util.beep();
       error="DDS1output too low for filter";
@@ -3314,7 +3313,7 @@ void hwdInterface::CalculateAllStepsForLO1Synth()
       return;
     }
     CreateBaseForDDSarray();//needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
-    FillDDS1array();//need thisstep,sw0-sw39,w0-w4,base,ddsclock
+    FillDDS1array(vars->thisstep);//need thisstep,sw0-sw39,w0-w4,base,ddsclock
     //[endCalculateThisStepDDS1]
   }
   vars->thisstep = haltstep; //return to the step in the sweep, where we halted, if needed
@@ -3417,7 +3416,7 @@ void hwdInterface::CalculateAllStepsForLO3Synth()
     //returns with ncount,ncounter,fcounter,pdf
     vars->dds3output = pdf * rcounter;    //actual output of DDS3(input Ref to PLL3)
     CreatePLL3N();//needs:ncounter,fcounter,PLL3mode,PLL3 ; creates PLL NBuffer N0-Nx
-    FillPLL3array();//need thisstep,N0thruN23,pdf3(40),dds3output(41),samePLL3(42)see dim PLL3array for slot info //ver111-14
+    FillPLL3array(vars->thisstep);//need thisstep,N0thruN23,pdf3(40),dds3output(41),samePLL3(42)see dim PLL3array for slot info //ver111-14
     //[endCalculateThisStepPLL3]
     //[CalculateThisStepDDS3]//need:dds3output,masterclock,appxdds3,dds3filbw
     if (activeConfig->appxdds3 != 0)
@@ -3444,7 +3443,7 @@ void hwdInterface::CalculateAllStepsForLO3Synth()
         return;
       }
       CreateBaseForDDSarray();//needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
-      FillDDS3array();//need thisstep,sw0-sw39,w0-w4,base,ddsclock  ver111-15
+      FillDDS3array(vars->thisstep);//need thisstep,sw0-sw39,w0-w4,base,ddsclock  ver111-15
     }
     //del.ver112-2b phaarray(thisstep,0) = 0 //this will set all pdmstates, to 0 //ver112-1a
     vars->phaarray[vars->thisstep][0] = 0; //this will set all pdmstates, to 0 //undeleted, ver113-7e
@@ -3453,118 +3452,154 @@ void hwdInterface::CalculateAllStepsForLO3Synth()
   vars->lastpdmstate = 2; //this will guarantee that the PDM will get commanded //ver112-1a
 }
 
-void hwdInterface::FillPLL1array()
+void hwdInterface::FillPLL1array(int step)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  Int64N temp;
-  if (activeConfig->cb == 3) //USB:11-08-2010
-    usb->usbMSADevicePopulateDDSArrayBitReverse(ptrSPLL1Array, temp, vars->thisstep, 40, result);*/
-      //if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL1Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
+  //need thisstep,N0thruN23,pdf1(40),dds1output(41),samePLL1(42)see dim PLL1array for slot info 'ver111-1
+  if (activeConfig->cb == 3)
+  {
+    //          if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL1Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
+  }
+  else
+  {
+    //reversed sequence for N23 to be first. ver111-31a
+    pll_1[step].array[23] = N0;
+    pll_1[step].array[22] = N1;
+    pll_1[step].array[21] = N2;
+    pll_1[step].array[20] = N3;
+    pll_1[step].array[19] = N4;
+    pll_1[step].array[18] = N5;
+    pll_1[step].array[17] = N6;
+    pll_1[step].array[16] = N7;
+    pll_1[step].array[15] = N8;
+    pll_1[step].array[14] = N9;
+    pll_1[step].array[13] = N10;
+    pll_1[step].array[12] = N11;
+    pll_1[step].array[11] = N12;
+    pll_1[step].array[10] = N13;
+    pll_1[step].array[9] = N14;
+    pll_1[step].array[8] = N15;
+    pll_1[step].array[7] = N16;
+    pll_1[step].array[6] = N17;
+    pll_1[step].array[5] = N18;
+    pll_1[step].array[4] = N19;
+    pll_1[step].array[3] = N20;
+    pll_1[step].array[2] = N21;
+    pll_1[step].array[1] = N22;
+    pll_1[step].array[0] = N23;
+  }
+  pll_1[step].pdf = pdf;
+  pll_1[step].freq = LO1;
+  pll_1[step].ncounter = ncounter;
+  pll_1[step].fcounter = fcounter;
+  pll_1[step].Acounter = Acounter;
+  pll_1[step].Bcounter = Bcounter;
 
-//need thisstep,N0thruN23,pdf1(40),dds1output(41),samePLL1(42)see dim PLL1array for slot info 'ver111-1
-  /*
-    if cb = 3 then 'USB:11-08-2010
-        if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL1Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
-    else 'USB:05/12/2010
-
-        'reversed sequence for N23 to be first. ver111-31a
-        PLL1array(thisstep,23) = N0:PLL1array(thisstep,22) = N1
-        PLL1array(thisstep,21) = N2:PLL1array(thisstep,20) = N3
-        PLL1array(thisstep,19) = N4:PLL1array(thisstep,18) = N5
-        PLL1array(thisstep,17) = N6:PLL1array(thisstep,16) = N7
-        PLL1array(thisstep,15) = N8:PLL1array(thisstep,14) = N9
-        PLL1array(thisstep,13) = N10:PLL1array(thisstep,12) = N11
-        PLL1array(thisstep,11) = N12:PLL1array(thisstep,10) = N13
-        PLL1array(thisstep,9) = N14:PLL1array(thisstep,8) = N15
-        PLL1array(thisstep,7) = N16:PLL1array(thisstep,6) = N17
-        PLL1array(thisstep,5) = N18:PLL1array(thisstep,4) = N19
-        PLL1array(thisstep,3) = N20:PLL1array(thisstep,2) = N21
-        PLL1array(thisstep,1) = N22:PLL1array(thisstep,0) = N23
-    end if 'USB:05/12/2010
-    PLL1array(thisstep,40) = pdf
-    PLL1array(thisstep,43) = LO1
-    PLL1array(thisstep,45) = ncounter
-    PLL1array(thisstep,46) = fcounter
-    PLL1array(thisstep,47) = Acounter
-    PLL1array(thisstep,48) = Bcounter
-    return
-*/
 }
 
-void hwdInterface::FillPLL3array()
+void hwdInterface::FillPLL3array(int step)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[FillPLL3array]'need thisstep,N0thruN23,pdf3(40),dds3output(41),samePLL3(42)see dim PLL3array for slot info 'ver111-14
-    if cb = 3 then'USB:11-08-2010
-        if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL3Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
-    else 'USB:05/12/2010
-        'reversed sequence for N23 to be first. ver111-31a
-        PLL3array(thisstep,23) = N0:PLL3array(thisstep,22) = N1
-        PLL3array(thisstep,21) = N2:PLL3array(thisstep,20) = N3
-        PLL3array(thisstep,19) = N4:PLL3array(thisstep,18) = N5
-        PLL3array(thisstep,17) = N6:PLL3array(thisstep,16) = N7
-        PLL3array(thisstep,15) = N8:PLL3array(thisstep,14) = N9
-        PLL3array(thisstep,13) = N10:PLL3array(thisstep,12) = N11
-        PLL3array(thisstep,11) = N12:PLL3array(thisstep,10) = N13
-        PLL3array(thisstep,9) = N14:PLL3array(thisstep,8) = N15
-        PLL3array(thisstep,7) = N16:PLL3array(thisstep,6) = N17
-        PLL3array(thisstep,5) = N18:PLL3array(thisstep,4) = N19
-        PLL3array(thisstep,3) = N20:PLL3array(thisstep,2) = N21
-        PLL3array(thisstep,1) = N22:PLL3array(thisstep,0) = N23
-    end if 'USB:05/12/2010
-    PLL3array(thisstep,40) = pdf
-    PLL3array(thisstep,43) = LO3
-    PLL3array(thisstep,45) = ncounter
-    PLL3array(thisstep,46) = fcounter
-    PLL3array(thisstep,47) = Acounter
-    PLL3array(thisstep,48) = Bcounter
-    return
-*/
+//need thisstep,N0thruN23,pdf3(40),dds3output(41),samePLL3(42)see dim PLL3array for slot info 'ver111-14
+  if (activeConfig->cb == 3)
+  {
+  //   if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL3Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
+  }
+  else
+  {
+    //reversed sequence for N23 to be first. ver111-31a
+    pll_3[step].array[23] = N0;
+    pll_3[step].array[22] = N1;
+    pll_3[step].array[21] = N2;
+    pll_3[step].array[20] = N3;
+    pll_3[step].array[19] = N4;
+    pll_3[step].array[18] = N5;
+    pll_3[step].array[17] = N6;
+    pll_3[step].array[16] = N7;
+    pll_3[step].array[15] = N8;
+    pll_3[step].array[14] = N9;
+    pll_3[step].array[13] = N10;
+    pll_3[step].array[12] = N11;
+    pll_3[step].array[11] = N12;
+    pll_3[step].array[10] = N13;
+    pll_3[step].array[9] = N14;
+    pll_3[step].array[8] = N15;
+    pll_3[step].array[7] = N16;
+    pll_3[step].array[6] = N17;
+    pll_3[step].array[5] = N18;
+    pll_3[step].array[4] = N19;
+    pll_3[step].array[3] = N20;
+    pll_3[step].array[2] = N21;
+    pll_3[step].array[1] = N22;
+    pll_3[step].array[0] = N23;
+  }
+  pll_3[step].pdf = pdf;
+  pll_3[step].freq = LO3;
+  pll_3[step].ncounter = ncounter;
+  pll_3[step].fcounter = fcounter;
+  pll_3[step].Acounter = Acounter;
+  pll_3[step].Bcounter = Bcounter;
+
 }
 
-void hwdInterface::FillDDS1array()
+void hwdInterface::FillDDS1array(int step)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[FillDDS1array]'need thisstep,sw0-sw39,w0-w4,base,ddsclock 'ver111-12
-    if cb = 3 then'USB:11-08-2010
-        if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArray", USBdevice as long, ptrSDDS1Array as ulong, Int64SW as ptr, thisstep as short, result as boolean 'USB:11-08-2010
-    else 'USB:05/12/2010
-        DDS1array(thisstep,0) = sw0:DDS1array(thisstep,1) = sw1
-        DDS1array(thisstep,2) = sw2:DDS1array(thisstep,3) = sw3
-        DDS1array(thisstep,4) = sw4:DDS1array(thisstep,5) = sw5
-        DDS1array(thisstep,6) = sw6:DDS1array(thisstep,7) = sw7
-        DDS1array(thisstep,8) = sw8:DDS1array(thisstep,9) = sw9
-        DDS1array(thisstep,10) = sw10:DDS1array(thisstep,11) = sw11
-        DDS1array(thisstep,12) = sw12:DDS1array(thisstep,13) = sw13
-        DDS1array(thisstep,14) = sw14:DDS1array(thisstep,15) = sw15
-        DDS1array(thisstep,16) = sw16:DDS1array(thisstep,17) = sw17
-        DDS1array(thisstep,18) = sw18:DDS1array(thisstep,19) = sw19
-        DDS1array(thisstep,20) = sw20:DDS1array(thisstep,21) = sw21
-        DDS1array(thisstep,22) = sw22:DDS1array(thisstep,23) = sw23
-        DDS1array(thisstep,24) = sw24:DDS1array(thisstep,25) = sw25
-        DDS1array(thisstep,26) = sw26:DDS1array(thisstep,27) = sw27
-        DDS1array(thisstep,28) = sw28:DDS1array(thisstep,29) = sw29
-        DDS1array(thisstep,30) = sw30:DDS1array(thisstep,31) = sw31
-        DDS1array(thisstep,32) = sw32:DDS1array(thisstep,33) = sw33
-        DDS1array(thisstep,34) = sw34:DDS1array(thisstep,35) = sw35
-        DDS1array(thisstep,36) = sw36:DDS1array(thisstep,37) = sw37
-        DDS1array(thisstep,38) = sw38:DDS1array(thisstep,39) = sw39
-    end if 'USB:05/12/2010
-    DDS1array(thisstep,40) = w0
-    DDS1array(thisstep,41) = w1
-    DDS1array(thisstep,42) = w2
-    DDS1array(thisstep,43) = w3
-    DDS1array(thisstep,44) = w4
-    DDS1array(thisstep,45) = base 'base is decimal command
-    DDS1array(thisstep,46) = base*ddsclock/2^32 'actual dds 1 output freq
-    return
-*/
+  //need thisstep,sw0-sw39,w0-w4,base,ddsclock //ver111-12
+  if (activeConfig->cb == 3)
+  {
+    //  if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArray", USBdevice as long, ptrSDDS1Array as ulong, Int64SW as ptr, thisstep as short, result as boolean //USB:11-08-2010
+  }
+  else
+  {
+    dds_1[step].array[0] = sw0;
+    dds_1[step].array[1] = sw1;
+    dds_1[step].array[2] = sw2;
+    dds_1[step].array[3] = sw3;
+    dds_1[step].array[4] = sw4;
+    dds_1[step].array[5] = sw5;
+    dds_1[step].array[6] = sw6;
+    dds_1[step].array[7] = sw7;
+    dds_1[step].array[8] = sw8;
+    dds_1[step].array[9] = sw9;
+    dds_1[step].array[10] = sw10;
+    dds_1[step].array[11] = sw11;
+    dds_1[step].array[12] = sw12;
+    dds_1[step].array[13] = sw13;
+    dds_1[step].array[14] = sw14;
+    dds_1[step].array[15] = sw15;
+    dds_1[step].array[16] = sw16;
+    dds_1[step].array[17] = sw17;
+    dds_1[step].array[18] = sw18;
+    dds_1[step].array[19] = sw19;
+    dds_1[step].array[20] = sw20;
+    dds_1[step].array[21] = sw21;
+    dds_1[step].array[22] = sw22;
+    dds_1[step].array[23] = sw23;
+    dds_1[step].array[24] = sw24;
+    dds_1[step].array[25] = sw25;
+    dds_1[step].array[26] = sw26;
+    dds_1[step].array[27] = sw27;
+    dds_1[step].array[28] = sw28;
+    dds_1[step].array[29] = sw29;
+    dds_1[step].array[30] = sw30;
+    dds_1[step].array[31] = sw31;
+    dds_1[step].array[32] = sw32;
+    dds_1[step].array[33] = sw33;
+    dds_1[step].array[34] = sw34;
+    dds_1[step].array[35] = sw35;
+    dds_1[step].array[36] = sw36;
+    dds_1[step].array[37] = sw37;
+    dds_1[step].array[38] = sw38;
+    dds_1[step].array[39] = sw39;
+  }
+  dds_1[step].array[40] = w0;
+  dds_1[step].array[41] = w1;
+  dds_1[step].array[42] = w2;
+  dds_1[step].array[43] = w3;
+  dds_1[step].array[44] = w4;
+  dds_1[step].base = base; //base is decimal command
+  dds_1[step].freq = base*ddsclock / pow(2,32); //actual dds 1 output freq
 }
 
-void hwdInterface::FillDDS3array()
+void hwdInterface::FillDDS3array(int )
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -3617,15 +3652,15 @@ void hwdInterface::CreateCmdAllArray()
     {
       for (int clmn = 0; clmn <= 15; clmn++)
       {
-        vars->cmdallarray[index][clmn] = vars->DDS1array[index][clmn]*4
-            + vars->DDS3array[index][clmn]*16;
+        vars->cmdallarray[index][clmn] = dds_1[index].array[clmn]*4
+            + dds_3[index].array[clmn]*16;
       }
       for (int clmn = 16; clmn <= 39; clmn++)
       {
-        vars->cmdallarray[index][clmn] = vars->PLL1array[index][clmn-16]*2
-            + vars->DDS1array[index][clmn]*4
-            + vars->PLL3array[index][clmn-16]*8
-            + vars->DDS3array[index][clmn]*16;
+        vars->cmdallarray[index][clmn] = pll_1[index].array[clmn-16]*2
+            + dds_1[index].array[clmn]*4
+            + pll_3[index].array[clmn-16]*8
+            + dds_3[index].array[clmn]*16;
       }
     }
   }
@@ -3672,12 +3707,12 @@ void hwdInterface::CommandPLLslimUSB()
   return;
 }
 
-void hwdInterface::DetermineModule()
+void hwdInterface::DetermineModule(int step)
 {
   //All "glitchXX's" are "0" when entering this subroutine. Either from "fresh RUN" or [WaitStatement]
   //if a module is not present, or if it doesn't need commanding, return with it's "glitchXX = 0"
 
-  vars->dds1output = vars->DDS1array[vars->thisstep][46];
+  vars->dds1output = dds_1[step].freq;
   if (vars->dds1output != vars->lastdds1output)
   {
     //dds 1 is same, don//t waste time commanding
@@ -3685,8 +3720,8 @@ void hwdInterface::DetermineModule()
     glitchd1 = 1;
     vars->lastdds1output = vars->dds1output;
   }
-  ncounter1=vars->PLL1array[vars->thisstep][45];
-  fcounter1=vars->PLL1array[vars->thisstep][46];
+  ncounter1= pll_1[step].ncounter;
+  fcounter1=pll_1[step].fcounter;
   if (!(ncounter1==lastncounter1 && fcounter1==lastfcounter1))
   {
     //dont waste time commanding
@@ -3696,9 +3731,12 @@ void hwdInterface::DetermineModule()
   }
 
   if  (activeConfig->TGtop == 0)
+  {
     return; //there is no PLL 3, no DDS 3,and no PDM for VNA
-  ncounter3=vars->PLL3array[vars->thisstep][45];
-  fcounter3=vars->PLL3array[vars->thisstep][46];
+  }
+
+  ncounter3=pll_3[step].ncounter;
+  fcounter3=pll_3[step].fcounter;
   if (!(ncounter3==lastncounter3 && fcounter3==lastfcounter3))
   {
     //don't waste time commanding
@@ -3709,7 +3747,7 @@ void hwdInterface::DetermineModule()
 
   if (activeConfig->appxdds3 != 0)
     //if 0, there is no DDS3, but, there can be VNA
-    vars->dds3output = vars->DDS3array[vars->thisstep][46];
+    vars->dds3output = dds_3[step].freq;
   if (vars->dds3output != vars->lastdds3output)
   {
     //dds 3 is same, don//t waste time commanding
@@ -3719,7 +3757,7 @@ void hwdInterface::DetermineModule()
 
   if (vars->suppressPhase || vars->msaMode=="SA" || vars->msaMode=="ScalarTrans")
     return; // not in VNA mode, skip the PDM
-  pdmcmd = vars->phaarray[vars->thisstep][0];
+  pdmcmd = vars->phaarray[step][0];
   if (pdmcmd == vars->lastpdmstate)
     return; //don't waste time commanding
   VideoGlitchPDM();

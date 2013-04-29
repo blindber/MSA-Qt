@@ -84,9 +84,9 @@ protected:
 
 
 private slots:
-  void on_DirectionF_clicked();
+  void on_DirectionF_clicked(bool checked);
 
-  void on_DirectionR_clicked();
+  void on_DirectionR_clicked(bool checked);
 
 
   void on_cbAutoWait_clicked(bool checked);
@@ -114,8 +114,8 @@ private:
   //void FreqAxisPreference();
   //void LeftButDouble();
   //void axisXDoNothing();
-  void setDUTForward();
-  void setDUTReverse();
+  void setDUTForward(bool checked);
+  void setDUTReverse(bool checked);
   void setAutoWait();
   void clearAutoWait();
   void axisLRon();

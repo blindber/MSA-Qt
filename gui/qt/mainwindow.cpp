@@ -21,6 +21,7 @@
 #include "dialogchooseprimaryaxis.h"
 #include "dialogFreqAxisPreference.h"
 
+
 #include <qwaitcondition.h>
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -29,6 +30,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
   winConfigMan = NULL;
   vars = NULL;
+  showVars = NULL;
   ui->setupUi(this);
 
   DefaultDir = QApplication::applicationDirPath();
@@ -94,6 +96,10 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow()
 {
+  if (showVars)
+  {
+    delete showVars;
+  }
   delete timerStart;
   delete timerStart2;
   delete hwdIf->usb;
@@ -2238,7 +2244,7 @@ void MainWindow::ChangeMode()
 
 void MainWindow::on_actionShow_Variables_triggered()
 {
-  hwdIf->Showvar();
+  Showvar();
 }
 void MainWindow::on_actionReference_Lines_triggered()
 {
@@ -2948,6 +2954,73 @@ void MainWindow::PrintMessage()
 {
   graph->PrintMessage();
 }
+
+void MainWindow::Showvar()
+{
+  QString var = "";
+  if (!showVars)
+  {
+    showVars = new dialogShowVars(this);
+  }
+  showVars->show();
+  updatevar(vars->thisstep);
+
+  if (graph->haltsweep==1)
+  {
+    PostScan();
+  }
+}
+
+void MainWindow::updatevar(int step)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  if (!showVars)
+  {
+    return;
+  }
+  if (!showVars->isVisible())
+  {
+    return;
+  }
+
+  QStringList values;
+  values << QString("this step = %1").arg(step);
+  values << QString("dds1output = %1 MHz").arg(hwdIf->dds_1[step].freq);
+  values << QString("LO 1 = %1 MHz").arg(hwdIf->pll_1[step].freq);  // PLL1array[step][43]);
+  values << QString("pdf1 = %1 MHz").arg(hwdIf->pll_1[step].pdf);  // vars->PLL1array[step][40]);
+  values << QString("ncounter1 = %1").arg(hwdIf->pll_1[step].ncounter);  // vars->PLL1array[step][45]);
+  values << QString("Bcounter1 = %1").arg(hwdIf->pll_1[step].Bcounter );  // vars->PLL1array[step][48]);
+  values << QString("Acounter1 = %1").arg(hwdIf->pll_1[step].Acounter);  // vars->PLL1array[step][47]);
+  values << QString("fcounter1 = %1").arg(hwdIf->pll_1[step].fcounter);  // vars->PLL1array[step][46]);
+  values << QString("rcounter1 = %1").arg(hwdIf->rcounter1);
+  values << QString("LO2 = %1 MHz").arg(vars->LO2);
+  values << QString("pdf2 = %1 MHz").arg(hwdIf->pdf2);
+  values << QString("ncounter2 = %1").arg(hwdIf->ncounter2);
+  values << QString("Bcounter2 = %1").arg(hwdIf->Bcounter2);
+  values << QString("Acounter2 = %1").arg(hwdIf->Acounter2);
+  values << QString("rcounter2 = %1").arg(hwdIf->rcounter2);
+  values << QString("LO3 = %1 MHz").arg(hwdIf->pll_3[step].freq);// vars->PLL3array[step][43]);
+  values << QString("pdf3 = %1 MHz").arg(hwdIf->pll_3[step].pdf);
+  values << QString("ncounter3 = %1").arg(hwdIf->pll_3[step].ncounter);
+  values << QString("Bcounter3 = %1").arg(hwdIf->pll_3[step].Bcounter);
+  values << QString("Acounter3 = %1").arg(hwdIf->pll_3[step].Acounter);
+  values << QString("fcounter3 = %1").arg(hwdIf->pll_3[step].fcounter);
+  values << QString("rcounter3 = %1").arg(hwdIf->rcounter3);
+  values << QString("dds3output = %1").arg(hwdIf->dds_3[step].freq);
+  values << QString("Magdata= %1").arg(vars->magarray[step][3]);
+  values << QString("magpower=%1").arg(vars->datatable[step][2]);  //raw magdata bits, MSA input power(massaged)
+  values << QString("Phadata = %1").arg(vars->phaarray[step][3]);
+  values << QString("PDM = %1").arg(vars->phaarray[step][4]);
+  values << QString("Real Final I.F. = %1")
+            .arg(vars->LO2 - (hwdIf->pll_1[step].fcounter * hwdIf->dds_1[step].freq / hwdIf->rcounter1) + vars->datatable[step][1]);
+  values << QString("glitchtime = %1").arg(vars->glitchtime);
+
+
+  showVars->update(values);
+}
+
+
+
 void MainWindow::Restart()
 {
   graph->haltsweep=0;
@@ -3354,38 +3427,44 @@ void MainWindow::ResizeArrays(int nPoints)
   {
     graph->gSetMaxPoints(maxPoints);     //Resize arrays in graph module
 
+    hwdIf->pll_1.resize(maxPoints);
+    hwdIf->pll_3.resize(maxPoints);
     vars->datatable.mresize(maxPoints,5);    //added element for band ver116-4s
     vars->magarray.mresize(maxPoints,4);
     vars->phaarray.mresize(maxPoints,5);
     vars->lineCalArray.mresize(maxPoints,3);
-    graph->referenceSource.mresize(maxPoints, 3); //ver114-7f
-    graph->referenceTransform.mresize(maxPoints, 3); //ver114-7f
-    vars->PLL1array.mresize(maxPoints,49);
-    vars->PLL3array.mresize(maxPoints,49);
-    vars->DDS1array.mresize(maxPoints,47);
-    vars->DDS3array.mresize(maxPoints,47);
+    graph->referenceSource.mresize(maxPoints, 3);
+    graph->referenceTransform.mresize(maxPoints, 3);
+    //vars->PLL1array.mresize(maxPoints,49);
+    //vars->PLL3array.mresize(maxPoints,49);
+    //vars->DDS1array.mresize(maxPoints,47);
+    //vars->DDS3array.mresize(maxPoints,47);
+    hwdIf->dds_1.resize(maxPoints);
+    hwdIf->dds_3.resize(maxPoints);
+
+
     vars->cmdallarray.mresize(maxPoints,40);
 
     hwdIf->usb->resizeMemory(maxPoints);
 
     vars->freqCorrection.resize(maxPoints);
-    vars->frontEndCorrection.resize(maxPoints); //ver115-9c
-    vars->ReflectArray.mresize(maxPoints,17);   //ver115-2d
-    vars->S21DataArray.mresize(maxPoints, 4);  //ver116-1b
-    vars->bandLineCal.mresize(maxPoints, 3);  //ver114-5f
-    vars->OSLa.mresize(maxPoints, 2);  //ver115-1b
-    vars->OSLb.mresize(maxPoints, 2);  //ver115-1b
-    vars->OSLc.mresize(maxPoints, 2);  //ver115-1b
-    vars->OSLstdOpen.mresize(maxPoints,2);  //ver115-1b
-    vars->OSLstdLoad.mresize(maxPoints,2);  //ver115-1b
-    vars->OSLcalOpen.mresize(maxPoints,2);  //ver115-1b
-    vars->OSLcalLoad.mresize(maxPoints,2);  //ver115-1b
-    vars->OSLcalShort.mresize(maxPoints,2);  //ver115-1b
+    vars->frontEndCorrection.resize(maxPoints);
+    vars->ReflectArray.mresize(maxPoints,17);
+    vars->S21DataArray.mresize(maxPoints, 4);
+    vars->bandLineCal.mresize(maxPoints, 3);
+    vars->OSLa.mresize(maxPoints, 2);
+    vars->OSLb.mresize(maxPoints, 2);
+    vars->OSLc.mresize(maxPoints, 2);
+    vars->OSLstdOpen.mresize(maxPoints,2);
+    vars->OSLstdLoad.mresize(maxPoints,2);
+    vars->OSLcalOpen.mresize(maxPoints,2);
+    vars->OSLcalLoad.mresize(maxPoints,2);
+    vars->OSLcalShort.mresize(maxPoints,2);
     vars->OSLBandA.mresize(maxPoints,2);
     vars->OSLBandB.mresize(800,2);
-    vars->OSLBandC.mresize(800,2);       //ver115-4a
-    vars->OSLBandRef.mresize(maxPoints,3);        //ver115-4a
-    vars->auxGraphData.mresize(maxPoints, 6);    //ver115-4a
+    vars->OSLBandC.mresize(800,2);
+    vars->OSLBandRef.mresize(maxPoints,3);
+    vars->auxGraphData.mresize(maxPoints, 6);
 
     //Note we do not resize arrays for base Line or base OSL cal, because resizing will invalidate the data, and
     //because base line cal is saved to/retrieved from a file so its max size needs to be known before retrieval.
@@ -4517,9 +4596,14 @@ void MainWindow::on_actionSweep_triggered()
 
     //-------------------------------------------------------------
     graph->DetectChanges(0);   //Do necessary redrawing and set continueCode ver114-6e
-    if (graph->continueCode!=3)
+    if (graph->continueCode==3)
+    {
+      needRestart = 1;
+    }
+    else
     {
       graph->continueCode=0;
+      needRestart = 0;
     }
 
     vars->steps=vars->globalSteps;   //transfer to non-global
