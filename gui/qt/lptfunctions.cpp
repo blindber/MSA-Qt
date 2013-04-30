@@ -15,13 +15,80 @@
 // WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 //******************************************************************************
 #include "lptfunctions.h"
+#include <QMessageBox>
+#include "constants.h"
 
 lptFunctions::lptFunctions()
 {
+
+}
+
+int lptFunctions::init(int libraryType, int port)
+{
+  this->port = port;
+  status = port + 1;
+  control = port + 2;
+
+  this->libraryType = libraryType;
+  if (libraryType == inpoutLib)
+  {
+    lptLib = new QLibrary("inpout32.dll");
+
+    if (!lptLib->load())
+    {
+      QMessageBox::about(0, "DLL Error", lptLib->errorString() );
+      return false;
+    }
+
+    lpoutport = (lpOut32) lptLib->resolve("Out32");
+    if (lpoutport)
+    {
+      lpinport = (lpInp32) lptLib->resolve("Inp32");
+
+      isDriverOpen = (lpIsInpOutDriverOpen) lptLib->resolve("IsInpOutDriverOpen");
+      is64Bit = (lpIsXP64Bit) lptLib->resolve("IsXP64Bit");
+    }
+  }
+  else if (libraryType == ntPortLin)
+  {
+    lptLib = new QLibrary("ntport.dll");
+
+    if (!lptLib->load())
+    {
+      QMessageBox::about(0, "DLL Error", lptLib->errorString() );
+      return false;
+    }
+
+    ntoutport = (Outp) lptLib->resolve("Outp");
+    if (ntoutport)
+    {
+      ntinport = (Inp) lptLib->resolve("Inp");
+    }
+
+  }
+  else if (libraryType == userPortLib)
+  {
+
+  }
+  else
+  {
+
+  }
+  return 0;
+}
+
+void lptFunctions::setLatchLines(int le1, int le2, int le3, int fqud1, int fqud3)
+{
+  this->le1 = le1;
+  this->le2 = le2;
+  this->le3 = le3;
+  this->fqud1 = fqud1;
+  this->fqud3 = fqud3;
 }
 
 void lptFunctions::Read8Bitmag()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
 /*
 'needed: port,status ; creates: magdata
     'This will 8 bit parallel on Original or Slim Control Board. ver111-29
@@ -54,7 +121,7 @@ void lptFunctions::Read8Bitmag()
 }
 void lptFunctions::Read8Bitpha()
 {
-
+qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   //needed: port,status ; creates: phadata
       //read 8 bit parallel on Original or Slim Control Board. ver111-29
       // if inp(status) > 63 then ack line is high (phase voltage>ladder)
@@ -103,6 +170,7 @@ void lptFunctions::Read8Bitpha()
 
 void lptFunctions::Read12Bitmag()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 'needed: port,status ; creates: magdata
     'This will read 12 bit parallel, WAIT line, on Original or Slim Control Board. ver111-29
@@ -156,6 +224,7 @@ void lptFunctions::Read12Bitmag()
 
 void lptFunctions::Read12Bitpha()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 //needed: port,status ; creates: phadata
     //This will read 12 bit parallel, ACK line, on Original or Slim Control Board. ver111-29
@@ -231,6 +300,7 @@ void lptFunctions::Read12Bitpha()
 }
 void lptFunctions::Process16MagPha()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 //ver111-33a
     //process the stat15-0 for both magnitude and phase.Determines magdata bit (D7) and phadata bit (D6) in each word
@@ -276,6 +346,7 @@ void lptFunctions::Process16MagPha()
 
 int lptFunctions::Process16Mag()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 'ver111-33a
     'process the stat15-0 for magnitude only. Determines magdata bit (D7) in each word
@@ -303,6 +374,7 @@ int lptFunctions::Process16Mag()
 }
 void lptFunctions::Process22MagPha()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 //ver111-37a
     //process the stat11-0 for both magnitude and phase.Determines magdata bit (D7) and phadata bit (D6) in each word
@@ -339,6 +411,7 @@ void lptFunctions::Process22MagPha()
 
 void lptFunctions::Process22Mag()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 'ver111-37a
     'process the stat11-0 for magnitude only. Determines magdata bit (D7) in each word
@@ -361,6 +434,7 @@ void lptFunctions::Process22Mag()
 }
 void lptFunctions::CommandPLLorig()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 'needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111-28
     'used during initialization of PLL1, PLL2, and PLL3.  PDM will get set to "0".
@@ -383,56 +457,55 @@ void lptFunctions::CommandPLLorig()
     return 'to [CommandPLL]
     */
 }
-void lptFunctions::CommandPLLslim()
+void lptFunctions::CommandPLLslim(int filtbank, int datavalue, int pdmcommand, nValues *n, int levalue)
 {
-  /*
-'needs:datavalue,levalue,N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,SLIM ControlBoard ver111-28
-    'used during initialization of PLL1, PLL2, and PLL3.  PDM will get set to "0" during Initializations
-    'selt word = 1 common clock, 4 datas, plus 3 (filtbank). entering this sub, selt word should = filtbank only
-    'init word = 5 latch lines plus 2 pdm commands. entering this sub, init word should = pdmcmd + pdmclk only.ver111-39d
-    'two steps to do: command data and clock without disturbing Filter Bank, then send LE without disturbing PDM
-  'step 1. Command the PLL without changing the filter bank.
-    'For PLL1,datavalue=2, for PLL2,datavalue=16, for PLL3,datavalue=8
-    'following code lines changed in ver113-3c
-    a=filtbank + N23*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N22*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N21*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N20*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N19*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N18*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N17*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N16*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N15*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N14*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N13*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N12*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N11*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N10*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N9*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N8*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N7*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N6*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N5*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N4*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N3*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N2*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N1*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    a=filtbank + N0*datavalue:out port, a:out control, SELT:out control, contclear:out port, a+1:out control, SELT:out control, contclear
-    out port, filtbank:out control, SELT:out control, contclear 'leaving lines latched to filter bank
-    out port, 0
-  'step 2. Command the PLL without changing the PDM
-    pdmcommand = phaarray(thisstep,0)*64 'do not disturb PDM state, this may be used during Spur Test
-    out port, pdmcommand + levalue  'levalues: PLL1=1, PLL2=16, PLL3=4
-    out control, INIT
-    out port, pdmcommand
-    out control, contclear  'leaving lines latched, and unchanged, to PDM
-    out port, 0
-    return 'to [CommandPLL]
-
-*/
+  //needs:datavalue,levalue,N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,SLIM ControlBoard ver111-28
+  //used during initialization of PLL1, PLL2, and PLL3.  PDM will get set to "0" during Initializations
+  //selt word = 1 common clock, 4 datas, plus 3 (filtbank). entering this sub, selt word should = filtbank only
+  //init word = 5 latch lines plus 2 pdm commands. entering this sub, init word should = pdmcmd + pdmclk only.ver111-39d
+  //two steps to do: command data and clock without disturbing Filter Bank, then send LE without disturbing PDM
+  //step 1. Command the PLL without changing the filter bank.
+  //For PLL1,datavalue=2, for PLL2,datavalue=16, for PLL3,datavalue=8
+  //following code lines changed in ver113-3c
+  int a;
+  a=filtbank + n->N23*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N22*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N21*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N20*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N19*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N18*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N17*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N16*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N15*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N14*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N13*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N12*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N11*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N10*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N9*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N8*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N7*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N6*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N5*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N4*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N3*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N2*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N1*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  a=filtbank + n->N0*datavalue;output(port, a);output(control, SELT);output(control, contclear);output(port, a+1);output(control, SELT);output(control, contclear);
+  output(port, filtbank);output(control, SELT);output(control, contclear); //leaving lines latched to filter bank
+  output(port, 0);
+  //step 2. Command the PLL without changing the PDM
+  //pdmcommand = phaarray(thisstep,0)*64 //do not disturb PDM state, this may be used during Spur Test
+  output(port, pdmcommand + levalue);  //levalues: PLL1=1, PLL2=16, PLL3=4
+  output(control, INIT);
+  output(port, pdmcommand);
+  output(control, contclear);  //leaving lines latched, and unchanged, to PDM
+  output(port, 0);
 }
 void lptFunctions::CommandOrigCB()
-{/*
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
 [CommandOrigCB]' correct modules have been determined in [DetermineModule]
     'Command necessary modules, independently, from Original Control Board
     if glitchd1 > 0 then gosub [CommandDDS1OrigCB]
@@ -445,7 +518,9 @@ void lptFunctions::CommandOrigCB()
 }
 
 void lptFunctions::CommandDDS1OrigCB()
-{/*'needed:DDS1array 'ver111-21
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*'needed:DDS1array 'ver111-21
     if dds1parser = 1 then goto void MainWindow::CommandDDS1OrigCBserial() 'ver111-21
    '(CommandDDS1OrigCBparallel)'needed:DDS1array(w0-w4),port,control,AUTO,STRB,contclear ; commands DDS1 on J5, parallel. ver111-21
         'note, a DDS commanded parallel, will begin with Control Word (W0), then MSB Word (W1), ending with LSB Word (W4)
@@ -473,7 +548,9 @@ void lptFunctions::CommandDDS1OrigCB()
 */
 }
 void lptFunctions::CommandDDS1OrigCBserial()
-{/*'needed:DDS1array(sw0-sw39),control,AUTO,STRB,contclear ; commands DDS1 on J5, serially ver111-21
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*'needed:DDS1array(sw0-sw39),control,AUTO,STRB,contclear ; commands DDS1 on J5, serially ver111-21
         'note: once the DDS1 has been reset into serial mode, the D0 thru D6 data lines are "don't care".
         'note, a DDS serial command, will begin with LSB (W0), thru MSB (W31), ending with Phase bit 4 (W39)
         for clmn = 0 to 39 'ver111-21
@@ -488,7 +565,9 @@ void lptFunctions::CommandDDS1OrigCBserial()
 //'void lptFunctions::endCommandDDS1OldRevA()
 
 void lptFunctions::CommandPLL1OrigCB()
-{/*'needed:PLL1array(N23-N0),SELT,lastncounter1,lastfcounter1 'ver111-21
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*'needed:PLL1array(N23-N0),SELT,lastncounter1,lastfcounter1 'ver111-21
     'ver111-28a makes the SELT buffer "see" the pdm state before commanding PLL1, to prevent orig PDM from changing states.
     Jcontrol = SELT : LEPLL = 4 'ver111-21
     'Command PLL1,oldControl using N23-N0,control,Jcontrol,port,contclear,LEPLL ver111-21
@@ -507,7 +586,9 @@ void lptFunctions::CommandPLL1OrigCB()
 */
 }
 void lptFunctions::CommandDDS3OrigCB()
-{/*'needed:DDS3array,lastdds3output,INIT 'ver111-18
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*'needed:DDS3array,lastdds3output,INIT 'ver111-18
     Jcontrol = INIT:swclk = 32:sfqud = 2 'for Orig Control Bd,J4,DDS3 ver111-16
     'Command DDS3,serially,oldControl using sw0-sw39,swclk,sfqud,control,Jcontrol,port,contclear,LEPLL ver111-21
     'note, a DDS commanded serially, will begin with LSB, continue to MSB, and end with Control Word MSB Phase Bit
@@ -525,7 +606,9 @@ void lptFunctions::CommandDDS3OrigCB()
 */
 }
 void lptFunctions::CommandPLL3OrigCB()
-{/*'needed:PLL3array(N23-N0),INIT,lastncounter3,lastfcounter3 ver111-18
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*'needed:PLL3array(N23-N0),INIT,lastncounter3,lastfcounter3 ver111-18
     Jcontrol = INIT : LEPLL = 16 'ver111-21
     'Command PLL3,Orig Control using N23-N0,control,Jcontrol,port,contclear,LEPLL ver111-21
     'note, a PLL will serially command beginning with N23 and end with N0 (address bit)
@@ -543,14 +626,18 @@ void lptFunctions::CommandPLL3OrigCB()
 */
 }
 void lptFunctions::CommandPDMOrigCB()
-{/*'Set original PDM phase for last known mode, since a PLL1 or PLL2 command will reset the PDM to Norm.
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*'Set original PDM phase for last known mode, since a PLL1 or PLL2 command will reset the PDM to Norm.
     out port, phaarray(thisstep,0)*128: out control, SELT: out control, contclear: out port, 0  'pdmcmd is determined in void MainWindow::InvertPDmodule() 'ver111-20
     lastpdmstate=phaarray(thisstep,0)   'ver114-6c
     return 'to void MainWindow::CommandOrigCB()orvoid MainWindow::CommandPDMonly()
 */
 }
 void lptFunctions::CommandPDMSlimCB()
-{/*'also sending a "latch signal", used by orig PDM module
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*'also sending a "latch signal", used by orig PDM module
     out port, phaarray(thisstep,0)*64
     out control, INIT
     out port, phaarray(thisstep,0)*64 + 32
@@ -561,38 +648,47 @@ void lptFunctions::CommandPDMSlimCB()
     return 'to void MainWindow::CommandPDMonly()
 */
 }
-void lptFunctions::CommandAllSlims()
-{/*'for SLIM Control and SLIM modules. Old PDM and old Filt Bank can be used 'ver111-31c
-   '(send data and clocks without changing Filter Bank)
-    '0-15 is DDS1bit*4 + DDS3bit*16, data = 0 to PLL 1 and PLL 3. seevoid MainWindow::CreateCmdAllArray().
-    'present new Data with no clock,latch high,latch low,present new data with clock,latch high,latch low. ver113-2a
-    'repeat for each bit. (40 data bits and 40 clocks for each module, even if they don't need that many)
-    'this format guarantees that the common clock will not transition with a data transition, preventing crosstalk in LPT cable. ver111-32c
-    for clmn = 0 to 39  'ver113-3c
-        a= cmdallarray(thisstep,clmn)+ filtbank
-        out port, a : out control, SELT:out control, contclear 'a is the data, without clock
-        out port, a+1:out control, SELT:out control, contclear 'a+1 is data, plus clock
-    next clmn
-    out port, filtbank 'remove data, leaving filtbank data to filter bank.
-    out control, SELT:out control, contclear 'disable buffer. filtbank signals will be latched to filter bank assembly
+void lptFunctions::CommandAllSlims(int step, int filtbank, int pdmcmd)
+{
+  //for SLIM Control and SLIM modules. Old PDM and old Filt Bank can be used
+  //(send data and clocks without changing Filter Bank)
+  //0-15 is DDS1bit*4 + DDS3bit*16, data = 0 to PLL 1 and PLL 3. seevoid MainWindow::CreateCmdAllArray().
+  //present new Data with no clock,latch high,latch low,present new data with clock,latch high,latch low.
+  //repeat for each bit. (40 data bits and 40 clocks for each module, even if they don//t need that many)
+  //this format guarantees that the common clock will not transition with a data transition, preventing crosstalk in LPT cable.
+  for (int clmn = 0; clmn <= 39; clmn++)
+  {
+    int a= cmdAllArray[step].array[clmn]+ filtbank;
+    output(port, a);
+    output(control, SELT);
+    output(control, contclear); //a is the data, with clock
+    output(port, a+1);
+    output(control, SELT);
+    output(control, contclear); //a+1 is data, plus clock
+  }
+  output(port, filtbank); //remove data, leaving filtbank data to filter bank.
+  output(control, SELT);
+  output(control, contclear); //disable buffer. filtbank signals will be latched to filter bank assembly
 
-  'send LE's to PLL1, PLL3, FQUD's to DDS1, DDS3, and command PDM
-    'begin by setting up init word=LE's and Fquds + PDM state for thisstep
-    pdmcmd = phaarray(thisstep,0)*64 'ver111-39d
-    out port, le1 + fqud1 + le3 + fqud3 + pdmcmd 'present data to buffer input'ver111-39d
-    out control, INIT: out control, contclear  'latch the buffer, moving the signals to the 5 modules'ver113-2a
-    out port, pdmcmd + 32 'remove LEs and Fquds, leaving PDM data, but add a latch signal P2D5 for old PDM if used.'ver111-39d
-    out control, INIT: out control, contclear  'sends latch signal to old PDM'ver113-2a
-    out port, pdmcmd  'remove the added latch signal to PDM, leaving just the PDM's static data'ver111-39d
-    out control, INIT: out control, contclear  'ver113-2a
-    out port, 0    'bring all Data lines low. PDM data remains static
-    lastpdmstate=phaarray(thisstep,0)   'ver114-6c
-    return 'to void MainWindow::CommandThisStep()
-*/
+  //send LE//s to PLL1, PLL3, FQUD//s to DDS1, DDS3, and command PDM
+  //begin by setting up init word=LE//s and Fquds + PDM state for thisstep
+  //pdmcmd = phaarray(thisstep,0)*64;
+  output(port, le1 + fqud1 + le3 + fqud3 + pdmcmd); //present data to buffer input
+  output(control, INIT);
+  output(control, contclear);  //latch the buffer, moving the signals to the 5 modules
+  output(port, pdmcmd + 32); //remove LEs and Fquds, leaving PDM data, but add a latch signal P2D5 for old PDM if used.
+  output(control, INIT);
+  output(control, contclear);  //sends latch signal to old PDM
+  output(port, pdmcmd);  //remove the added latch signal to PDM, leaving just the PDM//s static data
+  output(control, INIT);
+  output(control, contclear);
+  output(port, 0);    //bring all Data lines low. PDM data remains static
+  //lastpdmstate=phaarray(thisstep,0);
+  return;
+
 }
 void lptFunctions::ReadAD16Status()
 {
-  /*
   //For reading the 16 bit serial AtoD. Changed 4-27-10 ver115-9b
      //This routine modified to help reject noise glitching caused by newer, faster, cheaply made computers.
      //needed: port, control, status ; creates: 16 status port words (stat15-stat0)mag,(and, pha if two A/D//s installed) //ver111-33a
@@ -600,48 +696,49 @@ void lptFunctions::ReadAD16Status()
      //reads 16 bit serial using Original or Slim Control Board. ver111-33c
      //good for 16 Bit Original AtoD Module or SLIM-ADC-16
      //MAG is WAIT, PHASE is ACK, SCLK is BD6, CVN is BD7.
-      if cb = 2 then goto [Read16wSlimCB]// if SLIM Contol Board, jump over [Read16wOrigCB]
-    [Read16wOrigCB] //Using the Original Control Board.  added by ver115-9b
-      out port, 128  //take CVN high. Begins data capture inside AtoD
-      out port, 128:out port, 128 //keep CVN high for 3 port commands to assure full AtoD conversion
-      out port, 64  //CVN low and SCLK=1 //bit 15 is valid
-      stat15 = inp(status) //read data, statX is an 8 bit word for the Status Port
-      out port, 0:out port, 64 //Status bit 14 is now valid
-      stat14 = inp(status)
-      out port, 0:out port, 64 //Status bit 13 is now valid
-      stat13 = inp(status)
-      out port, 0:out port, 64 //Status bit 12 is now valid
-      stat12 = inp(status)
-      out port, 0:out port, 64 //Status bit 11 is now valid
-      stat11 = inp(status)
-      out port, 0:out port, 64 //Status bit 10 is now valid
-      stat10 = inp(status)
-      out port, 0:out port, 64 //Status bit 9 is now valid
-      stat9 = inp(status)
-      out port, 0:out port, 64 //Status bit 8 is now valid
-      stat8 = inp(status)
-      out port, 0:out port, 64 //Status bit 7 is now valid
-      stat7 = inp(status)
-      out port, 0:out port, 64 //Status bit 6 is now valid
-      stat6 = inp(status)
-      out port, 0:out port, 64 //Status bit 5 is now valid
-      stat5 = inp(status)
-      out port, 0:out port, 64 //Status bit 4 is now valid
-      stat4 = inp(status)
-      out port, 0:out port, 64 //Status bit 3 is now valid
-      stat3 = inp(status)
-      out port, 0:out port, 64 //Status bit 2 is now valid
-      stat2 = inp(status)
-      out port, 0:out port, 64 //Status bit 1 is now valid
-      stat1 = inp(status)
-      out port, 0 //Status bit 0 is now valid
-      stat0 = inp(status)
+      //if cb = 2 then goto [Read16wSlimCB]// if SLIM Contol Board, jump over [Read16wOrigCB]
+     //Using the Original Control Board.  added by ver115-9b
+      output(port, 128);  //take CVN high. Begins data capture inside AtoD
+      output(port, 128);
+      output(port, 128); //keep CVN high for 3 port commands to assure full AtoD conversion
+      output(port, 64);  //CVN low and SCLK=1 //bit 15 is valid
+      stats.stat15 = input(status); //read data, statX is an 8 bit word for the Status Port
+      output(port, 0);output(port, 64); //Status bit 14 is now valid
+      stats.stat14 = input(status);
+      output(port, 0);output(port, 64); //Status bit 13 is now valid
+      stats.stat13 = input(status);
+      output(port, 0);output(port, 64); //Status bit 12 is now valid
+      stats.stat12 = input(status);
+      output(port, 0);output(port, 64); //Status bit 11 is now valid
+      stats.stat11 = input(status);
+      output(port, 0);output(port, 64); //Status bit 10 is now valid
+      stats.stat10 = input(status);
+      output(port, 0);output(port, 64); //Status bit 9 is now valid
+      stats.stat9 = input(status);
+      output(port, 0);output(port, 64); //Status bit 8 is now valid
+      stats.stat8 = input(status);
+      output(port, 0);output(port, 64); //Status bit 7 is now valid
+      stats.stat7 = input(status);
+      output(port, 0);output(port, 64); //Status bit 6 is now valid
+      stats.stat6 = input(status);
+      output(port, 0);output(port, 64); //Status bit 5 is now valid
+      stats.stat5 = input(status);
+      output(port, 0);output(port, 64); //Status bit 4 is now valid
+      stats.stat4 = input(status);
+      output(port, 0);output(port, 64); //Status bit 3 is now valid
+      stats.stat3 = input(status);
+      output(port, 0);output(port, 64); //Status bit 2 is now valid
+      stats.stat2 = input(status);
+      output(port, 0);output(port, 64); //Status bit 1 is now valid
+      stats.stat1 = input(status);
+      output(port, 0); //Status bit 0 is now valid
+      stats.stat0 = input(status);
       //we now have raw a/d status words in stat15-stat0
-      return //to [ReadMagnitude]or[ReadPhase]with status words
-*/
+      //to [ReadMagnitude]or[ReadPhase]with status words
 }
 void lptFunctions::ReadAD22Status()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
   //For reading the 12 bit serial AtoD. Changed 4-27-10 ver115-9b
      //This routine modified to help reject noise glitching caused by newer, faster, cheaply made computers.
@@ -693,6 +790,7 @@ void lptFunctions::ReadAD22Status()
 }
 void lptFunctions::ResetDDS1par()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 'needed:control,STRBAUTO,contclear ; resets DDS1 on J5(OrigControlBd), into parallel mode
     out control, STRBAUTO        'wclk and fqud lines high, causing DDS "Reset" line to go high
@@ -703,6 +801,7 @@ void lptFunctions::ResetDDS1par()
 
 void lptFunctions::ResetDDS1ser()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 'OrigControlBoard.needed:AUTO,STRB,STRBAUTO ; set DDS1(J5)to serial mode. ver113-2c
     'DDS (AD9850/9851) can be hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don't care.
@@ -731,6 +830,7 @@ void lptFunctions::ResetDDS1ser()
 }
 void lptFunctions::ResetDDS3ser()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
   //OrigControlBoard.needed:AUTO,STRB,STRBAUTO ; set DDS3(J4)to serial mode. ver113-2c
   //DDS3 (AD9850/9851) must be hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don't care.
@@ -748,98 +848,110 @@ void lptFunctions::ResetDDS3ser()
     */
 }
 
-void lptFunctions::ResetDDS1serSLIM()
+void lptFunctions::ResetDDS1serSLIM(int pdmcmd, int filtbank)
 {
-  /*
-//reset serial DDS1 without disturbing Filter Bank or PDM. ver113-2c
-    //must have DDS (AD9850/9851) hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don't care.
-    //this will reset DDS into parallel, involk serial mode, then command to 0 Hz.
-    pdmcmd = phaarray(thisstep,0) //ver111-39d
+  //reset serial DDS1 without disturbing Filter Bank or PDM. ver113-2c
+  //must have DDS (AD9850/9851) hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don't care.
+  //this will reset DDS into parallel, involk serial mode, then command to 0 Hz.
+  //pdmcmd = phaarray(thisstep,0) //ver111-39d
 
-    //(reset DDS1 to parallel)WCLK up,WCLK up and FQUD up,WCLK up and FQUD down,WCLK down
-    out port, filtbank + 1     //apply last known filter path and WCLK=D0=1 to buffer
-    out control, SELT          //DDSpin9, WCLK up to DDS
-    out control, contclear     //disable buffer,leaving filtbank, and WCLK=high to DDS
-    out port, pdmcmd*64 + 2    //apply last known pdmcmd and FQUD=D3=1 to buffer
-    out control, INIT          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
-    out port, pdmcmd*64        //DDSpin8, FQUD down
-    out control, contclear     //disable buffer, leaving last known PDM state latched
-    out port, filtbank         //apply last known filter path and WCLK=D0=0 to buffer
-    out control, SELT          //DDSpin9, WCLK down
-    out control, contclear     //disable buffer,leaving filtbank
-    //(end reset DDS1 to parallel)
-    //(involk serial mode DDS1)WCLK up, WCLK down, FQUD up, FQUD down
-    out port, filtbank + 1     //apply last known filter path and WCLK=D0=1 to buffer
-    out control, SELT          //DDSpin9, WCLK up to DDS
-    out port, filtbank         //apply last known filter path and WCLK=D0=0 to DDS
-    out control, contclear     //disable buffer,leaving filtbank
-    out port, pdmcmd*64 + 2    //apply last known pdmcmd and FQUD=D3=1 to buffer
-    out control, INIT          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
-    out port, pdmcmd*64        //DDSpin8, FQUD down
-    out control, contclear     //disable buffer, leaving last known PDM state latched
-    //(end involk serial mode DDS1)
-    //(flush and command DDS1)D7,WCLK up,WCLK down,(repeat39more),FQUD up,FQUD down
-    //present data to buffer,latch buffer,disable buffer,present data+clk to buffer,latch buffer,disable buffer
-    a=filtbank
-    for thisloop = 0 to 39
-    out port, a:out control, SELT:out control, contclear: out port, a+1:out control, SELT:out control, contclear
-    next thisloop
-    out port, a:out control, SELT:out control, contclear //leaving filtbank latched
-    out port, pdmcmd*64 + 2    //apply last known pdmcmd and FQUD=D3=1 to buffer
-    out control, INIT          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
-    out port, pdmcmd*64        //DDSpin8, FQUD down
-    out control, contclear     //disable buffer, leaving last known PDM state latched
-    //(end flush command DDS1)
-    return //to //[InitializeDDS1]
-*/
+  //(reset DDS1 to parallel)WCLK up,WCLK up and FQUD up,WCLK up and FQUD down,WCLK down
+  output(port, filtbank + 1);     //apply last known filter path and WCLK=D0=1 to buffer
+  output(control, SELT);          //DDSpin9, WCLK up to DDS
+  output(control, contclear);     //disable buffer,leaving filtbank, and WCLK=high to DDS
+  output(port, pdmcmd*64 + 2);    //apply last known pdmcmd and FQUD=D3=1 to buffer
+  output(control, INIT);          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
+  output(port, pdmcmd*64);        //DDSpin8, FQUD down
+  output(control, contclear);     //disable buffer, leaving last known PDM state latched
+  output(port, filtbank);         //apply last known filter path and WCLK=D0=0 to buffer
+  output(control, SELT);          //DDSpin9, WCLK down
+  output(control, contclear);     //disable buffer,leaving filtbank
+  //(end reset DDS1 to parallel)
+  //(involk serial mode DDS1)WCLK up, WCLK down, FQUD up, FQUD down
+  output(port, filtbank + 1);     //apply last known filter path and WCLK=D0=1 to buffer
+  output(control, SELT);          //DDSpin9, WCLK up to DDS
+  output(port, filtbank);         //apply last known filter path and WCLK=D0=0 to DDS
+  output(control, contclear);     //disable buffer,leaving filtbank
+  output(port, pdmcmd*64 + 2);    //apply last known pdmcmd and FQUD=D3=1 to buffer
+  output(control, INIT);          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
+  output(port, pdmcmd*64);        //DDSpin8, FQUD down
+  output(control, contclear);     //disable buffer, leaving last known PDM state latched
+  //(end involk serial mode DDS1)
+  //(flush and command DDS1)D7,WCLK up,WCLK down,(repeat39more),FQUD up,FQUD down
+  //present data to buffer,latch buffer,disable buffer,present data+clk to buffer,latch buffer,disable buffer
+  int a=filtbank;
+  for (int thisloop = 0; thisloop <= 39; thisloop++)
+  {
+    output(port, a);
+    output(control, SELT);
+    output(control, contclear);
+    output(port, a+1);
+    output(control, SELT);
+    output(control, contclear);
+  }
+  output(port, a);
+  output(control, SELT);
+  output(control, contclear); //leaving filtbank latched
+  output(port, pdmcmd*64 + 2);    //apply last known pdmcmd and FQUD=D3=1 to buffer
+  output(control, INIT);          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
+  output(port, pdmcmd*64);        //DDSpin8, FQUD down
+  output(control, contclear);     //disable buffer, leaving last known PDM state latched
+  //(end flush command DDS1)
+  return; //to //[InitializeDDS1]
 }
-void lptFunctions::ResetDDS3serSLIM()
+void lptFunctions::ResetDDS3serSLIM(int pdmcmd, int filtbank)
 {
-  /*
-'reset serial DDS3 without disturbing Filter Bank or PDM. ver113-2c
-    'must have DDS (AD9850/9851) hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don't care.
-    'this will reset DDS into parallel, involk serial mode, then command to 0 Hz.
-    pdmcmd = phaarray(thisstep,0) 'ver111-39d
+  //reset serial DDS3 without disturbing Filter Bank or PDM. ver113-2c
+  //must have DDS (AD9850/9851) hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don//t care.
+  //this will reset DDS into parallel, involk serial mode, then command to 0 Hz.
 
-    '(reset DDS3 to parallel)WCLK up,WCLK up and FQUD up,WCLK up and FQUD down,WCLK down
-    out port, filtbank + 1     'apply last known filter path and WCLK=D0=1 to buffer
-    out control, SELT          'DDSpin9, WCLK up to DDS
-    out control, contclear     'disable buffer,leaving filtbank, and WCLK=high to DDS
-    out port, pdmcmd*64 + 8    'apply last known pdmcmd and FQUD=D3=1 to buffer
-    out control, INIT          'DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
-    out port, pdmcmd*64        'DDSpin8, FQUD down
-    out control, contclear     'disable buffer, leaving last known PDM state latched
-    out port, filtbank         'apply last known filter path and WCLK=D0=0 to buffer
-    out control, SELT          'DDSpin9, WCLK down
-    out control, contclear     'disable buffer,leaving filtbank
-    '(end reset DDS3 to parallel)
-    '(involk serial mode DDS3)WCLK up, WCLK down, FQUD up, FQUD down
-    out port, filtbank + 1     'apply last known filter path and WCLK=D0=1 to buffer
-    out control, SELT          'DDSpin9, WCLK up to DDS
-    out port, filtbank         'apply last known filter path and WCLK=D0=0 to DDS
-    out control, contclear     'disable buffer,leaving filtbank
-    out port, pdmcmd*64 + 8    'apply last known pdmcmd and FQUD=D3=1 to buffer
-    out control, INIT          'DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
-    out port, pdmcmd*64        'DDSpin8, FQUD down
-    out control, contclear     'disable buffer, leaving last known PDM state latched
-    '(end involk serial mode DDS3)
-    '(flush and command DDS3)D7,WCLK up,WCLK down,(repeat39more),FQUD up,FQUD down
-    'present data to buffer,latch buffer,disable buffer,present data+clk to buffer,latch buffer,disable buffer
-    a=filtbank
-    for thisloop = 0 to 39
-    out port, a:out control, SELT:out control, contclear: out port, a+1:out control, SELT:out control, contclear
-    next thisloop
-    out port, a:out control, SELT:out control, contclear 'leaving filtbank latched
-    out port, pdmcmd*64 + 8    'apply last known pdmcmd and FQUD=D3=1 to buffer
-    out control, INIT          'DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
-    out port, pdmcmd*64        'DDSpin8, FQUD down
-    out control, contclear     'disable buffer, leaving last known PDM state latched
-    '(end flush command DDS3)
-    return 'to '(InitializeDDS 3)
-    */
+  //(reset DDS3 to parallel)WCLK up,WCLK up and FQUD up,WCLK up and FQUD down,WCLK down
+  output(port, filtbank + 1);     //apply last known filter path and WCLK=D0=1 to buffer
+  output(control, SELT);          //DDSpin9, WCLK up to DDS
+  output(control, contclear);     //disable buffer,leaving filtbank, and WCLK=high to DDS
+  output(port, pdmcmd*64 + 8);    //apply last known pdmcmd and FQUD=D3=1 to buffer
+  output(control, INIT);          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
+  output(port, pdmcmd*64);        //DDSpin8, FQUD down
+  output(control, contclear);     //disable buffer, leaving last known PDM state latched
+  output(port, filtbank);         //apply last known filter path and WCLK=D0=0 to buffer
+  output(control, SELT);          //DDSpin9, WCLK down
+  output(control, contclear);     //disable buffer,leaving filtbank
+  //(end reset DDS3 to parallel)
+  //(involk serial mode DDS3)WCLK up, WCLK down, FQUD up, FQUD down
+  output(port, filtbank + 1);     //apply last known filter path and WCLK=D0=1 to buffer
+  output(control, SELT);          //DDSpin9, WCLK up to DDS
+  output(port, filtbank);         //apply last known filter path and WCLK=D0=0 to DDS
+  output(control, contclear);     //disable buffer,leaving filtbank
+  output(port, pdmcmd*64 + 8);    //apply last known pdmcmd and FQUD=D3=1 to buffer
+  output(control, INIT);          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
+  output(port, pdmcmd*64);        //DDSpin8, FQUD down
+  output(control, contclear);     //disable buffer, leaving last known PDM state latched
+  //(end involk serial mode DDS3)
+  //(flush and command DDS3)D7,WCLK up,WCLK down,(repeat39more),FQUD up,FQUD down
+  //present data to buffer,latch buffer,disable buffer,present data+clk to buffer,latch buffer,disable buffer
+  int a=filtbank;
+  for (int thisloop = 0; thisloop <= 39; thisloop++)
+  {
+    output(port, a);
+    output(control, SELT);
+    output(control, contclear);
+    output(port, a+1);
+    output(control, SELT);
+    output(control, contclear);
+  }
+  output(port, a);
+  output(control, SELT);
+  output(control, contclear); //leaving filtbank latched
+  output(port, pdmcmd*64 + 8);    //apply last known pdmcmd and FQUD=D3=1 to buffer
+  output(control, INIT);          //DDSpin8, FQUD up,DDS resets to parallel,register pointer will reset
+  output(port, pdmcmd*64);        //DDSpin8, FQUD down
+  output(control, contclear);     //disable buffer, leaving last known PDM state latched
+  //(end flush command DDS3)
+  //to //(InitializeDDS 3)
 }
 void lptFunctions::LPTportTest()
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 'lpt, added by Scotty ver116-4b
 [LPTportTest]
@@ -1042,8 +1154,12 @@ regPD0 = 1 'ver116-4r
 QString USBwrbuf = "A60200"+ToHex(lptD0+lptD1+lptD2 +lptD3 +lptD4 +lptD5 +lptD6 +lptD7)+"000000";    //116-4sLPT
 usb->usbMSADeviceWriteString(USBwrbuf,7);
     wait
-
-    [SetLPTControl]
+    */
+}
+void lptFunctions::SetLPTControl()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
     out control, lptpin1 +lptpin14 +lptpin16 +lptpin17
 'for USB, this is register PD, bits 0-3
 QString USBwrbuf = "A608000000"+ToHex(regPD0+regPD1+regPD2+regPD3)+"00"; //ver116-4r
@@ -1078,31 +1194,140 @@ usb->usbMSADeviceWriteString(USBwrbuf,7);
 }
 void lptFunctions::CommandFilterOrigCB(int &fbank)// //command 1 of 4 and latch it  ver116-4j made this a subroutine
 {
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
     //fbank should be the non-global filtbank
     if suppressHardware then exit sub //ver115-6c
-    control=globalPort+2
-    out globalPort, fbank       //presents filter address to control buffer
+    control=port+2
+    out port, fbank       //presents filter address to control buffer
     out control, globalINIT        //presents filter address to Filter Bank
-    out globalPort, fbank + 1   //latches filter address into Filter Bank using latch signal
-    out globalPort, fbank       //leaves filter address on Filter Bank, removing latch signal
+    out port, fbank + 1   //latches filter address into Filter Bank using latch signal
+    out port, fbank       //leaves filter address on Filter Bank, removing latch signal
     out control, globalContClear   //removes filter address from Filter Bank
-    out globalPort, 0              //removes filter address from control buffer
+    out port, 0              //removes filter address from control buffer
         */
 }
 
-void lptFunctions::CommandFilterSlimCB(int  &fbank)// //ver116-4j made this a subroutine
+void lptFunctions::CommandFilterSlimCB(int  fbank)
 {
-  /*
-    //fbank should be the non-global filtbank
-    if suppressHardware then exit sub //ver115-6c
-    control=globalPort+2
-    out globalPort, fbank         //presents filter address to control buffer
-    out control, globalSELT          //presents filter address to Filter Bank
-    out globalPort, fbank + 128   //latches filter address into Filter Bank using latch signal
-    out globalPort, fbank         //leaves filter address on Filter Bank, removing latch signal
-    out control, globalContClear     //removes filter address from Filter Bank
-    out globalPort, 0                //removes filter address from control buffer
-        */
+  //fbank should be the non-global filtbank
+  //if suppressHardware then exit sub
+  control=port+2;
+  output(port, fbank);         //presents filter address to control buffer
+  output(control, SELT);       //presents filter address to Filter Bank
+  output(port, fbank + 128);   //latches filter address into Filter Bank using latch signal
+  output(port, fbank);         //leaves filter address on Filter Bank, removing latch signal
+  output(control, contclear);  //removes filter address from Filter Bank
+  output(port, 0);             //removes filter address from control buffer
 }
 
+int lptFunctions::input(short port)
+{
+  if (libraryType == inpoutLib)
+  {
+    return lpinport(port);
+  }
+  else if (libraryType == ntPortLin)
+  {
+    return ntinport(port);
+  }
+  else if (libraryType == userPortLib)
+  {
+
+  }
+  else
+  {
+    return 0;
+  }
+}
+
+void lptFunctions::output(short port, short value)
+{
+  if (libraryType == inpoutLib)
+  {
+    lpoutport(port, value) ;
+  }
+  else if (libraryType == ntPortLin)
+  {
+    ntoutport((WORD)port, (WORD)value);
+  }
+  else if (libraryType == userPortLib)
+  {
+
+  }
+}
+
+void lptFunctions::Read16wSlimCB() //Using the SLIM Control Board. added by ver115-9b
+{
+  output(port, 128);output(control, AUTO);output(control, contclear);  //take CVN high. Begins data conversion inside AtoD,
+  //and is completed within 2.2 usec.
+  output(control, contclear);  //keep CVN high for 3 port commands to assure full AtoD conversion
+
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low and SCLK=1 //Status bit 15
+  //of the serial data is valid and can be read at any time.
+  stats.stat15 = input(status); //read data, statX is an 8 bit word for the Status Port
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //SCLK=0  //bit 14 is valid,
+  //data (SDO) is incremented on the falling edge of SCLK
+  output(port, 64);output(control, AUTO);output(control, contclear);  //SCLK=1
+  stats.stat14 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 13 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat13 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear); //CVN low, SCLK=0  //bit 12 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat12 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 11 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat11 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 10 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat10 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 9 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat9 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 8 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat8 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 7 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat7 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 6 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat6 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 5 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat5 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 4 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat4 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 3 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat3 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 2 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat2 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 1 is valid
+  output(port, 64);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=1
+  stats.stat1 = input(status); //read data, statX is 8 bit word
+
+  output(port, 0);output(control, AUTO);output(control, contclear);  //CVN low, SCLK=0  //bit 0 is valid
+  //a/d outputs would go high z on 16th SCLK trailing edge, but only 15 have been sent.
+  stats.stat0 = input(status); //read data, statX is 8 bit word
+  //U3 and P3 on SLIM Control Board is disabled.
+  //we now have raw a/d status words in stat15-stat0
+  return; //to [ReadMagnitude]or[ReadPhase]with status words
+}

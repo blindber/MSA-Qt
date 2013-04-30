@@ -48,6 +48,8 @@ public:
   void setUwork(cWorkArray *newuWork);
   void setFilePath(QString Dir);
   void setVna(dialogVNACal *newVnaCal);
+  void resizeArrays(int newSize);
+  void initVars();
 
   usbFunctions *usb;
   touchStone touch;
@@ -94,7 +96,7 @@ public:
 
   void InitializeHardware();
 
-  void CommandCurrentStep();
+  void CommandCurrentStep(int step);
   void SelectVideoFilter();
   void SelectLatchedSwitches(int desiredFreqBand);
   int switchLatchBits(int desiredFreqBand);
@@ -116,7 +118,7 @@ public:
   void FillDDS1array(int step);
   void FillDDS3array(int);
   void CreateCmdAllArray();
-  void CommandPLL();
+  void CommandPLL(int step);
 
   void CommandPLLslimUSB();
 
@@ -144,12 +146,10 @@ public:
   int status;
   int control;
 
-  int globalSTRB, globalINIT, globalSELT, globalContClear;  //ver116-1b
+  int globalSTRB, globalINIT, globalSELT, globalContClear;
   int swclk;
   int LEPLL;
   int sfqud;
-
-  int le1, le2,le3,fqud1,fqud3; //ver111-31b
 
   int pdmlowlim, pdmhighlim;
   int bUseUsb;
@@ -311,32 +311,9 @@ private:
 
 
 
+  nValues n;
 
 
-  int N0;
-  int N1;
-  int N2;
-  int N3;
-  int N4;
-  int N5;
-  int N6;
-  int N7;
-  int N8;
-  int N9;
-  int N10;
-  int N11;
-  int N12;
-  int N13;
-  int N14;
-  int N15;
-  int N16;
-  int N17;
-  int N18;
-  int N19;
-  int N20;
-  int N21;
-  int N22;
-  int N23;
 
   int nb0;
   int nb1;

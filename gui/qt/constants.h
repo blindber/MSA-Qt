@@ -70,6 +70,10 @@ enum lptConstants
   STRBAUTO = 8
 };
 
+enum initMemorySizes
+{
+  initMemSize = 802
+};
 
 enum twoPortConstants
 {

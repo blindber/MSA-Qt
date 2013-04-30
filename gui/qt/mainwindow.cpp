@@ -110,6 +110,7 @@ MainWindow::~MainWindow()
   }
   delete vars;
 }
+
 void MainWindow::delayedStart()
 {
   timerStart2->stop();
@@ -237,71 +238,9 @@ void MainWindow::delayedStart()
       QMessageBox::about(0,"Error", "Unable to create OperatingCal folder.");
   }
 */
-  //-----Load or create coax data file-----
-  //coax.CoaxLoadDataFile(); //ver115-4a
 
-  //2.Establish hard "Global" variables
-  //For speed, most of the following are not declared global, and they are not accessible
-  //within true subroutines. But a couple have true global versions.
-
-  hwdIf->globalSTRB=STRB;
-  hwdIf->globalINIT=INIT;
-  hwdIf->globalSELT=SELT;
-  hwdIf->globalContClear=contclear;   //ver116-1b
-
-  if (activeConfig.cb==0)
-  {
-    hwdIf->le1=4;
-    hwdIf->le2=8;
-    hwdIf->le3=16;
-    hwdIf->fqud1=STRB;
-    hwdIf->fqud3=2; //ver111-31b
-  }
-  if (activeConfig.cb==1)
-  {
-    hwdIf->le1=1;
-    hwdIf->le2=1;
-    hwdIf->le3=4;
-    hwdIf->fqud1=2;
-    hwdIf->fqud3=8; //ver111-31b
-  }
-  if (activeConfig.cb==2)
-  {
-    hwdIf->le1=1;
-    hwdIf->le2=16;
-    hwdIf->le3=4;
-    hwdIf->fqud1=2;
-    hwdIf->fqud3=8; //ver111-31b
-  }
-  if (activeConfig.cb==3)
-  {
-    hwdIf->le1=1;
-    hwdIf->le2=16;
-    hwdIf->le3=4;
-    hwdIf->fqud1=2;
-    hwdIf->fqud3=8;
-    vars->bUseUsb = 1;  //USB;01-08-2010
-  }
-  if (activeConfig.adconv == 8)
-  {
-    hwdIf->pdmlowlim = 51 ;
-    hwdIf->pdmhighlim = 205; //establish boundries for 8 bit parallel A to D ver111-36f
-  }
-  if (activeConfig.adconv == 12)
-  {
-    hwdIf->pdmlowlim = 819 ;
-    hwdIf->pdmhighlim = 3277; //establish boundries for 12 bit parallel A to D ver111-36f
-  }
-  if (activeConfig.adconv == 16)
-  {
-    hwdIf->pdmlowlim = 13107 ;
-    hwdIf->pdmhighlim = 52429; //establish boundries for 16 bit serial A to D ver111-36f
-  }
-  if (activeConfig.adconv == 22)
-  {
-    hwdIf->pdmlowlim = 819 ;
-    hwdIf->pdmhighlim = 3277; //establish boundries for 12 bit serial A to D ver111-37a
-  }
+  hwdIf->initVars();
+  vars->bUseUsb = 1;  //USB;01-08-2010
 
 
   //3.Initialize for whatever mode we will start up in
@@ -336,7 +275,8 @@ void MainWindow::delayedStart()
   //Video Filter is not a latched switch, but it has to be output along with the other data
   //This should work if the switch capacitors discharge only about 10% and recharge time constant is 1 second or less
   //Note that SelectLatchedSwitches adds some time delay also
-  vars->switchTR=0 ; vars->switchFR=0 ;
+  vars->switchTR=0;
+  vars->switchFR=0 ;
   hwdIf->SelectLatchedSwitches(vars->lastSetBand);
   util.uSleep(500); //wait again because latching will occur again when preferences are loaded.
 
@@ -359,7 +299,7 @@ void MainWindow::delayedStart()
   graph->InitGraphParams();   //Initialize parameters to set up the graphing module ver114-3f moved
 
   ChangeMode(); //create Graph Window in mode of msaMode$
-  vnaCal.desiredCalLevel=0;   //Desire no cal ver114-6b
+  vnaCal.desiredCalLevel=0;   //Desire no cal
   vnaCal.SignalNoCalInstalled();
   vnaCal.bandLineNumSteps=-1;   //Indicate cal does not exist ver114-5f; baseLine cal was handled above ver114-5mb
   vars->OSLBandNumSteps=-1;  //ver115-1b
@@ -2713,7 +2653,7 @@ void MainWindow::CommandThisStep()
   //b. calculate how much delay is needed for each module[DetermineModule], but use only the largest one[WaitStatement].
   //c. send individual data, clocks, and latch commands that are necessary for[CommandOrigCB]
   //or for SLIM, use [CommandAllSlims] for commanding concurrently //ver111-31c
-  hwdIf->CommandCurrentStep();  //ver116-4j made this a separate routine
+  hwdIf->CommandCurrentStep(vars->thisstep);  //ver116-4j made this a separate routine
 
   //16.Determine sequence of operations after commanding the modules
   if (hwdIf->onestep == 1)   //in the One Step mode
@@ -2962,6 +2902,7 @@ void MainWindow::Showvar()
   {
     showVars = new dialogShowVars(this);
   }
+  showVars->move(x() + width() + 3, y());
   showVars->show();
   updatevar(vars->thisstep);
 
@@ -2973,7 +2914,6 @@ void MainWindow::Showvar()
 
 void MainWindow::updatevar(int step)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   if (!showVars)
   {
     return;
@@ -3427,8 +3367,8 @@ void MainWindow::ResizeArrays(int nPoints)
   {
     graph->gSetMaxPoints(maxPoints);     //Resize arrays in graph module
 
-    hwdIf->pll_1.resize(maxPoints);
-    hwdIf->pll_3.resize(maxPoints);
+//    hwdIf->pll_1.resize(maxPoints);
+//    hwdIf->pll_3.resize(maxPoints);
     vars->datatable.mresize(maxPoints,5);    //added element for band ver116-4s
     vars->magarray.mresize(maxPoints,4);
     vars->phaarray.mresize(maxPoints,5);
@@ -3443,9 +3383,8 @@ void MainWindow::ResizeArrays(int nPoints)
     hwdIf->dds_3.resize(maxPoints);
 
 
-    vars->cmdallarray.mresize(maxPoints,40);
-
-    hwdIf->usb->resizeMemory(maxPoints);
+    //vars->cmdallarray.mresize(maxPoints,40);
+    //hwdIf->usb->resizeMemory(maxPoints);
 
     vars->freqCorrection.resize(maxPoints);
     vars->frontEndCorrection.resize(maxPoints);

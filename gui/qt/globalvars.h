@@ -432,7 +432,7 @@ public:
       QString frontEndLastFolder;  //path to Last folder from which front end was loaded
 
               //ver114-2d combined config arrays into one, and deleted configarray
-      Q2DintVector cmdallarray;//(2020,40) //(0-15)DDS1+DDS3, (16-39)PLL1+DDS1+PLL3+DDS3
+      //Q2DintVector cmdallarray;//(2020,40) //(0-15)DDS1+DDS3, (16-39)PLL1+DDS1+PLL3+DDS3
 
       int suppressHardware; //=1 to suppress hardware operations, otherwise 0 //ver115-6c
       int suppressHardwareInitOnRestart;    //=1 to skip hardware re-initialization to speed up Restart or [PartialRestart].

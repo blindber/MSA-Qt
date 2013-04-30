@@ -31,11 +31,6 @@ hwdInterface::hwdInterface(QWidget *parent)
   swclk = 0;
   LEPLL = 0;
   sfqud = 0;
-  le1 = 0;
-  le2 = 0;
-  le3 = 0;
-  fqud1 = 0;
-  fqud3 = 0;
   pdmlowlim = 0;
   pdmhighlim = 0;
   bUseUsb = 0;
@@ -105,6 +100,8 @@ hwdInterface::hwdInterface(QWidget *parent)
   Bcounter = 0;
   Acounter = 0;
 
+  resizeArrays(initMemSize);
+
 }
 
 hwdInterface::~hwdInterface()
@@ -142,6 +139,78 @@ void hwdInterface::setVna(dialogVNACal *newVnaCal)
   vnaCal = newVnaCal;
 }
 
+void hwdInterface::resizeArrays(int newSize)
+{
+  pll_1.resize(newSize);
+  pll_3.resize(newSize);
+  usb->resizeMemory(newSize);
+  lpt.cmdAllArray.resize(newSize);
+}
+
+void hwdInterface::initVars()
+{
+  globalSTRB=STRB;
+  globalINIT=INIT;
+  globalSELT=SELT;
+  globalContClear=contclear;
+
+  int le1, le2,le3,fqud1,fqud3;
+  if (activeConfig->cb==0)
+  {
+    le1=4;
+    le2=8;
+    le3=16;
+    fqud1=STRB;
+    fqud3=2;
+  }
+  if (activeConfig->cb==1)
+  {
+    le1=1;
+    le2=1;
+    le3=4;
+    fqud1=2;
+    fqud3=8;
+  }
+  if (activeConfig->cb==2)
+  {
+    le1=1;
+    le2=16;
+    le3=4;
+    fqud1=2;
+    fqud3=8;
+  }
+  if (activeConfig->cb==3)
+  {
+    le1=1;
+    le2=16;
+    le3=4;
+    fqud1=2;
+    fqud3=8;
+  }
+  lpt.setLatchLines(le1, le2, le3, fqud1, fqud3);
+  if (activeConfig->adconv == 8)
+  {
+    pdmlowlim = 51 ;
+    pdmhighlim = 205; //establish boundries for 8 bit parallel A to D ver111-36f
+  }
+  if (activeConfig->adconv == 12)
+  {
+    pdmlowlim = 819 ;
+    pdmhighlim = 3277; //establish boundries for 12 bit parallel A to D ver111-36f
+  }
+  if (activeConfig->adconv == 16)
+  {
+    pdmlowlim = 13107 ;
+    pdmhighlim = 52429; //establish boundries for 16 bit serial A to D ver111-36f
+  }
+  if (activeConfig->adconv == 22)
+  {
+    pdmlowlim = 819 ;
+    pdmhighlim = 3277; //establish boundries for 12 bit serial A to D ver111-37a
+  }
+
+}
+
 void hwdInterface::CreateRcounter()
 {
   //needed:reference,appxpdf ; creates:rcounter,pdf //ver111-4
@@ -154,7 +223,11 @@ void hwdInterface::CommandPLL1R()
 {
   //needed:rcounter1,PLL1mode,PLL1phasepolarity,SELT,PLL1
   rcounter = rcounter1;
-  preselector = 32; if (activeConfig->PLL1mode == 1) preselector = 16;
+  preselector = 32;
+  if (activeConfig->PLL1mode == 1)
+  {
+    preselector = 16;
+  }
   phasepolarity = activeConfig->PLL1phasepolarity;    //inverting op amp is 0, non-inverting loop is 1
   fractional = activeConfig->PLL1mode;       //0 for Integer-N; 1 for Fractional-N
   Jcontrol = SELT;   //for PLL 1, on Control Board J1, the value is "3"
@@ -437,45 +510,45 @@ void hwdInterface::Create2326N()
     return; //with errora
   }
   //ver116-4o deleted "if" block, per Lrev1
-  N0 = 1;       //n address bit 0, must be 1
-  N1 = 0;       //n address bit 1, must be 0
+  n.N0 = 1;       //n address bit 0, must be 1
+  n.N1 = 0;       //n address bit 1, must be 0
   na0 = int(Acounter/2);
-  N2 = Acounter- 2*na0;      //Acounter bit 0 LSB
+  n.N2 = Acounter- 2*na0;      //Acounter bit 0 LSB
   na1 = int(na0/2);
-  N3 = na0 - 2*na1;
+  n.N3 = na0 - 2*na1;
   na2 = int(na1/2);
-  N4 = na1 - 2*na2;
+  n.N4 = na1 - 2*na2;
   na3 = int(na2/2);
-  N5 = na2 - 2*na3;
+  n.N5 = na2 - 2*na3;
   na4 = int(na3/2);
-  N6 = na3 - 2*na4;              //Acounter bit 4 MSB
+  n.N6 = na3 - 2*na4;              //Acounter bit 4 MSB
   nb0 = int(Bcounter/2);
-  N7 = Bcounter- 2*nb0;      //Bcounter bit 0 LSB
+  n.N7 = Bcounter- 2*nb0;      //Bcounter bit 0 LSB
   nb1 = int(nb0/2);
-  N8 = nb0 - 2*nb1;
+  n.N8 = nb0 - 2*nb1;
   nb2 = int(nb1/2);
-  N9 = nb1 - 2*nb2;
+  n.N9 = nb1 - 2*nb2;
   nb3 = int(nb2/2);
-  N10 = nb2 - 2*nb3;
+  n.N10 = nb2 - 2*nb3;
   nb4 = int(nb3/2);
-  N11 = nb3 - 2*nb4;
+  n.N11 = nb3 - 2*nb4;
   nb5 = int(nb4/2);
-  N12 = nb4 - 2*nb5;
+  n.N12 = nb4 - 2*nb5;
   nb6 = int(nb5/2);
-  N13 = nb5 - 2*nb6;
+  n.N13 = nb5 - 2*nb6;
   nb7 = int(nb6/2);
-  N14 = nb6 - 2*nb7;
+  n.N14 = nb6 - 2*nb7;
   nb8 = int(nb7/2);
-  N15 = nb7 - 2*nb8;
+  n.N15 = nb7 - 2*nb8;
   nb9 = int(nb8/2);
-  N16 = nb8 - 2*nb9;
+  n.N16 = nb8 - 2*nb9;
   nb10 = int(nb9/2);
-  N17 = nb9 - 2*nb10;
+  n.N17 = nb9 - 2*nb10;
   nb11 = int(nb10/2);
-  N18 = nb10 - 2*nb11;
+  n.N18 = nb10 - 2*nb11;
   nb12 = int(nb11/2);
-  N19 = nb11 - 2*nb12;          //Bcounter bit 12 MSB
-  N20 = 1;    //Phase Det Current, 1= 1 ma, 0= 250 ua
+  n.N19 = nb11 - 2*nb12;          //Bcounter bit 12 MSB
+  n.N20 = 1;    //Phase Det Current, 1= 1 ma, 0= 250 ua
   if (activeConfig->cb == 3)
   {
 //      then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
@@ -830,7 +903,11 @@ void hwdInterface::CommandDDS1()
     gosub [CreateCmdAllArray] 'ver112-2a
     if cb = 0 then gosub [CommandDDS1OrigCB]'will command DDS 1, only
 'delver113-4a    if cb = 2 then gosub [CommandDDS1SlimCB]'will command DDS 1, only
-    if cb = 2 then gosub [CommandAllSlims]'will command all 4 modules. ver113-4a
+    if cb = 2
+{
+  CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
+  lastpdmstate=phaarray(thisstep,0);
+  }
     if cb = 3 then gosub [CommandAllSlimsUSB]'will command all 4 modules. ver113-4a 'USB:01-08-2010
     wait
 
@@ -867,7 +944,10 @@ void hwdInterface::CommandDDS3()
     gosub [CreateCmdAllArray]
     if cb = 0 then gosub [CommandDDS3OrigCB]'will command DDS 3, only
 'delver113-4a    if cb = 2 then gosub [CommandDDS3SlimCB]'will command DDS 3, only
-    if cb = 2 then gosub [CommandAllSlims]'will command all 4 modules. ver113-4a
+    if cb = 2
+{CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]); //will command all 4 modules. ver113-4a
+lastpdmstate=phaarray(thisstep,0);
+}
     if cb = 3 then gosub [CommandAllSlimsUSB]'will command all 4 modules. ver113-4a 'USB:01-08-2010
     wait
 */
@@ -902,7 +982,11 @@ void hwdInterface::DDS3Track()
     thisstep = remember
     gosub [CreateCmdAllArray]
     if cb = 0 then gosub [CommandDDS3OrigCB]'will command DDS 3, only
-    if cb = 2 then gosub [CommandAllSlims]'will command all 4 modules. ver113-4a
+    if cb = 2
+{
+CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
+lastpdmstate=phaarray(thisstep,0);
+}
     if cb = 3 then gosub [CommandAllSlimsUSB]'will command all 4 modules. 'USB:01-08-2010
     wait
 */
@@ -936,7 +1020,11 @@ void hwdInterface::DDS1Sweep()
     thisstep = remember
     gosub [CreateCmdAllArray]
     if cb = 0 then gosub [CommandDDS1OrigCB]'will command DDS 1, only
-    if cb = 2 then gosub [CommandAllSlims]'will command all 4 modules. ver113-4a
+    if cb = 2
+{
+CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
+lastpdmstate=phaarray(thisstep,0);
+}
     if cb = 3 then gosub [CommandAllSlimsUSB]'will command all 4 modules.  'USB:01-08-2010 moved ver116-4f
     wait
 */
@@ -1226,27 +1314,27 @@ void hwdInterface::Command2326R()
   //needed:rcounter,phasepolarity,control,Jcontrol,port,LEPLL,contclear ; commands LMX2326 rcounter and registers
   //[Create2326InitBuffer]//need phasepolarity
   //ver116-4o deleted "if" block, per Lrev1
-  N20=0;     //Test, use 0
-  N19=0;     //1=Power Down Mode, use 0
-  N18=0;     //Test, use 0
-  N17=0;     //Test, use 0
-  N16=0;     //Test, use 0
-  N15=0;     //Fastlock Time out value, use 0
-  N14=0;     //Fastlock Time out value, use 0
-  N13=0;     //Fastlock Time out value, use 0
-  N12=0;     //Fastlock Time out value, use 0
-  N11=0;     //1=Time out enable, use 0
-  N10=0;     //Fastlock control, use 0
-  N9=0;    //1=Fastlock enable, use 0
-  N8=0;    //1=Tristate the phase det output, use 0
-  N7 = phasepolarity;     //Phase det polarity, 1=pos  0=neg
-  N6=0;        //FoLD control(pin14 output), 0= tristate, 1= R Divider out
-  N5=0;        //2= N Divider out, 3= Serial Data Output, 4= Digital Lock Detect
-  N4=0;        //5= Open drain lock detect, 6= High output, 7= Low output
-  N3=0;        //1= Power Down, use 0
-  N2=0;        //1= Counter Reset Enable, allows reset of R,N counters,use 0
-  N1=1;        //F1 address bit 1, must be 1
-  N0=1;        //F1 address bit 0, must be 1
+  n.N20=0;     //Test, use 0
+  n.N19=0;     //1=Power Down Mode, use 0
+  n.N18=0;     //Test, use 0
+  n.N17=0;     //Test, use 0
+  n.N16=0;     //Test, use 0
+  n.N15=0;     //Fastlock Time out value, use 0
+  n.N14=0;     //Fastlock Time out value, use 0
+  n.N13=0;     //Fastlock Time out value, use 0
+  n.N12=0;     //Fastlock Time out value, use 0
+  n.N11=0;     //1=Time out enable, use 0
+  n.N10=0;     //Fastlock control, use 0
+  n.N9=0;    //1=Fastlock enable, use 0
+  n.N8=0;    //1=Tristate the phase det output, use 0
+  n.N7 = phasepolarity;     //Phase det polarity, 1=pos  0=neg
+  n.N6=0;        //FoLD control(pin14 output), 0= tristate, 1= R Divider out
+  n.N5=0;        //2= N Divider out, 3= Serial Data Output, 4= Digital Lock Detect
+  n.N4=0;        //5= Open drain lock detect, 6= High output, 7= Low output
+  n.N3=0;        //1= Power Down, use 0
+  n.N2=0;        //1= Counter Reset Enable, allows reset of R,N counters,use 0
+  n.N1=1;        //F1 address bit 1, must be 1
+  n.N0=1;        //F1 address bit 0, must be 1
   if (activeConfig->cb == 3)
   {
     //Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
@@ -1258,7 +1346,7 @@ void hwdInterface::Command2326R()
     //    Int64N.msLong.struct = 0; //ver116-4o per Lrev1
   }
   //[Command2326InitBuffer]//need Jcontrol,LEPLL,contclear
-  CommandPLL();//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
+  CommandPLL(vars->thisstep);//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
   //[Create2326Rbuffer]//need rcounter
   if (rcounter <3)
   {
@@ -1273,41 +1361,41 @@ void hwdInterface::Command2326R()
     return;
   }
   //ver116-4o deleted "if" block, per Lrev1
-  N0 = 0;                   //R address bit 0, must be 0
-  N1 = 0;                   //R address vit 1, must be 0
+  n.N0 = 0;                   //R address bit 0, must be 0
+  n.N1 = 0;                   //R address vit 1, must be 0
   ra0 = (int)(rcounter/2);
-  N2 = rcounter- 2*ra0;    //LSB
+  n.N2 = rcounter- 2*ra0;    //LSB
   ra1 = (int)(ra0/2);
-  N3 = ra0- 2*ra1;
+  n.N3 = ra0- 2*ra1;
   ra2 = (int)(ra1/2);
-  N4 = ra1- 2*ra2;
+  n.N4 = ra1- 2*ra2;
   ra3 = (int)(ra2/2);
-  N5 = ra2- 2*ra3;
+  n.N5 = ra2- 2*ra3;
   ra4 = (int)(ra3/2);
-  N6 = ra3- 2*ra4;
+  n.N6 = ra3- 2*ra4;
   ra5 = (int)(ra4/2);
-  N7 = ra4- 2*ra5;
+  n.N7 = ra4- 2*ra5;
   ra6 = (int)(ra5/2);
-  N8 = ra5- 2*ra6;
+  n.N8 = ra5- 2*ra6;
   ra7 = (int)(ra6/2);
-  N9 = ra6- 2*ra7;
+  n.N9 = ra6- 2*ra7;
   ra8 = (int)(ra7/2);
-  N10 = ra7- 2*ra8;
+  n.N10 = ra7- 2*ra8;
   ra9 = (int)(ra8/2);
-  N11 = ra8- 2*ra9;
+  n.N11 = ra8- 2*ra9;
   ra10 = (int)(ra9/2);
-  N12 = ra9- 2*ra10;
+  n.N12 = ra9- 2*ra10;
   ra11 = (int)(ra10/2);
-  N13 = ra10- 2*ra11;
+  n.N13 = ra10- 2*ra11;
   ra12 = (int)(ra11/2);
-  N14 = ra11- 2*ra12;
+  n.N14 = ra11- 2*ra12;
   ra13 = (int)(ra12/2);
-  N15 = ra12- 2*ra13;  //MSB
-  N16 = 0;     //Test Bit
-  N17 = 0;     //Test Bit
-  N18 = 0;     //Test Bit
-  N19 = 0;     //Test Bit
-  N20 = 0;     //Lock Detector Mode, 0=3 refcycles, 1=5 cycles
+  n.N15 = ra12- 2*ra13;  //MSB
+  n.N16 = 0;     //Test Bit
+  n.N17 = 0;     //Test Bit
+  n.N18 = 0;     //Test Bit
+  n.N19 = 0;     //Test Bit
+  n.N20 = 0;     //Lock Detector Mode, 0=3 refcycles, 1=5 cycles
 
   if (activeConfig->cb == 3)
   {
@@ -1320,7 +1408,7 @@ void hwdInterface::Command2326R()
     */
   }
   //[Command2326Rbuffer]//need Jcontrol,LEPLL,contclear
-  CommandPLL();//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
+  CommandPLL(vars->thisstep);//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
 }
 
 void hwdInterface::Command2350R()
@@ -1586,37 +1674,37 @@ void hwdInterface::Command4112R()
 void hwdInterface::InitializeHardware()
 {
 
+  lpt.init(inpoutLib, activeConfig->globalPort);
+  //lpt.init(ntPortLin);
   //These hardware initializations are performed on startup and usually repeated on Restart. The reason
   //they are repeated on Restart is to fix any hardware glitches that might occur. Whenever it is known
   //that a hardware change is made, such as filter selection changing, it is best to take action immediately,
   //and not rely on the Restart process. In some cases, Restart skips these initializations for speed.
   if (vars->suppressHardware==0 && activeConfig->cb<3)
   {
-    qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-    /*
-      out port, 0                 //begin with all data lines low
-      if (cb == 2)   //ver116-1b
-      {
-          out control, INITSELT //latch "0" into SLIM Control Board Buffers 1 and 2
-          out control, AUTO //latch "0" into SLIM Control Board Buffers 3
-          //We don't clear SLIM Buffer 4, because it controls among other things the latched switches
-          //It was initialized near the beginning to make the PS line high.
-      }
-      out control, contclear      //begin with all control lines low
-          */
+    lpt.output(port, 0);    //begin with all data lines low
+    if (activeConfig->cb == 2)
+    {
+      lpt.output(control, INITSELT); //latch "0" into SLIM Control Board Buffers 1 and 2
+      lpt.output(control, AUTO); //latch "0" into SLIM Control Board Buffers 3
+      //We don't clear SLIM Buffer 4, because it controls among other things the latched switches
+      //It was initialized near the beginning to make the PS line high.
+    }
+    lpt.output(control, contclear);      //begin with all control lines low
   }
   if (activeConfig->cb == 3 && vars->bUseUsb !=0)  //USB:01-08-2010
   {
     QString USBwrbuf = "A5010000"; // reset all lines low //USB:01-08-2010
     usb->usbMSADeviceWriteString(USBwrbuf,4);    //USB:01-08-2010
-  } //USB:01-08-2010
+  }
   //the following are meaningless values to guarantee first time commanding. Used in subroutine, [DetermineModule]
   vars->lastdds1output = activeConfig->appxdds1;
   vars->lastdds3output = activeConfig->appxdds3;
-  vars->lastpdmstate = 2; //ver111-28
+  vars->lastpdmstate = 2;
   lastncounter1 = 0;
   lastncounter3 = 0; //to guarantee Original MSA will command PLL//s after init. ver114-6c
-  error=""; errora="";  //ver115-1c
+  error="";
+  errora="";
 
   //Initialize Final Filter path.
   int filtbank;
@@ -1646,8 +1734,14 @@ void hwdInterface::InitializeHardware()
       lpt.ResetDDS3ser();
     } //ver111-7
     //[ResetDDS3ser]needs:port,control,Jcontrol,swclk,sfqud,contclear ; resets DDS3 into Serial mode
-    if (activeConfig->cb == 2) lpt.ResetDDS3serSLIM(); //ver111-29
-    if (activeConfig->cb == 3) ResetDDS3serUSB();  //USB:01-08-2010
+    if (activeConfig->cb == 2)
+    {
+      lpt.ResetDDS3serSLIM(vars->phaarray[vars->thisstep][0], filtbank);
+    }
+    if (activeConfig->cb == 3)
+    {
+      ResetDDS3serUSB();
+    }
     //7.if configured, initialize PLO3. No frequency command yet.
     //Initialize PLL 3. //CreatePLL3R,CommandPLL3R
     appxpdf=activeConfig->PLL3phasefreq; //ver111-4
@@ -1692,7 +1786,7 @@ void hwdInterface::InitializeHardware()
   LEPLL = 8;
   datavalue = 16;
   levalue = 16; //PLL2 data and le bit values ver111-28
-  CommandPLL();//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111-5
+  CommandPLL(vars->thisstep);//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111-5
 
   //9.Initialize PLO 1. No frequency command yet.
   //[InitializePLL1]//set PLL1 to proper Rcount and initialize
@@ -1719,13 +1813,13 @@ void hwdInterface::InitializeHardware()
   if (activeConfig->cb == 0 && activeConfig->dds1parser == 1)
     lpt.ResetDDS1ser();//(Orig Control)//needed:control,AUTO,STRB,contclear  ; resets DDS1 on J5, into serial mode ver111-21
   if (activeConfig->cb == 2)
-    lpt.ResetDDS1serSLIM();//reset serial DDS1 without disturbing Filter Bank or PDM //ver111-29
+    lpt.ResetDDS1serSLIM(vars->phaarray[vars->thisstep][0], filtbank);//reset serial DDS1 without disturbing Filter Bank or PDM //ver111-29
   if (activeConfig->cb == 3)
     ResetDDS1serUSB();//reset serial DDS1 without disturbing Filter Bank or PDM  //USB:01-08-2010
   SkipHardwareInitialization();
 }
 
-void hwdInterface::CommandCurrentStep()
+void hwdInterface::CommandCurrentStep(int step)
 {
   //a separate gosub from the old [CommandThisStep] so it can be called not only during regular scanning,
   //but on in combination with [ReadStep] to command and read a particular step, once all info is set up.
@@ -1736,18 +1830,21 @@ void hwdInterface::CommandCurrentStep()
   //or for SLIM, use [CommandAllSlims] for commanding concurrently
   if (vars->suppressHardware==0)
   {
-    int thisBand=vars->datatable[vars->thisstep][4];
+    int thisBand=vars->datatable[step][4];
     if (thisBand!=vars->lastSetBand)
     {
       SelectLatchedSwitches(thisBand);   //Set band switch
     }
-    DetermineModule(vars->thisstep); //determine which, if any, module needs commanding.
+    DetermineModule(step); //determine which, if any, module needs commanding.
     int cmdneeded = glitchp1 + glitchd1 + glitchp3 + glitchd3 + glitchpdm;
     if (cmdneeded > 0 && activeConfig->cb == 0)
       lpt.CommandOrigCB();//old Control (150 usec, 0 SW) //ver111-28ver111-38a
     //if cb = 1 then gosub [CommandRevB]//old Control looking like SLIM  //not created yet
     if (cmdneeded > 0 && activeConfig->cb == 2)
-      lpt.CommandAllSlims();
+    {
+      lpt.CommandAllSlims(step, filtbank, vars->phaarray[step][0]*64);
+      vars->lastpdmstate=vars->phaarray[step][0];
+    }
     if (cmdneeded > 0 && activeConfig->cb == 3)
       CommandAllSlimsUSB();
     if (cftest==1)
@@ -2068,7 +2165,14 @@ void hwdInterface::ReadMagnitude()
     ReadADCviaUSB(); // and return here with magdata and phadata //ver116-4r
   if (activeConfig->cb != 3 && activeConfig->adconv == 16)
   {
-    lpt.ReadAD16Status();
+    if (activeConfig->cb == 2)
+    {
+      lpt.Read16wSlimCB();
+    }
+    else
+    {
+      lpt.ReadAD16Status();
+    }
     magdata = lpt.Process16Mag();
   }
     //and return here with just magdata //ver111-33b
@@ -2098,7 +2202,9 @@ void hwdInterface::ReadPhase()
       break;
     default:
       if (activeConfig->cb == 3)
-        ReadADCviaUSB(); //ver116-4r
+      {
+        ReadADCviaUSB();
+      }
       if (activeConfig->cb != 3 && activeConfig->adconv == 16)
       {
         lpt.ReadAD16Status();
@@ -3178,7 +3284,6 @@ void hwdInterface::SelectFilter(int &fbank)
 }
 void hwdInterface::CommandFilter(int &fbank)
 {
-  //ver116-4j made this a subroutine
   //filtbank is passed here as fbank so we can change the non-global filtbank
   if (activeConfig->cb == 0)
   {
@@ -3194,7 +3299,7 @@ void hwdInterface::CommandFilter(int &fbank)
   {
     fbank = vars->FiltA1*64 + vars->FiltA0*32;
     CommandFilterSlimCBUSB(fbank);
-  } //USB:01-08-2010
+  }
 }
 void hwdInterface::CommandFilterSlimCBUSB(int &fbank)//  //USB:01-08-2010 ver116-4j made this a subroutine
 {
@@ -3462,30 +3567,30 @@ void hwdInterface::FillPLL1array(int step)
   else
   {
     //reversed sequence for N23 to be first. ver111-31a
-    pll_1[step].array[23] = N0;
-    pll_1[step].array[22] = N1;
-    pll_1[step].array[21] = N2;
-    pll_1[step].array[20] = N3;
-    pll_1[step].array[19] = N4;
-    pll_1[step].array[18] = N5;
-    pll_1[step].array[17] = N6;
-    pll_1[step].array[16] = N7;
-    pll_1[step].array[15] = N8;
-    pll_1[step].array[14] = N9;
-    pll_1[step].array[13] = N10;
-    pll_1[step].array[12] = N11;
-    pll_1[step].array[11] = N12;
-    pll_1[step].array[10] = N13;
-    pll_1[step].array[9] = N14;
-    pll_1[step].array[8] = N15;
-    pll_1[step].array[7] = N16;
-    pll_1[step].array[6] = N17;
-    pll_1[step].array[5] = N18;
-    pll_1[step].array[4] = N19;
-    pll_1[step].array[3] = N20;
-    pll_1[step].array[2] = N21;
-    pll_1[step].array[1] = N22;
-    pll_1[step].array[0] = N23;
+    pll_1[step].array[23] = n.N0;
+    pll_1[step].array[22] = n.N1;
+    pll_1[step].array[21] = n.N2;
+    pll_1[step].array[20] = n.N3;
+    pll_1[step].array[19] = n.N4;
+    pll_1[step].array[18] = n.N5;
+    pll_1[step].array[17] = n.N6;
+    pll_1[step].array[16] = n.N7;
+    pll_1[step].array[15] = n.N8;
+    pll_1[step].array[14] = n.N9;
+    pll_1[step].array[13] = n.N10;
+    pll_1[step].array[12] = n.N11;
+    pll_1[step].array[11] = n.N12;
+    pll_1[step].array[10] = n.N13;
+    pll_1[step].array[9] = n.N14;
+    pll_1[step].array[8] = n.N15;
+    pll_1[step].array[7] = n.N16;
+    pll_1[step].array[6] = n.N17;
+    pll_1[step].array[5] = n.N18;
+    pll_1[step].array[4] = n.N19;
+    pll_1[step].array[3] = n.N20;
+    pll_1[step].array[2] = n.N21;
+    pll_1[step].array[1] = n.N22;
+    pll_1[step].array[0] = n.N23;
   }
   pll_1[step].pdf = pdf;
   pll_1[step].freq = LO1;
@@ -3506,30 +3611,30 @@ void hwdInterface::FillPLL3array(int step)
   else
   {
     //reversed sequence for N23 to be first. ver111-31a
-    pll_3[step].array[23] = N0;
-    pll_3[step].array[22] = N1;
-    pll_3[step].array[21] = N2;
-    pll_3[step].array[20] = N3;
-    pll_3[step].array[19] = N4;
-    pll_3[step].array[18] = N5;
-    pll_3[step].array[17] = N6;
-    pll_3[step].array[16] = N7;
-    pll_3[step].array[15] = N8;
-    pll_3[step].array[14] = N9;
-    pll_3[step].array[13] = N10;
-    pll_3[step].array[12] = N11;
-    pll_3[step].array[11] = N12;
-    pll_3[step].array[10] = N13;
-    pll_3[step].array[9] = N14;
-    pll_3[step].array[8] = N15;
-    pll_3[step].array[7] = N16;
-    pll_3[step].array[6] = N17;
-    pll_3[step].array[5] = N18;
-    pll_3[step].array[4] = N19;
-    pll_3[step].array[3] = N20;
-    pll_3[step].array[2] = N21;
-    pll_3[step].array[1] = N22;
-    pll_3[step].array[0] = N23;
+    pll_3[step].array[23] = n.N0;
+    pll_3[step].array[22] = n.N1;
+    pll_3[step].array[21] = n.N2;
+    pll_3[step].array[20] = n.N3;
+    pll_3[step].array[19] = n.N4;
+    pll_3[step].array[18] = n.N5;
+    pll_3[step].array[17] = n.N6;
+    pll_3[step].array[16] = n.N7;
+    pll_3[step].array[15] = n.N8;
+    pll_3[step].array[14] = n.N9;
+    pll_3[step].array[13] = n.N10;
+    pll_3[step].array[12] = n.N11;
+    pll_3[step].array[11] = n.N12;
+    pll_3[step].array[10] = n.N13;
+    pll_3[step].array[9] = n.N14;
+    pll_3[step].array[8] = n.N15;
+    pll_3[step].array[7] = n.N16;
+    pll_3[step].array[6] = n.N17;
+    pll_3[step].array[5] = n.N18;
+    pll_3[step].array[4] = n.N19;
+    pll_3[step].array[3] = n.N20;
+    pll_3[step].array[2] = n.N21;
+    pll_3[step].array[1] = n.N22;
+    pll_3[step].array[0] = n.N23;
   }
   pll_3[step].pdf = pdf;
   pll_3[step].freq = LO3;
@@ -3652,12 +3757,12 @@ void hwdInterface::CreateCmdAllArray()
     {
       for (int clmn = 0; clmn <= 15; clmn++)
       {
-        vars->cmdallarray[index][clmn] = dds_1[index].array[clmn]*4
+        lpt.cmdAllArray[index].array[clmn] = dds_1[index].array[clmn]*4
             + dds_3[index].array[clmn]*16;
       }
       for (int clmn = 16; clmn <= 39; clmn++)
       {
-        vars->cmdallarray[index][clmn] = pll_1[index].array[clmn-16]*2
+        lpt.cmdAllArray[index].array[clmn] = pll_1[index].array[clmn-16]*2
             + dds_1[index].array[clmn]*4
             + pll_3[index].array[clmn-16]*8
             + dds_3[index].array[clmn]*16;
@@ -3675,7 +3780,7 @@ void hwdInterface::CreateCmdAllArray()
             */
   }
 }
-void hwdInterface::CommandPLL()
+void hwdInterface::CommandPLL(int step)
 {
   //comes here during PLL R Initializations and PLL 2 N command ver111-28
   if (activeConfig->cb == 0)
@@ -3684,7 +3789,7 @@ void hwdInterface::CommandPLL()
   }
   if (activeConfig->cb == 2)
   {
-    lpt.CommandPLLslim();
+    lpt.CommandPLLslim(filtbank, datavalue, vars->phaarray[step][0]*64, &n, levalue);
   }
   if (activeConfig->cb == 3)
   {

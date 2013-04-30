@@ -29,7 +29,7 @@ globalVars::globalVars()
   //PLL3array.mresize(802,49);
   //DDS1array.mresize(802,49);
   //DDS3array.mresize(802,49);
-  cmdallarray.mresize(802,40);
+  //cmdallarray.mresize(802,40);
 
 
   freqCorrection.resize(802);    //SEWgraph1
