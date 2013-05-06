@@ -17,10 +17,11 @@
 #include "lptfunctions.h"
 #include <QMessageBox>
 #include "constants.h"
+#include <QDebug>
 
 lptFunctions::lptFunctions()
 {
-
+  libraryType = NULL;
 }
 
 int lptFunctions::init(int libraryType, int port)
@@ -298,79 +299,77 @@ void lptFunctions::Read12Bitpha()
 
 */
 }
-void lptFunctions::Process16MagPha()
+void lptFunctions::Process16MagPha(int &magdata, int &phadata)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-//ver111-33a
-    //process the stat15-0 for both magnitude and phase.Determines magdata bit (D7) and phadata bit (D6) in each word
-    if cb = 3 then return //magdata and phadata is already processed. //ver116-4r
-    magdata = 0
-    phadata = 0
-    if stat15>127 then stat15=stat15-128:magdata = magdata + 32768  //WAIT is low, MAG is high
-    if stat15<64 then phadata = phadata + 32768  //ACK is low, PHASE is high
-    if stat14>127 then stat14=stat14-128:magdata = magdata + 16384
-    if stat14<64 then phadata = phadata + 16384
-    if stat13>127 then stat13=stat13-128:magdata = magdata + 8192
-    if stat13<64 then phadata = phadata + 8192
-    if stat12>127 then stat12=stat12-128:magdata = magdata + 4096
-    if stat12<64 then phadata = phadata + 4096
-    if stat11>127 then stat11=stat11-128:magdata = magdata + 2048
-    if stat11<64 then phadata = phadata + 2048
-    if stat10>127 then stat10=stat10-128:magdata = magdata + 1024
-    if stat10<64 then phadata = phadata + 1024
-    if stat9>127 then stat9=stat9-128:magdata = magdata + 512
-    if stat9<64 then phadata = phadata + 512
-    if stat8>127 then stat8=stat8-128:magdata = magdata + 256
-    if stat8<64 then phadata = phadata + 256
-    if stat7>127 then stat7=stat7-128:magdata = magdata + 128
-    if stat7<64 then phadata = phadata + 128
-    if stat6>127 then stat6=stat6-128:magdata = magdata + 64
-    if stat6<64 then phadata = phadata + 64
-    if stat5>127 then stat5=stat5-128:magdata = magdata + 32
-    if stat5<64 then phadata = phadata + 32
-    if stat4>127 then stat4=stat4-128:magdata = magdata + 16
-    if stat4<64 then phadata = phadata + 16
-    if stat3>127 then stat3=stat3-128:magdata = magdata + 8
-    if stat3<64 then phadata = phadata + 8
-    if stat2>127 then stat2=stat2-128:magdata = magdata + 4
-    if stat2<64 then phadata = phadata + 4
-    if stat1>127 then stat1=stat1-128:magdata = magdata + 2
-    if stat1<64 then phadata = phadata + 2
-    if stat0>127 then stat0=stat0-128:magdata = magdata + 1
-    if stat0<64 then phadata = phadata + 1
-    return  //to [ReadPhase] with magdata and phadata
+  static int counter = -90;
+  counter ++;
+  //process the stat15-0 for both magnitude and phase.Determines magdata bit (D7) and phadata bit (D6) in each word
+  //if cb = 3 then return //magdata and phadata is already processed. //ver116-4r
+  magdata = 0;
+  phadata = 0;
+  if (stats.stat15>127) { stats.stat15=stats.stat15-128;magdata = magdata + 32768; }  //WAIT is low, MAG is high
+  if (stats.stat15<64) { phadata = phadata + 32768; }  //ACK is low, PHASE is high
+  if (stats.stat14>127) { stats.stat14=stats.stat14-128;magdata = magdata + 16384; }
+  if (stats.stat14<64) { phadata = phadata + 16384; }
+  if (stats.stat13>127) { stats.stat13=stats.stat13-128;magdata = magdata + 8192; }
+  if (stats.stat13<64) { phadata = phadata + 8192; }
+  if (stats.stat12>127) { stats.stat12=stats.stat12-128;magdata = magdata + 4096; }
+  if (stats.stat12<64) { phadata = phadata + 4096; }
+  if (stats.stat11>127) { stats.stat11=stats.stat11-128;magdata = magdata + 2048; }
+  if (stats.stat11<64) { phadata = phadata + 2048; }
+  if (stats.stat10>127) { stats.stat10=stats.stat10-128;magdata = magdata + 1024; }
+  if (stats.stat10<64) { phadata = phadata + 1024; }
+  if (stats.stat9>127) { stats.stat9=stats.stat9-128;magdata = magdata + 512; }
+  if (stats.stat9<64) { phadata = phadata + 512; }
+  if (stats.stat8>127) { stats.stat8=stats.stat8-128;magdata = magdata + 256; }
+  if (stats.stat8<64) { phadata = phadata + 256; }
+  if (stats.stat7>127) { stats.stat7=stats.stat7-128;magdata = magdata + 128; }
+  if (stats.stat7<64) { phadata = phadata + 128; }
+  if (stats.stat6>127) { stats.stat6=stats.stat6-128;magdata = magdata + 64; }
+  if (stats.stat6<64) { phadata = phadata + 64; }
+  if (stats.stat5>127) { stats.stat5=stats.stat5-128;magdata = magdata + 32; }
+  if (stats.stat5<64) { phadata = phadata + 32; }
+  if (stats.stat4>127) { stats.stat4=stats.stat4-128;magdata = magdata + 16; }
+  if (stats.stat4<64) { phadata = phadata + 16; }
+  if (stats.stat3>127) { stats.stat3=stats.stat3-128;magdata = magdata + 8; }
+  if (stats.stat3<64) { phadata = phadata + 8; }
+  if (stats.stat2>127) { stats.stat2=stats.stat2-128;magdata = magdata + 4; }
+  if (stats.stat2<64) { phadata = phadata + 4; }
+  if (stats.stat1>127) { stats.stat1=stats.stat1-128;magdata = magdata + 2; }
+  if (stats.stat1<64) { phadata = phadata + 2; }
+  if (stats.stat0>127) { stats.stat0=stats.stat0-128;magdata = magdata + 1; }
+  if (stats.stat0<64) { phadata = phadata + 1; }
+  return;  //to [ReadPhase] with magdata and phadata
 
-*/
+  magdata = counter;
+  phadata = counter;
+
 }
 
-int lptFunctions::Process16Mag()
+void lptFunctions::Process16Mag(int &magdata)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'ver111-33a
-    'process the stat15-0 for magnitude only. Determines magdata bit (D7) in each word
-    if cb = 3 then return 'magdata is already processed (along with phadata) 'ver116-4r
-    magdata = 0
-    if stat15>127 then magdata = magdata + 32768  'WAIT is low, MAG is high
-    if stat14>127 then magdata = magdata + 16384  'WAIT is low, MAG is high
-    if stat13>127 then magdata = magdata + 8192  'WAIT is low, MAG is high
-    if stat12>127 then magdata = magdata + 4096  'WAIT is low, MAG is high
-    if stat11>127 then magdata = magdata + 2048  'WAIT is low, MAG is high
-    if stat10>127 then magdata = magdata + 1024  'WAIT is low, MAG is high
-    if stat9>127 then magdata = magdata + 512  'WAIT is low, MAG is high
-    if stat8>127 then magdata = magdata + 256  'WAIT is low, MAG is high
-    if stat7>127 then magdata = magdata + 128  'WAIT is low, MAG is high
-    if stat6>127 then magdata = magdata + 64  'WAIT is low, MAG is high
-    if stat5>127 then magdata = magdata + 32  'WAIT is low, MAG is high
-    if stat4>127 then magdata = magdata + 16  'WAIT is low, MAG is high
-    if stat3>127 then magdata = magdata + 8  'WAIT is low, MAG is high
-    if stat2>127 then magdata = magdata + 4  'WAIT is low, MAG is high
-    if stat1>127 then magdata = magdata + 2  'WAIT is low, MAG is high
-    if stat0>127 then magdata = magdata + 1  'WAIT is low, MAG is high
-    return 'to [ReadMagnitude]with magdata
-    */
-  return 11297;
+    //process the (stats.stat15-0 for magnitude only. Determines magdata bit (D7) in each word
+    //if cb = 3) return //magdata is already processed (along with phadata) //ver116-4r
+    magdata = 0;
+    if (stats.stat15>127) magdata = magdata + 32768;  //WAIT is low, MAG is high
+    if (stats.stat14>127) magdata = magdata + 16384;  //WAIT is low, MAG is high
+    if (stats.stat13>127) magdata = magdata + 8192;  //WAIT is low, MAG is high
+    if (stats.stat12>127) magdata = magdata + 4096;  //WAIT is low, MAG is high
+    if (stats.stat11>127) magdata = magdata + 2048;  //WAIT is low, MAG is high
+    if (stats.stat10>127) magdata = magdata + 1024;  //WAIT is low, MAG is high
+    if (stats.stat9>127) magdata = magdata + 512;  //WAIT is low, MAG is high
+    if (stats.stat8>127) magdata = magdata + 256;  //WAIT is low, MAG is high
+    if (stats.stat7>127) magdata = magdata + 128;  //WAIT is low, MAG is high
+    if (stats.stat6>127) magdata = magdata + 64;  //WAIT is low, MAG is high
+    if (stats.stat5>127) magdata = magdata + 32;  //WAIT is low, MAG is high
+    if (stats.stat4>127) magdata = magdata + 16;  //WAIT is low, MAG is high
+    if (stats.stat3>127) magdata = magdata + 8;  //WAIT is low, MAG is high
+    if (stats.stat2>127) magdata = magdata + 4;  //WAIT is low, MAG is high
+    if (stats.stat1>127) magdata = magdata + 2;  //WAIT is low, MAG is high
+    if (stats.stat0>127) magdata = magdata + 1;  //WAIT is low, MAG is high
+    return; //to [ReadMagnitude]with magdata
+
+
 }
 void lptFunctions::Process22MagPha()
 {
@@ -1223,6 +1222,11 @@ void lptFunctions::CommandFilterSlimCB(int  fbank)
 
 int lptFunctions::input(short port)
 {
+  if (!lptLib->isLoaded())
+  {
+    qDebug() << "LPT low level driver not loaded";
+    return 0;
+  }
   if (libraryType == inpoutLib)
   {
     return lpinport(port);
@@ -1235,14 +1239,16 @@ int lptFunctions::input(short port)
   {
 
   }
-  else
-  {
-    return 0;
-  }
+  return 0;
 }
 
 void lptFunctions::output(short port, short value)
 {
+  if (!lptLib->isLoaded())
+  {
+    qDebug() << "LPT low level driver not loaded";
+    return;
+  }
   if (libraryType == inpoutLib)
   {
     lpoutport(port, value) ;

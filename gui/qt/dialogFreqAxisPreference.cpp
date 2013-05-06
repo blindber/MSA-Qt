@@ -138,7 +138,7 @@ int dialogFreqAxisPreference::DisplayAxisXPreference(sweepStruct *config)
     ui->planeadj->setVisible(false);
   }
   //Graph R0
-  if (cfg->msaMode == modeRefelection)
+  if (cfg->msaMode == modeReflection)
   {
     ui->R0->setVisible(true);
     ui->R0Lab1->setVisible(true);
@@ -333,7 +333,7 @@ int dialogFreqAxisPreference::DisplayAxisXPreference(sweepStruct *config)
   }
 
       //R0 for Reflection
-  if (cfg->msaMode == modeRefelection)
+  if (cfg->msaMode == modeReflection)
   {
     ui->R0->setText(util.uFormatted(cfg->S11GraphR0,"3,4,5//UseMultiplier//DoCompact//SuppressMilli"));
   }
@@ -517,7 +517,7 @@ void dialogFreqAxisPreference::RecalcPlaneExtAndR0()
   // button to Recalculate and draw data with new plane extension or new S11 graph R0
   //R0 transform is done only for reflection mode
   float planeadj=util.uCompact(ui->planeadjbox->text()).toFloat();  //Get new planeadj
-  if (cfg->msaMode==modeRefelection)
+  if (cfg->msaMode==modeReflection)
   {
     cfg->S11GraphR0=util.uValWithMult(util.uCompact(ui->R0->text()));  //Get R0
   }
@@ -530,7 +530,7 @@ void dialogFreqAxisPreference::RecalcPlaneExtAndR0()
 void dialogFreqAxisPreference::VerifyPlaneExtension()
 {
   //See if we can do plane extension ver115-4j
-  if (cfg->planeadj!=0 && cfg->msaMode==modeRefelection)
+  if (cfg->planeadj!=0 && cfg->msaMode==modeReflection)
   {
     if (cfg->S11JigType!="Reflect")      //Reflect means bridge
     {
@@ -600,7 +600,7 @@ void dialogFreqAxisPreference::axisXFinished()
     end if
 */
   int R0Changed=0;
-  if (cfg->msaMode==modeRefelection)
+  if (cfg->msaMode==modeReflection)
   {
     float newR0= util.uValWithMult(ui->R0->text());
     if (newR0<0)
@@ -631,7 +631,7 @@ void dialogFreqAxisPreference::axisXFinished()
     cfg->S21JigAttach="Series";
   }
 
-  if (cfg->msaMode==modeVectorTrans || cfg->msaMode==modeRefelection)
+  if (cfg->msaMode==modeVectorTrans || cfg->msaMode==modeReflection)
   {
     cfg->planeadj=util.uCompact(ui->planeadjbox->text()).toFloat();
     VerifyPlaneExtension();    //See if we can do plane ext. ver115-4j
@@ -924,7 +924,7 @@ void dialogFreqAxisPreference::axisXFinished()
       cfg->offset = util.usingF("####.######",util.uCompact(freqoff).toFloat()).toFloat();
     }
   }
-  if (cfg->msaMode == modeVectorTrans ||  cfg->msaMode == modeRefelection)  //modes with phase
+  if (cfg->msaMode == modeVectorTrans ||  cfg->msaMode == modeReflection)  //modes with phase
   {
     cfg->invdeg = util.uCompact(ui->invdegbox->text()).toInt();
   }

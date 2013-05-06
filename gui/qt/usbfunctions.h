@@ -23,7 +23,7 @@
 #endif
 
 #ifndef __WIN32__
-#define __int64 qint64
+//#define __int64 qint64
 #endif
 
 struct USBrBuf

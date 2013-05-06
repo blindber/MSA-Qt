@@ -56,7 +56,7 @@ public:
 
   QFile *touchOpenInputFile(QString fullPath); //Open file; return handle or blank if not successful
   QFile *touchOpenOutputFile(QString fullPath);  //Open file; return handle or blank if not successful
-  void touchWriteOnePortParameters(QStringList &fHndl, QString dataMode);
+  void touchWriteOnePortParameters(QStringList &fHndl, int dataMode);
   void touchReadParams(QString source, int sourceType);
   void touchReadParams(QFile *source, int sourceType);
   void touchProcessPostOptionComments(QString tLine);

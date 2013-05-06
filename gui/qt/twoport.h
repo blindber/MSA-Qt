@@ -76,7 +76,7 @@ private:
   int TwoPortSourceZR, TwoPortLoadZR;   //In and out termination resistances //ver116-2a
   //TwoPortTermCalcFreq is the freq(MHz) for calculating auto match and converting negative caps and inductors
   //into positive inductors and caps before doing match graphs. TwoPortTermCalcStep is the step number of that freq
-  float TwoPortTermCalcFreq,;
+  float TwoPortTermCalcFreq;
   int TwoPortTermCalcStep;
   /*
   dim TwoPortTitle$(4)       //Title of two port params. 4 lines; zero entry not used

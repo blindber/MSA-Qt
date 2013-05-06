@@ -20,7 +20,7 @@
 
 touchStone::touchStone()
 {
-  touchMaxData=10000;  //ver116-1b
+  touchMaxData=10000;
 }
 
 void touchStone::setUwork(cWorkArray *uw)
@@ -75,7 +75,7 @@ QFile *touchStone::touchOpenOutputFile(QString fullPath)  //Open file; return ha
   return fFile;
 }
 
-void touchStone::touchWriteOnePortParameters(QStringList &fHndl, QString dataMode)
+void touchStone::touchWriteOnePortParameters(QStringList &fHndl, int dataMode)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*

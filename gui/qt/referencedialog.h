@@ -43,7 +43,7 @@ struct referDialog
   int referenceLineType;
   int referenceTrace;
 
-  QString msaMode;
+  int msaMode;
   int referenceDoMath;
   int referenceOpA;
   int referenceOpB;

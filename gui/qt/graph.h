@@ -447,7 +447,8 @@ private:
 
 
   //when drawing point by point
-  QString gDraw1, gDraw2,gErase1, gErase2;  //color and size combined for drawing and erasing traces
+  QString gDraw1, gDraw2,gErase1;  //color and size combined for drawing and erasing traces
+  QVector<QGraphicsItem *> gErase2;
   int gLastPointBeforePause;     //number of last point drawn (1...) in dynamic draw at time of pause
   int gWasFirstScanAtPause;  //whether we were in the first scan at time of pause
   int gLastQueryPointNum;    //Last point number at which mouse-move query was done, or -1 if none ver116-4h

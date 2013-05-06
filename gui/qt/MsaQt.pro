@@ -67,7 +67,9 @@ SOURCES += main.cpp\
     dialogsavecustappearance.cpp \
     dialogchooseprimaryaxis.cpp \
     dialogFreqAxisPreference.cpp \
-    dialogshowvars.cpp
+    dialogshowvars.cpp \
+    smithdialog.cpp \
+    scanthread.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -93,7 +95,9 @@ HEADERS  += mainwindow.h \
     dialogsavecustappearance.h \
     dialogchooseprimaryaxis.h \
     dialogFreqAxisPreference.h \
-    dialogshowvars.h
+    dialogshowvars.h \
+    smithdialog.h \
+    scanthread.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \
@@ -105,7 +109,8 @@ FORMS    += mainwindow.ui \
     dialogsavecustappearance.ui \
     dialogchooseprimaryaxis.ui \
     dialogFreqAxisPreference.ui \
-    dialogshowvars.ui
+    dialogshowvars.ui \
+    smithdialog.ui
 
 RESOURCES += \
     resource.qrc

@@ -109,7 +109,7 @@ enum msaModes
   modeSA = 0,
   modeVectorTrans = 1,
   modeScalarTrans = 2,
-  modeRefelection = 3
+  modeReflection = 3
 };
 
 

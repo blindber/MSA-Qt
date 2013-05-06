@@ -495,7 +495,7 @@ void dialogCalManager::calManEnterAvailablePaths()
     if (bw==0)
       bwPad="   ";
     else
-      bwPad = util.Space(5-((int)(log(bw)/log(10)))); //Aligns bw at decimal;
+      bwPad = util.Space(5-((int)(log(bw)/log(10.0)))); //Aligns bw at decimal;
     bwStr = bwPad + QString::number(bw);
     thisFilt = freq + bwStr;
     calManFileList.append(QString::number(i) + " (" + thisFilt.trimmed() + ")");   //Path num plus freq and bw
@@ -742,161 +742,237 @@ end sub
 }
 void dialogCalManager::calCreateMagCubicCoeff()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*//Create table of cubic coefficients for mag cal table and set validPhaseThreshold
-    //Each entry of the mag coefficient table will have 8 numbers. 0-3 are the A,B,C,D
-    //coefficients for interpolating the real part; 4-7 are for the phase correction.
+  //Create table of cubic coefficients for mag cal table and set validPhaseThreshold
+  //Each entry of the mag coefficient table will have 8 numbers. 0-3 are the A,B,C,D
+  //coefficients for interpolating the real part; 4-7 are for the phase correction.
 
-    call intSetMaxNumPoints calMagPoints  //Be sure we have room ver115-9d
-    call intClearSrc
-    validPhaseThreshold=0  //ver116-1b
-    leftADC=-1 : leftDB=-150  //ver116-1b
-    centerSlopeFound=0
-    for i=1 to calMagPoints //copy cal table to intSrc
-        //Phase corrections of 180 or -180 indicate phase is invalid at this ADC value for magnitude
-        //We set validPhaseThreshold to 1 greater than the highest ADC value with such a correction.
-        thisPhaseCorrection=calMagTable(i,2) //ver116-1b
-        thisADC=calMagTable(i,0)
-        thisDB=calMagTable(i,1)
-        if thisPhaseCorrection=180 or thisPhaseCorrection=180 then validPhaseThreshold=calMagTable(i,0)+1 //ver116-1b
-        call intAddSrcEntry thisADC, thisDB ,thisPhaseCorrection //ver116-1b
-        //Save first point at -60 dBm or higher
-        if leftADC=-1 and thisDB>=-60 then leftADC=thisADC : leftDB=thisDB  //ver116-1b
-        //Save slope of ADC vs. dB line for a centrally located slope for at least a 20 dB segment.
-        //This is used for adaptive wait times
-        if leftADC<>-1 and centerSlopeFound=0 and (thisDB-leftDB) >=20 then   //ver116-1b
-            calCenterSlope=(thisADC-leftADC)/(thisDB-leftDB)
-            highPointNumOfCenterSlope=i //This will be refined below ver116-1b
-            centerSlopeFound=1
-        end if
-    next i
+  inter.intSetMaxNumPoints(calMagPoints);  //Be sure we have room
+  inter.intClearSrc();
+  vars->validPhaseThreshold=0;
+  float leftADC=-1;
+  float leftDB=-150;
+  int centerSlopeFound=0;
+  int highPointNumOfCenterSlope;
+  for (int i=1; i <= calMagPoints; i++) //copy cal table to intSrc
+  {
+    //Phase corrections of 180 or -180 indicate phase is invalid at this ADC value for magnitude
+    //We set validPhaseThreshold to 1 greater than the highest ADC value with such a correction.
+    float thisPhaseCorrection=calMagTable[i][2];
+    float thisADC=calMagTable[i][0];
+    float thisDB=calMagTable[i][1];
+    if (thisPhaseCorrection==180 || thisPhaseCorrection==180)
+    {
+      vars->validPhaseThreshold=calMagTable[i][0]+1;
+    }
+    inter.intAddSrcEntry(thisADC, thisDB ,thisPhaseCorrection);
+    //Save first point at -60 dBm or higher
+    if (leftADC==-1 && thisDB>=-60)
+    {
+      leftADC=thisADC;
+      leftDB=thisDB;
+    }
+    //Save slope of ADC vs. dB line for a centrally located slope for at least a 20 dB segment.
+    //This is used for adaptive wait times
+    if (leftADC!=-1 && centerSlopeFound==0 && ((thisDB-leftDB) >=20))
+    {
+      vars->calCenterSlope=(thisADC-leftADC)/(thisDB-leftDB);
+      highPointNumOfCenterSlope=i; //This will be refined below ver116-1b
+      centerSlopeFound=1;
+    }
+  }
 
-        //Signal that our "imaginary" part is an angle, and not to "favor flat", because
-        //we expect the db as a function of ADC to become vertical near the ends.
-        //Do phase only if calGetDoPhase()=1
-    favorFlat=0 : isAngle=1
-    doPhase=calGetDoPhase() //ver116-1b
-    //First "1" means do magnitude; second 1 means we are doing phase correction table //ver116-1b
-    call intCreateCubicCoeffTable 1,doPhase,isAngle, favorFlat, 1   //ver116-1b
-    for i=1 to calMagPoints  //put the data where we want it
-        calMagCoeffTable(i,0)=intSrcCoeff(i,0) :calMagCoeffTable(i,1)=intSrcCoeff(i,1)
-        calMagCoeffTable(i,2)=intSrcCoeff(i,2) :calMagCoeffTable(i,3)=intSrcCoeff(i,3)
-        calMagCoeffTable(i,4)=intSrcCoeff(i,4) :calMagCoeffTable(i,5)=intSrcCoeff(i,5)
-        calMagCoeffTable(i,6)=intSrcCoeff(i,6) :calMagCoeffTable(i,7)=intSrcCoeff(i,7)
-    next i
+  //Signal that our "imaginary" part is an angle, and not to "favor flat", because
+  //we expect the db as a function of ADC to become vertical near the ends.
+  //Do phase only if calGetDoPhase()=1
+  int favorFlat=0;
+  int isAngle=1;
+  int doPhase=calGetDoPhase();
+  //First "1" means do magnitude; second 1 means we are doing phase correction table //ver116-1b
+  inter.intCreateCubicCoeffTable(1,doPhase,isAngle, favorFlat, 1);
+  for (int i=1; i <= calMagPoints; i++)  //put the data where we want it
+  {
+    calMagCoeffTable[i][0]=inter.intSrcCoeff[i][0]; calMagCoeffTable[i][1]=inter.intSrcCoeff[i][1];
+    calMagCoeffTable[i][2]=inter.intSrcCoeff[i][2]; calMagCoeffTable[i][3]=inter.intSrcCoeff[i][3];
+    calMagCoeffTable[i][4]=inter.intSrcCoeff[i][4]; calMagCoeffTable[i][5]=inter.intSrcCoeff[i][5];
+    calMagCoeffTable[i][6]=inter.intSrcCoeff[i][6]; calMagCoeffTable[i][7]=inter.intSrcCoeff[i][7];
+  }
 
 
-        //We re-iterate the calibration table to determine a couple other items. For calculating
-        //adaptive wait times, we need to know the approximate slope (delta ADC)/(delta dB).
-        //We potentially divide the response into three sections:
-        //For ADC<calLowADCofCenterSlope the slope is calLowEndSlope, calculated from at least a 5 dB segment near the
-        //       low end, but not so low as to have slopes less than 7% of the center slope
-        //for calLowADCofCenterSlope < ADC < calHighADCofCenterSlope the slope is calCenterSlope, calculated
-        //        from a 20 dB or greater segment somewhere in the center area
-        //for ADC>calHighADCofCenterSlope the slope is calHighEndSlope calculated from a 7 dB or greater segment at top end
-        //We need a reasonable range of values to be able to do this.  ver116-1b
-    calCanUseAutoWait=1
-    slopeErr=(calMagPoints<5)
-    if slopeErr=0 then if calMagTable(1,1)>-60 or calMagTable(calMagPoints, 1)<-40 then slopeErr=1
-    if slopeErr=1 then
-        //ver116-4b deleted irritating error message
-        calCanUseAutoWait=0
-        exit sub
-    end if
-    foundBoundary=0
-    for i=highPointNumOfCenterSlope to calMagPoints-1 //ver116-1b
-        //find point where slope after that point drops below 3/4 of the center slope
-        thisSlope=(calMagTable(i+1,0)-calMagTable(i,0))/(calMagTable(i+1,1)-calMagTable(i,1))   //delta ADC over delta dB
-        if thisSlope<0.75*calCenterSlope then highPointNumOfCenterSlope=i : foundBoundary=1 : exit for
-    next  i
-    if foundBoundary=0 then
-        //Slope never dropped off much so we don't need separate high end slope
-        calHighADCofCenterSlope=calMagTable(calMagPoints,0) : calHighEndSlope=calCenterSlope
-    else
-        //highPointNumOfCenterSlope is the point that divides the use of the center slope and use of the high end slope
-        calHighADCofCenterSlope=calMagTable(highPointNumOfCenterSlope,0)
-        rightADC=calMagTable(calMagPoints,0) : rightDB=calMagTable(calMagPoints,1)  //final ADC and dB entries  //ver116-1b
-        //find the high end slope
-        for i=calMagPoints-1 to highPointNumOfCenterSlope step -1   //ver116-1b
-            thisADC=calMagTable(i,0)
-            thisDB=calMagTable(i,1)
-            if i=highPointNumOfCenterSlope or (rightDB-thisDB>=7) then
-                slopeDenom=rightDB-thisDB
-                if slopeDenom=0 then
-                    Notice "Error in determining high end slope for Auto Wait."
-                    calHighADCofCenterSlope=calMagTable(calMagPoints,0) : calHighEndSlope=calCenterSlope
-                    calCanUseAutoWait=0
-                else
-                    calHighEndSlope=(rightADC-thisADC)/slopeDenom   //Slope of top 7 dB
-                end if
-            end if
-        next i
-    end if
-    if calCanUseAutoWait=0 then useAutoWait=0   //ver116-4e
-    //We now have to find the lowest level at which calCenterSlope can be used. This is the point where it drops off
-    //at least 60%
-    foundBoundary=0
-    for i=highPointNumOfCenterSlope to 2 step -1 //ver116-1b
-        //find point where slope after that point drops below 3/4 of the center slope
-        //But don't mess with DB values above -60 dB.
-        thisADC=calMagTable(i,0)
-        thisDB=calMagTable(i,1)
-        slopeDenom=thisDB-calMagTable(i-1,1)
-        if slopeDenom=0 then thisSlope=0 else thisSlope=(thisADC-calMagTable(i-1,0))/slopeDenom   //delta ADC over delta dB
-        if thisSlope<0.60*calCenterSlope then lowPointNumOfCenterSlope=i : foundBoundary=1 : exit for
-    next  i
-    if foundBoundary=0 then
-        //Slope never dropped off much so we don't need separate low end slope
-        calLowADCofCenterSlope=0 : calLowEndSlope=calCenterSlope
-    else
-        //lowPointNumOfCenterSlope is the point that divides the use of the center slope and use of the low end slope
-        calLowADCofCenterSlope=calMagTable(lowPointNumOfCenterSlope,0)
-            //Now find the low end slope and boundary
-        firstSlopePointNum=0
-        calLowEndSlope=calCenterSlope    //In case it can//t be determined, use center slope value
-        for i=1 to calMagPoints //ver116-1b
-            //find point where slope after that is at least 1/10 of the center slope
-            thisADC=calMagTable(i,0)
-            thisDB=calMagTable(i,1)
-            if thisDB>-60 then
-                Notice "Error in determining low end slope for Auto Wait."    //Cal is messed up.
-                canUseAutoWait=0
-                exit for
-            end if
-            slopeDenom=calMagTable(i+1,1)-thisDB
-            if slopeDenom=0 then thisSlope=calCenterSlope else thisSlope=(calMagTable(i+1,0)-thisADC)/slopeDenom   //delta ADC over delta dB
-            if thisSlope>=0.07*calCenterSlope then firstSlopePointNum=i : exit for
-        next  i
-        if firstSlopePointNum=0 then
-            Notice "Error in determining low end slope for Auto Wait--all slopes too small"
-            canUseAutoWait=0
-            calADCofLowFringe=0
+  //We re-iterate the calibration table to determine a couple other items. For calculating
+  //adaptive wait times, we need to know the approximate slope (delta ADC)/(delta dB).
+  //We potentially divide the response into three sections:
+  //For ADC<calLowADCofCenterSlope the slope is calLowEndSlope, calculated from at least a 5 dB segment near the
+  //       low end, but not so low as to have slopes less than 7% of the center slope
+  //for calLowADCofCenterSlope < ADC < calHighADCofCenterSlope the slope is calCenterSlope, calculated
+  //        from a 20 dB or greater segment somewhere in the center area
+  //for ADC>calHighADCofCenterSlope the slope is calHighEndSlope calculated from a 7 dB or greater segment at top end
+  //We need a reasonable range of values to be able to do this.  ver116-1b
+  vars->calCanUseAutoWait=1;
+  int slopeErr=(calMagPoints<5);
+  if (slopeErr==0)
+  {
+    if (calMagTable[1][1]>-60 || calMagTable[calMagPoints][1]<-40)
+    {
+      slopeErr=1;
+    }
+  }
+  if (slopeErr==1)
+  {
+    //ver116-4b deleted irritating error message
+    vars->calCanUseAutoWait=0;
+    return;
+  }
+  int foundBoundary=0;
+  for (int i=highPointNumOfCenterSlope; i <= calMagPoints-1; i++)
+  {
+    //find point where slope after that point drops below 3/4 of the center slope
+    float thisSlope=(calMagTable[i+1][0]-calMagTable[i][0])/(calMagTable[i+1][1]-calMagTable[i][1]);   //delta ADC over delta dB
+    if (thisSlope<0.75*vars->calCenterSlope)
+    {
+      highPointNumOfCenterSlope=i;
+      foundBoundary=1;
+      break;
+    }
+  }
+  if (foundBoundary==0)
+  {
+    //Slope never dropped off much so we don't need separate high end slope
+    vars->calHighADCofCenterSlope=calMagTable[calMagPoints][0];
+    vars->calHighEndSlope=vars->calCenterSlope;
+  }
+  else
+  {
+    //highPointNumOfCenterSlope is the point that divides the use of the center slope and use of the high end slope
+    vars->calHighADCofCenterSlope=calMagTable[highPointNumOfCenterSlope][0];
+    float rightADC=calMagTable[calMagPoints][0];
+    float rightDB=calMagTable[calMagPoints][1];  //final ADC and dB entries  //ver116-1b
+    //find the high end slope
+    for (int i=calMagPoints-1; i >= highPointNumOfCenterSlope; i--) // step -1   //ver116-1b
+    {
+      float thisADC=calMagTable[i][0];
+      float thisDB=calMagTable[i][1];
+      if (i==highPointNumOfCenterSlope || (rightDB-thisDB>=7))
+      {
+        float slopeDenom=rightDB-thisDB;
+        if (slopeDenom==0)
+        {
+          QMessageBox::warning(this, "Notice", "Error in determining high end slope for Auto Wait.");
+          vars->calHighADCofCenterSlope=calMagTable[calMagPoints][0];
+          vars->calHighEndSlope=vars->calCenterSlope;
+          vars->calCanUseAutoWait=0;
+        }
         else
-            leftADC=calMagTable(firstSlopePointNum,0) : leftDB=calMagTable(firstSlopePointNum,1)
-            calADCofLowFringe=leftADC   //below this the slopes are tiny.
-            //Find low end slope
-            for i=firstSlopePointNum+1 to calMagPoints   //ver116-1b
-                thisADC=calMagTable(i,0)
-                thisDB=calMagTable(i,1)
-                if thisDB>-60 then
-                    Notice "Error in determining low end slope for Auto Wait."    //Cal is messed up. Use center slope to very bottom.
-                    canUseAutoWait=0
-                    exit for
-                end if
-                if (thisDB-leftDB)>=5 then //Segment at least 5 dB long
-                    calLowEndSlope=(thisADC-leftADC)/(thisDB-leftDB) //Slope of low end
-                    exit for
-                end if
-            next i
-        end if
-    end if
-    a1=calLowEndSlope
-    a2=calCenterSlope
-    a3=calHighEndSlope
-    a4=calLowADCofCenterSlope
-    a5=calHighADCofCenterSlope
-end sub
-*/
+        {
+          vars->calHighEndSlope=(rightADC-thisADC)/slopeDenom;   //Slope of top 7 dB
+        }
+      }
+    }
+  }
+  float thisSlope;
+  if (vars->calCanUseAutoWait==0)
+  {
+    vars->useAutoWait=0;
+  }
+  //We now have to find the lowest level at which calCenterSlope can be used. This is the point where it drops off
+  //at least 60%
+  foundBoundary=0;
+  int lowPointNumOfCenterSlope;
+  for (int i=highPointNumOfCenterSlope; i >= 2; i--)  // step -1 //ver116-1b
+  {
+    //find point where slope after that point drops below 3/4 of the center slope
+    //But don't mess with DB values above -60 dB.
+    float thisADC=calMagTable[i][0];
+    float thisDB=calMagTable[i][1];
+    float slopeDenom=thisDB-calMagTable[i-1][1];
+    if (slopeDenom==0)
+    {
+      thisSlope=0;
+    }
+    else
+    {
+      thisSlope=(thisADC-calMagTable[i-1][0])/slopeDenom;   //delta ADC over delta dB
+    }
+    if (thisSlope<0.60*vars->calCenterSlope)
+    {
+      lowPointNumOfCenterSlope=i;
+      foundBoundary=1;
+      break;
+    }
+  }
+  if (foundBoundary==0)
+  {
+    //Slope never dropped off much so we don't need separate low end slope
+    vars->calLowADCofCenterSlope=0;
+    vars->calLowEndSlope=vars->calCenterSlope;
+  }
+  else
+  {
+    //lowPointNumOfCenterSlope is the point that divides the use of the center slope and use of the low end slope
+    vars->calLowADCofCenterSlope=calMagTable[lowPointNumOfCenterSlope][0];
+    //Now find the low end slope and boundary
+    int firstSlopePointNum=0;
+    vars->calLowEndSlope=vars->calCenterSlope;    //In case it can//t be determined, use center slope value
+    for (int i=1; i <= calMagPoints; i++)
+    {
+      //find point where slope after that is at least 1/10 of the center slope
+      float thisADC=calMagTable[i][0];
+      float thisDB=calMagTable[i][1];
+      if (thisDB>-60)
+      {
+        QMessageBox::warning(this,  "Notice", "Error in determining low end slope for Auto Wait.");    //Cal is messed up.
+        vars->calCanUseAutoWait=0;
+        break;
+      }
+      float slopeDenom=calMagTable[i+1][1]-thisDB;
+      if (slopeDenom==0)
+      {
+        thisSlope=vars->calCenterSlope;
+      }
+      else
+      {
+        thisSlope=(calMagTable[i+1][0]-thisADC)/slopeDenom;   //delta ADC over delta dB
+      }
+      if (thisSlope>=0.07*vars->calCenterSlope)
+      {
+        firstSlopePointNum=i;
+        break;
+      }
+    }
+    if (firstSlopePointNum==0)
+    {
+      QMessageBox::warning(this, "Notice", "Error in determining low end slope for Auto Wait--all slopes too small");
+      vars->calCanUseAutoWait=0;
+      vars->calADCofLowFringe=0;
+    }
+    else
+    {
+      float leftADC=calMagTable[firstSlopePointNum][0];
+      float leftDB=calMagTable[firstSlopePointNum][1];
+      vars->calADCofLowFringe=leftADC;   //below this the slopes are tiny.
+      //Find low end slope
+      for (int i=firstSlopePointNum+1; i <= calMagPoints; i++)
+      {
+        float thisADC=calMagTable[i][0];
+        float thisDB=calMagTable[i][1];
+        if (thisDB>-60)
+        {
+          QMessageBox::warning(this, "Notice", "Error in determining low end slope for Auto Wait.");    //Cal is messed up. Use center slope to very bottom.
+          vars->calCanUseAutoWait=0;
+          break;
+        }
+        if ((thisDB-leftDB)>=5) //Segment at least 5 dB long
+        {
+          vars->calLowEndSlope=(thisADC-leftADC)/(thisDB-leftDB); //Slope of low end
+          break;
+        }
+      }
+    }
+  }
+  //a1=calLowEndSlope;
+  //a2=calCenterSlope;
+  //a3=calHighEndSlope;
+  //a4=calLowADCofCenterSlope;
+  //a5=calHighADCofCenterSlope;
 }
 void dialogCalManager::calCreateFreqCubicCoeff()
 {
@@ -1701,7 +1777,11 @@ QString dialogCalManager::calReadFile(QFile *calFile, QPlainTextEdit *editor, in
             {
                 if (skipData==0) tooMany=calAddFreqPoint(data1, data2);   //SEWcal2
             }
-            if (tooMany==1) {retVal=p+"Line "+QString::number(fileLine)+"; Too many points."; return retVal;}
+            if (tooMany==1)
+            {
+              retVal=p+"Line "+QString::number(fileLine)+"; Too many points.";
+              return retVal;
+            }
         }
     }  //end of processing non-comment line
   }

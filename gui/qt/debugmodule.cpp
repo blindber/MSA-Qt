@@ -339,7 +339,7 @@ void DebugModule::DebugOpenOutputFile$(QString arrayID, QString folder)
 */
 }
 
-void DebugModule::DebugModule::fileError()
+void DebugModule::fileError()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*

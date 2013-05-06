@@ -284,7 +284,7 @@ private:
   void SyncTestPDM();
 
   void ConvertDataToPower();
-  void ConvertSync();
+  void ConvertSync(int step);
   void PresetVNAlin();
   void VNAlinTest();
   void ConvertPDMlin();
@@ -308,6 +308,7 @@ private:
   float ddsclock;
   int PLL;
   quint32 base;
+  float power;
 
 
 
@@ -362,12 +363,12 @@ private:
   int ra12;
   int ra13;
 
-  quint32 sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10,;
+  quint32 sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10;
   quint32 sw11, sw12, sw13, sw14, sw15, sw16, sw17, sw18, sw19, sw20;
   quint32 sw21, sw22, sw23, sw24, sw25, sw26, sw27, sw28, sw29, sw30;
   quint32 sw31, sw32, sw33, sw34, sw35, sw36, sw37, sw38, sw39;
 
-  quint32 b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10,;
+  quint32 b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10;
   quint32 b11, b12, b13, b14, b15, b16, b17, b18, b19, b20;
   quint32 b21, b22, b23, b24, b25, b26, b27, b28, b29, b30;
   quint32 b31, b32, b33, b34, b35, b36, b37, b38, b39;

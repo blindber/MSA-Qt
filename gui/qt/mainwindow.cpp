@@ -20,9 +20,19 @@
 #include "constants.h"
 #include "dialogchooseprimaryaxis.h"
 #include "dialogFreqAxisPreference.h"
-
-
 #include <qwaitcondition.h>
+#include "smithdialog.h"
+
+QStateMachine wew;
+
+enum
+{
+  doWait,
+  doHalt,
+  doRestart,
+  doNothing
+};
+
 
 MainWindow::MainWindow(QWidget *parent) :
   QMainWindow(parent),
@@ -39,6 +49,11 @@ MainWindow::MainWindow(QWidget *parent) :
   graph = new msagraph(this);
   hwdIf = new hwdInterface(this);
   gridappearance = new dialogGridappearance(this);
+
+  //smithDialog *smith = new smithDialog(this);
+  //smith->exec();
+  //QApplication::exit(0);
+  //return;
 
   vnaCal.setUwork(&uWork);
   vnaCal.setGlobalVars(vars);
@@ -83,15 +98,17 @@ MainWindow::MainWindow(QWidget *parent) :
 
   CreateGraphWindow();
 
-  timerStart = new QTimer(this);
-  connect(timerStart, SIGNAL(timeout()), this, SLOT(updateView()));
-
+  //timerStart = new QTimer(this);
+  //connect(timerStart, SIGNAL(timeout()), this, SLOT(updateView()));
+  //timerStart->setSingleShot(true);
 
   // use a timer to trigger the initilization so that
   // we can start displaying feedback to the user
-  timerStart2 = new QTimer(this);
-  connect(timerStart2, SIGNAL(timeout()), this, SLOT(delayedStart()));
-  timerStart2->start(50);
+  //timerStart2 = new QTimer(this);
+  //connect(timerStart2, SIGNAL(timeout()), this, SLOT(delayedStart()));
+  //timerStart2->setSingleShot(true);
+  //timerStart2->start(50);
+  QTimer::singleShot(0, this, SLOT(delayedStart()));
 }
 
 MainWindow::~MainWindow()
@@ -100,8 +117,8 @@ MainWindow::~MainWindow()
   {
     delete showVars;
   }
-  delete timerStart;
-  delete timerStart2;
+  //delete timerStart;
+  //delete timerStart2;
   delete hwdIf->usb;
   delete ui;
   if (winConfigMan)
@@ -113,7 +130,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::delayedStart()
 {
-  timerStart2->stop();
+  //timerStart2->stop();
 
   //Suppress parallel port if we don't have the DLLs
   if (util.uVerifyDLL("ntport"))
@@ -125,7 +142,7 @@ void MainWindow::delayedStart()
   if (util.uVerifyDLL("msadll"))
     bUsbAvailable = true;
   else
-    bUsbAvailable = false; //USB:01-08-2010
+    bUsbAvailable = false;
 
   if (bUsbAvailable)
   {
@@ -173,6 +190,8 @@ void MainWindow::delayedStart()
   }
 
   hwdIf->port = activeConfig.globalPort;
+  hwdIf->initVars();
+
   vars->glitchtime = 0;
   hwdIf->status = hwdIf->port + 1;
   hwdIf->control = hwdIf->port + 2;
@@ -239,7 +258,6 @@ void MainWindow::delayedStart()
   }
 */
 
-  hwdIf->initVars();
   vars->bUseUsb = 1;  //USB;01-08-2010
 
 
@@ -254,7 +272,7 @@ void MainWindow::delayedStart()
   vars->baseFrequency=0;
   vars->cftest=0;    //cavity filter sweep test off ver116-4b
   vars->message="";
-  vars->msaMode="SA";
+  vars->msaMode= modeSA;
   vars->planeadj=0;
   vars->gentrk=0;
   vars->normrev=0;
@@ -339,7 +357,9 @@ void MainWindow::delayedStart()
   //5.Command Filter Bank
   hwdIf->InitializeHardware();
 
-  timerStart->start(50);
+  //timerStart->start(50);
+  //connect(timerStart, SIGNAL(timeout()), this, SLOT(updateView()));
+//  QTimer::singleShot(0, this, SLOT(updateView()));
 }
 
 void MainWindow::FindClientOffsets()
@@ -381,14 +401,14 @@ void MainWindow::RequireRestart()
 void MainWindow::DisplayButtonsForRunning()
 {
   //Display buttons for sweep in progress
-  if (vars->doingInitialization) return;    //Buttons don't exist yet    ver114-3f
+  if (vars->doingInitialization)
+    return;    //Buttons don't exist yet
   ui->btnOneStep->setEnabled(true);
   ui->btnContinue->setEnabled(true);
-  //print #handle.Restart, "Running"  //ver114-4c deleted print to #main.restart
-              //OneStep becomes HaltAtEnd when scan is in progress
-  //#handle.OneStep, "Halt At End"
+  ui->btnRestart->setText("Running");
+  //OneStep becomes HaltAtEnd when scan is in progress
   ui->btnOneStep->setText("Halt At End");
-      //Continue becomes Halt when scan is in progress
+  //Continue becomes Halt when scan is in progress
   ui->btnContinue->setText("Halt");
   ui->btnRedraw->setVisible(false);
 }
@@ -399,7 +419,7 @@ void MainWindow::DisplayButtonsForHalted()
   if (vars->doingInitialization) return;    //Buttons don't exist yet    ver114-3f
   ui->btnOneStep->setEnabled(true);
   ui->btnContinue->setEnabled(true);
-  // fix me print #handle.Restart, "Restart"  //ver114-4c deleted print to #main.restart
+  ui->btnRestart->setText("Restart");
           //OneStep becomes HaltAtEnd when scan is in progress
   ui->btnOneStep->setText("One Step");
       //Continue becomes Halt when scan is in progress
@@ -425,8 +445,11 @@ void MainWindow::GetDialogPlacement()
 void MainWindow::menuRunConfig()
 {
 //Graph Window Menu,Setup,Configuration Manager was selected
-  //if (graph->haltsweep==1) then gosub [FinishSweeping]     //Finish last point of sweep that was in progress. ver116-4j
-  //savePath$=path$ //ver114-4c
+  if (graph->haltsweep==1)
+  {
+    FinishSweeping();     //Finish last point of sweep that was in progress. ver116-4j
+  }
+  //savePath=path;
   int cancelled=winConfigMan->configRunManager(0);   //0 signals we are not running on startup so cancellation is allowed
   if (cancelled)   //Cancelled; restore filter setting; Halt or wait
   {
@@ -473,21 +496,21 @@ void MainWindow::ConformMenusToMode()
   //msaMode$ is the current mode. menuMode$ is the mode to which the menus are currently conformed.
 
   QString modeTitle;
-  if (vars->msaMode=="SA")
+  if (vars->msaMode==modeSA)
   {
     if (vars->gentrk==0) modeTitle="Spectrum Analyzer Mode"; else modeTitle="Spectrum Analyzer with TG Mode";
   }
-  if (vars->msaMode=="ScalarTrans") modeTitle="Tracking Generator Mode";
-  if (vars->msaMode=="VectorTrans") modeTitle="VNA Transmission Mode";
-  if (vars->msaMode=="Reflection") modeTitle="VNA Reflection Mode";
+  if (vars->msaMode==modeScalarTrans) modeTitle="Tracking Generator Mode";
+  if (vars->msaMode==modeVectorTrans) modeTitle="VNA Transmission Mode";
+  if (vars->msaMode==modeReflection) modeTitle="VNA Reflection Mode";
   QString ver="Ver " + QCoreApplication::applicationVersion();
   setWindowTitle("MSA-Qt Graph Window for "+modeTitle+ "; "+ ver);
 
   //Note we continue even if there is no mode change, mainly to get multiscan window right
   //if msaMode$=menuMode$ then exit sub //Nothing to do
 
-  int wasTransMode = (vars->menuMode=="ScalarTrans" || vars->menuMode=="VectorTrans");  //whether prior mode was transmission
-  int isTransMode= (vars->msaMode=="ScalarTrans" || vars->msaMode=="VectorTrans"); //whether current mode is transmission
+  int wasTransMode = (vars->menuMode==modeScalarTrans || vars->menuMode==modeVectorTrans);  //whether prior mode was transmission
+  int isTransMode= (vars->msaMode==modeScalarTrans || vars->msaMode==modeVectorTrans); //whether current mode is transmission
   if (wasTransMode && isTransMode) {vars->menuMode=vars->msaMode; return; }   //Nothing needs changing
 /*
     //Hide every menu item that is ever to be hidden, then show what we want.
@@ -537,16 +560,16 @@ void MainWindow::ConformMenusToMode()
 
     //We now have bare minimum of menus.
     //Make adjustments from here
-  //if (vars->msaMode!="Reflection") menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsFilterID,0, "Filter Analysis", 0);
+  //if (vars->msaMode!=modeRefelection) menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsFilterID,0, "Filter Analysis", 0);
   //frontEndID=uMenuItemID(hFileMenu,5);    // "Load Front End" menu is sixth in File menu, which is position 5
-  if (vars->msaMode!="SA")
+  if (vars->msaMode!=modeSA)
   {
         //menuOK=uGrayMenu(hFileMenu, frontEndID) //Disable Load Front End   //ver115-9d
         //menuOK=uShowMenuItem(hGraphMenuBar, -1, hOperatingCalMenu, "Operating Cal", menuOperatingCalPosition)      //Operating Cal menu
         vars->menuOperatingCalShowing=1;
         //menuOK=uShowMenuItem(hGraphMenuBar, -1, hTwoPortMenu, "Two-Port", menuTwoPortPosition)
         vars->menuTwoPortShowing=1;
-    if (vars->msaMode=="Reflection")
+    if (vars->msaMode==modeReflection)
     {
       /*
         //Reflection Mode
@@ -568,17 +591,17 @@ void MainWindow::ConformMenusToMode()
         menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsMeterID, 0,"Component Meter",1)    //Component meter is second on Functions list
         menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsRLCID, 0,"RLC Analysis",2)
         menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsCrystalID, 0, "Crystal Analysis", 3) //Crystal is 4th on Functions list
-        if msaMode$="VectorTrans" then menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsGroupDelayID, 0, "Group Delay", 4) //ver115-8b
+        if msaMode$=modeVectorTrans then menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsGroupDelayID, 0, "Group Delay", 4) //ver115-8b
         menuOK=uShowMenuItem(hDataMenu, menuDataS21ID, 0,"S21 Parameters", 2)    //S21 is third in Data menu
         menuOK=uShowMenuItem(hDataMenu, menuDataLineCalID, 0, "Installed Line Cal", 3)
             */
     }
   }
-  if (vars->msaMode=="SA")
+  if (vars->msaMode==modeSA)
   {
     //menuOK=uEnableMenu(hFileMenu, frontEndID) //Enable Load Front End   //ver115-9d
   }
-  if (vars->msaMode=="SA" && vars->gentrk==0)   //Display Multiscan window only when in SA mode without TG
+  if (vars->msaMode==modeSA && vars->gentrk==0)   //Display Multiscan window only when in SA mode without TG
   {
     //menuOK=uShowMenuItem(hGraphMenuBar, 0, hMultiscanMenu, "Multiscan", menuMultiscanPosition)
     vars->menuMultiscanShowing=1;
@@ -615,24 +638,6 @@ void MainWindow::menuExpandSweep()
 */
 }
 
-void MainWindow::btnRedraw()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub btnRedraw btn$  'Redraw button was pushed
-    'haltsweep=1 if scan is in progress, so we set flag to halt sweeping on return from the "scan"
-    'command that enabled this button to be handled.
-    if haltsweep=1 then continueCode=1 : exit sub   'Signal to halt after "scan" command
-    call mDeleteMarker "Halt"    'Delete Halt marker ver114-4c
-    if smithGraphHndl$()<>"" then call smithDrawChart    'To recreate bitmap of background, just in case it is messed up ver115-2c
-    refreshGridDirty=1 : call RefreshGraph 0    'ver114-7d
-end sub
-*/
-}
-
-
-
-
 void MainWindow::RestartSATGmode()
 {
   //menu for SA plus TG mode selected added ver115-4f
@@ -657,14 +662,14 @@ void MainWindow::RestartSAmodes()
   {
     CloseSpecial(1);
   }
-  vars->msaMode="SA";
+  vars->msaMode=modeSA;
   graph->SetDefaultGraphData();    //clears autoscale, sets Y1 and Y2 data types and range, and sets Y2DisplayMode and Y1DisplayMode
   vars->sgout=10;    //Set to 10 MHz no matter what band we are using. Will be irrelevant if in TG mode
   vars->offset=0;    //TG offset; will be irrelevant if in TG mode.
   vars->spurcheck = 0; //this assures Spur Test is OFF.
   graph->referenceLineSpec=""; graph->referenceLineType=0;
   ChangeMode();
-  Restart();
+  QTimer::singleShot(0, this, SLOT(Restart()));
 }
 
 void MainWindow::GoSAmode()
@@ -707,7 +712,7 @@ void MainWindow::RestartTransmissionMode()
   //settings that were last in effect for the new mode. This special treatment is done for menu-driven change
   //or by certain internally generated changes that call [ToggleTransmissionReflection], but not for changes
   //resulting from loading of preference files.   ver116-1b
-  if (vars->menuMode=="Reflection" && vars->transLastSteps!=0)
+  if (vars->menuMode==modeReflection && vars->transLastSteps!=0)
   {
     setCursor(Qt::WaitCursor);
     graph->ToggleTransmissionReflection();
@@ -716,16 +721,16 @@ void MainWindow::RestartTransmissionMode()
   }
   if (activeConfig.hasVNA)
   {
-    vars->msaMode="VectorTrans";
+    vars->msaMode=modeVectorTrans;
   }
   else
   {
-    vars->msaMode="ScalarTrans";
+    vars->msaMode=modeScalarTrans;
   }
   graph->SetDefaultGraphData();    //clears autoscale, sets Y1 and Y2 data types and range, and sets Y2DisplayMode and Y1DisplayMode ver115-3b
   vnaCal.S21JigAttach="Series";  //Start using series jig ver115-5a
   ChangeMode();
-  Restart();
+  QTimer::singleShot(0, this, SLOT(Restart()));
 }
 void MainWindow::GoTransmissionMode()
 {
@@ -741,7 +746,7 @@ void MainWindow::GoTransmissionMode()
   else*/
   {
     int smoothModeChange=0;
-    if (vars->menuMode=="Reflection")   //menuMode$ has prior mode ver116-1b
+    if (vars->menuMode==modeReflection)   //menuMode$ has prior mode ver116-1b
     {
       //If changing from reflection mode and sweep frequencies are the same, we preserve some settings
       if (vars->transLastSteps!=0
@@ -786,8 +791,8 @@ void MainWindow::RestartReflectionMode()
   //settings that were last in effect for the new mode. This special treatment is done for menu-driven change
   //or by certain internally generated changes that call [ToggleTransmissionReflection], but not for changes
   //resulting from loading of preference files.   ver116-1b
-  //if graphBox$<>"" and menuMode$="VectorTrans" and refLastSteps<>0 then
-  if (vars->menuMode=="VectorTrans" && vars->refLastSteps!=0)
+  //if graphBox$<>"" and menuMode$=modeVectorTrans and refLastSteps<>0 then
+  if (vars->menuMode==modeVectorTrans && vars->refLastSteps!=0)
   {
     setCursor(Qt::WaitCursor);
     graph->ToggleTransmissionReflection();
@@ -795,11 +800,11 @@ void MainWindow::RestartReflectionMode()
 
     return; // : wait
   }
-  vars->msaMode="Reflection"; //ver115-2a
+  vars->msaMode=modeReflection; //ver115-2a
   graph->SetDefaultGraphData();    //clears autoscale, sets Y1 and Y2 data types and range, and sets Y2DisplayMode and Y1DisplayMode ver115-3b
   vnaCal.S11JigType="Reflect";   //Start using bridge ver115-5a
   ChangeMode();
-  Restart();
+  QTimer::singleShot(0, this, SLOT(Restart()));
 }
 void MainWindow::GoReflectionMode()
 {
@@ -813,7 +818,7 @@ void MainWindow::GoReflectionMode()
   //        gosub [CreateGraphWindow]   //Note msaMode$ is new mode; menuMode$ is old mode
   //    else
   int smoothModeChange=0;
-  if (vars->menuMode=="VectorTrans")  //menuMode$ has prior mode ver116-1b
+  if (vars->menuMode==modeVectorTrans)  //menuMode$ has prior mode ver116-1b
   {
     //If changing from vector transmission mode and sweep frequencies are the same, we preserve some settings
     if (vars->refLastSteps!=0 && vars->refLastSteps==vars->steps
@@ -931,7 +936,7 @@ void MainWindow::MarkerClick()
         if selMarkerID$="" then newMarkID$="L" else newMarkID$=selMarkerID$
         'if gGetDoHist() or interpolateMarkerClicks=0 then clickedPointNum=int(clickedPointNum+0.5)   'Round to integral point ver115-1a
         roundedClickPointNum=int(clickedPointNum+0.5)   'ver116-4k
-        if msaMode$="SA" then clickedPointNum=roundedClickPointNum   'Round to integral point for SA mode ver115-2d
+        if msaMode$=modeSA then clickedPointNum=roundedClickPointNum   'Round to integral point for SA mode ver115-2d
         'If we are within one-half pixel of a integral point, we round off because it is nice to have integral points,
         'and there is no purpose to trying to get extreme resolution.
         if abs(clickedPointNum-roundedClickPointNum)*gPixelsPerStep()<=0.5 then clickedPointNum=roundedClickPointNum    'ver116-4k
@@ -1225,7 +1230,6 @@ end sub
 
 void MainWindow::OneStep()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   // The OneStep button shows HaltAtEnd during a scan
   if (graph->haltsweep == 1)
   {
@@ -1258,6 +1262,7 @@ void MainWindow::Continue()
     return;
   }
   hwdIf->onestep = 0;
+  FocusKeyBox();
 }
 
 void MainWindow::FocusKeyBox()
@@ -1279,7 +1284,7 @@ void MainWindow::FocusKeyBox()
   {
     hwdIf->scanResumed=1;
   }
-  StartSweep();
+  QTimer::singleShot(0, this, SLOT(StartSweep()));
 }
 
 
@@ -1375,8 +1380,8 @@ void MainWindow::menuRLCAnalysis()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
-    if haltsweep=1 then gosub void MainWindow::FinishSweeping()  //Halt
-    if msaMode$="Reflection" then call ReflectionRLC else call TranRLCAnalysis
+    if haltsweep=1 then gosub FinishSweeping()  //Halt
+    if msaMode$=modeRefelection then call ReflectionRLC else call TranRLCAnalysis
     call RequireRestart     //Scan can continue only by Restart
     wait
 */
@@ -1386,7 +1391,7 @@ void MainWindow::menuS11ToS21()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
-    if haltsweep then gosub void MainWindow::FinishSweeping()    //stop sweeping cleanly
+    if haltsweep then gosub FinishSweeping()    //stop sweeping cleanly
     call S11ToS21   //Do conversion
     call RequireRestart     //Scan can continue only by Restart
     wait
@@ -1617,7 +1622,7 @@ void MainWindow::menuQ()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*//Menu for Q factors was selected
-    if haltsweep=1 then gosub void MainWindow::FinishSweeping()
+    if haltsweep=1 then gosub FinishSweeping()
     call AnalyzeQ
     call ChangeGraphsToAuxData constAux0, constAux1  //graph series Q and parallel Q
     wait
@@ -1719,7 +1724,7 @@ void MainWindow::menuSaveDataFile()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*//ver115-5f
-    if haltsweep=1 then gosub void MainWindow::FinishSweeping()
+    if haltsweep=1 then gosub FinishSweeping()
 
     filter$="All files" + chr$(0) + "*.*" + chr$(0) + _
                 "Parameter files" + chr$(0) + "*.s1p" + chr$(0) + _
@@ -1799,7 +1804,7 @@ void MainWindow::RestoreVNAData()
     float thisfreq=vars->VNAData[stepNum][0]; //freq
     vars->datatable[stepNum][1]=thisfreq;
     vars->datatable[stepNum][2]=vars->VNAData[stepNum][1]; //dB or dBm
-    if (vars->msaMode=="SA" || vars->msaMode=="ScalarTrans")
+    if (vars->msaMode==modeSA || vars->msaMode==modeScalarTrans)
     {
         vars->datatable[stepNum][3]=0;
     }
@@ -1835,11 +1840,11 @@ void MainWindow::RestoreVNAData()
   for (vars->thisstep=vars->sweepStartStep; vars->thisstep != vars->sweepEndStep; vars->thisstep = vars->thisstep + vars->sweepDir)
   {
     //Plot this point the same as though we just gathered it.
-    if (vars->msaMode!="SA")
+    if (vars->msaMode!=modeSA)
       hwdIf->TransferToDataArrays();   //Enter data into S21DataArray or ReflectArray
     if (vars->VNARestoreDoR0AndPlaneExt)  //If user so specified, perform R0 conversion and plane extension
     {
-        if (vars->msaMode=="VectorTrans" || vars->msaMode=="ScalarTrans")
+        if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
         {
             if (vars->planeadj!=0)
             {
@@ -1853,7 +1858,7 @@ void MainWindow::RestoreVNAData()
         {
             //ISSUE--If OSL was not used, we don't have the raw data from the series or shunt fixture,
             //so we need to force the fixture to Bridge. Or do we. Does any routine other than ConvertRawData... access raw data?
-            if (vars->msaMode=="Reflection")
+            if (vars->msaMode==modeReflection)
             {
                 if (vars->planeadj!=0 || vnaCal.S11BridgeR0!=vnaCal.S11GraphR0)
                 {
@@ -1875,7 +1880,7 @@ void MainWindow::RestoreVNAData()
             }
         }
     }
-    if (vars->msaMode=="Reflection")
+    if (vars->msaMode==modeReflection)
       graph->CalcReflectDerivedData(vars->thisstep);
     graph->PlotDataToScreen();
   }
@@ -1920,7 +1925,7 @@ void MainWindow::regraphDatatable()
     for thisstep=sweepStartStep to sweepEndStep step sweepDir
         'Plot this point the same as though we just gathered it.
         'Apply planeadj and graph R0 transformed and put info into S21DataArray or ReflectArray
-        if msaMode$<>"SA" then gosub [ProcessDataArrays]
+        if msaMode$<>modeSA then gosub [ProcessDataArrays]
         gosub [PlotDataToScreen]
     next thisstep
 
@@ -2101,14 +2106,13 @@ end sub
 
 void MainWindow::updateView()
 {
-  timerStart->stop();
+  //timerStart->stop();
   ui->graphicsView->setScene(graph->getScene());
   graph->getScene()->setSceneRect(graph->getScene()->itemsBoundingRect());
   ui->graphicsView->fitInView(graph->getScene()->sceneRect());
 
   graph->gDrawGrid();
   graph->DrawSetupInfo();     //Draw info describing the sweep setup
-  timerStart->stop();
 }
 
 void MainWindow::multiscanCloseAll()
@@ -2140,13 +2144,13 @@ void MainWindow::CleanupAfterSweep()
   //Do cleanup after a sweep to be sure flags are set/reset properly
   //Called by [FinishSweeping]. Can also be called by other routines to immediately
   //terminate a sweep when they will be Restarting so they don't care about finishing the plotting.
-  DisplayButtonsForHalted();    //ver114-4f replaced call to [UpdateBoxes]
+  DisplayButtonsForHalted();
   if (vars->thisstep == vars->sweepEndStep)
     hwdIf->haltWasAtEnd=1;
   else
-    hwdIf->haltWasAtEnd=0;  //ver114-5c
+    hwdIf->haltWasAtEnd=0;
   graph->haltAtEnd=0;      //In case we got here from auto halt at end of sweep
-  vars->calInProgress=0;  //ver114-5h
+  vars->calInProgress=0;
   graph->haltsweep = 0; //this says the sweep has been halted, so don't print the first command of the next sweep step //ver111-20
 
 }
@@ -2159,20 +2163,20 @@ void MainWindow::ChangeMode()
   if (vars->multiscanIsOpen)
     multiscanCloseAll();  //Quit multiscan--it is for SA only
   smithFinished("");   //Close smith chart if it is open ver115-1b
-  if (activeConfig.hasVNA==0 && (vars->msaMode=="VectorTrans" || vars->msaMode=="Reflection"))
+  if (activeConfig.hasVNA==0 && (vars->msaMode==modeVectorTrans || vars->msaMode==modeReflection))
   {
-    vars->msaMode="SA";
+    vars->msaMode=modeSA;
     graph->SetDefaultGraphData();
   }
   if (activeConfig.TGtop==0)
   {
-    vars->msaMode="SA";
+    vars->msaMode=modeSA;
     graph->SetDefaultGraphData();
   }
 
-  if (vars->msaMode == "ScalarTrans" || vars->msaMode == "VectorTrans")
+  if (vars->msaMode == modeScalarTrans || vars->msaMode == modeVectorTrans)
     GoTransmissionMode();
-  else if (vars->msaMode == "Reflection")
+  else if (vars->msaMode == modeReflection)
     GoReflectionMode();
   else
     GoSAmode();
@@ -2480,7 +2484,7 @@ void MainWindow::on_btnRestart_clicked()
     Halted();
     return;
   }
-  Restart();
+  QTimer::singleShot(0, this, SLOT(Restart()));
 }
 
 void MainWindow::on_btnRedraw_clicked()
@@ -2601,115 +2605,191 @@ void MainWindow::StartSweep()
   //automatically stops at the end of a single sweep.
   //[StartSweep]//enters from above, or [IncrementOneStep]or[FocusKeyBox]([OneStep][Continue])
 
-  if (vars->specialOneSweep)
+  bool dostart = true;
+
+  while(true)
   {
-    graph->haltAtEnd=1;
-  }
-  else
-  {
-    graph->haltAtEnd=0;
-  }
-  if (vars->haltedAfterPartialRestart==0 && hwdIf->scanResumed==1)
-  {
-    //For a resumed scan, a halt occurred after the previous step and that step was fully processed.
-    //haltsweep will equal 0. If alternateSweep=1 and the halt occurred at the end of a sweep, we need to
-    //repeat the last point as the first point of the new sweep. But in the case where we are continuing
-    //after a halt resulting from partial restart, we returned before the first step was taken and need to
-    //start with that step.
-    graph->mDeleteMarker("Halt");    //ver114-4h moved the -4d version
-    if (vars->thisstep == vars->sweepStartStep && hwdIf->syncsweep == 1)
+    if (dostart)
     {
-      hwdIf->SyncSweep();
-    }
-    if (vars->alternateSweep==0 || hwdIf->haltWasAtEnd==0)   //ver114-5c Go to next step unless we need to repeat this one
-    {
-      if (vars->sweepDir==1)
+      if (vars->specialOneSweep)
       {
-        if (vars->thisstep<vars->sweepEndStep) vars->thisstep = vars->thisstep + 1; else vars->thisstep=vars->sweepStartStep;
+        graph->haltAtEnd=1;
       }
       else
       {
-        if (vars->thisstep > vars->sweepEndStep) vars->thisstep = vars->thisstep - 1; else vars->thisstep=vars->sweepStartStep;
+        graph->haltAtEnd=0;
+      }
+      if (vars->haltedAfterPartialRestart==0 && hwdIf->scanResumed==1)
+      {
+        //For a resumed scan, a halt occurred after the previous step and that step was fully processed.
+        //haltsweep will equal 0. If alternateSweep=1 and the halt occurred at the end of a sweep, we need to
+        //repeat the last point as the first point of the new sweep. But in the case where we are continuing
+        //after a halt resulting from partial restart, we returned before the first step was taken and need to
+        //start with that step.
+        graph->mDeleteMarker("Halt");    //ver114-4h moved the -4d version
+        if (vars->thisstep == vars->sweepStartStep && hwdIf->syncsweep == 1)
+        {
+          hwdIf->SyncSweep();
+        }
+        if (vars->alternateSweep==0 || hwdIf->haltWasAtEnd==0)   //ver114-5c Go to next step unless we need to repeat this one
+        {
+          if (vars->sweepDir==1)
+          {
+            if (vars->thisstep<vars->sweepEndStep)
+              vars->thisstep = vars->thisstep + 1;
+            else
+              vars->thisstep=vars->sweepStartStep;
+          }
+          else
+          {
+            if (vars->thisstep > vars->sweepEndStep)
+              vars->thisstep = vars->thisstep - 1;
+            else
+              vars->thisstep=vars->sweepStartStep;
+          }
+        }
+      }
+      else    //ver114-5c No longer need to retest scanResumed
+      {
+        vars->thisstep=vars->sweepStartStep;
+      }
+
+      vars->haltedAfterPartialRestart=0; //Reset. Will stay zero until next partial restart. 116-1b
+      hwdIf->scanResumed=0;   //Reset flag
+
+      dostart = false;
+    }
+    //15.[CommandThisStep]. command relevant Control Board and modules
+    //SEW CommandThisStep begins the inner loop that moves from step to step to complete a single
+    //SEW scan.This branch label is accessed only from the end of the loop.
+    //[CommandThisStep]//needs:thisstep ; commands PLL1,DDS1,PLL3,DDS3,PDM //ver111-7
+    //a. first, check to see if any or all the 5 module commands are necessary [DetermineModule]
+    //b. calculate how much delay is needed for each module[DetermineModule], but use only the largest one[WaitStatement].
+    //c. send individual data, clocks, and latch commands that are necessary for[CommandOrigCB]
+    //or for SLIM, use [CommandAllSlims] for commanding concurrently //ver111-31c
+    hwdIf->CommandCurrentStep(vars->thisstep);  //ver116-4j made this a separate routine
+
+    //16.Determine sequence of operations after commanding the modules
+    if (hwdIf->onestep == 1)   //in the One Step mode
+    {
+      hwdIf->glitchhlt = 10; //add extra settling time
+      hwdIf->ReadStep(); //read this step
+      ProcessAndPrint(); //process and print this step
+      DisplayButtonsForHalted();
+
+      graph->mAddMarker("Halt", vars->thisstep+1, "1");   //ver114-4d
+      //If marker is shown on graph, we need to redraw the whole graph
+      //Otherwise just redraw the marker info
+      if (graph->doGraphMarkers)
+        graph->RefreshGraph(0);
+      else
+        graph->mDrawMarkerInfo();  //No erasure gap in redraw ver114-5m
+
+      if (vars->thisstep == vars->sweepEndStep)
+      {
+        //Note reversal is after graph is redrawn
+        if (vars->alternateSweep)
+        {
+          ReverseSweepDirection();
+        }
+        hwdIf->haltWasAtEnd=1;
+      }
+      else
+      {
+        hwdIf->haltWasAtEnd=0;
+      }
+      return;
+    }
+
+    if (graph->haltsweep == 0)  //in first step after a Halt
+    {
+      graph->haltsweep = 1; //change flag to say we are not in first step after a Halt, for future steps
+      hwdIf->glitchhlt = 10;  //add extra settling time
+      hwdIf->ReadStep(); //read this step
+    }
+    else  //if in middle of sweep. process and print the previous step, then read this step
+    {
+      hwdIf->ProcessAndPrintLastStep();
+      hwdIf->ReadStep();//read this step
+    }
+    //moved sweep time here, so it prints after any refresh action from the prior scan
+    if (graph->displaySweepTime && vars->thisstep == vars->sweepStartStep)
+    {
+      int currTime = util.time("ms").toInt();
+      if (hwdIf->suppressSweepTime == 0)
+      {
+        vars->message= "Sweep Time="+util.usingF("####.##", (currTime-hwdIf->startTime)/1000)+" sec.";
+        graph->PrintMessage();
+      }
+      hwdIf->suppressSweepTime=0; //Only suppress on first scan //ver114-4h
+      hwdIf->startTime=currTime;        //timer for testing
+    }
+    int action = PostScan();
+    if (action == doHalt)
+      break;
+    else if (action == doWait)
+    {
+      return;
+    }
+    else if (action == doRestart)
+    {
+      QTimer::singleShot(0, this, SLOT(Restart()));
+      return;
+    }
+    //}
+    //void MainWindow::IncrementOneStep()
+    //{
+    //18.[IncrementOneStep]
+    //SEW IncrementOneStep is the end of both the inner loop over points and the outer loop
+    //SEW over scans. goto [CommandThisStep] continues the inner loop with the next point.
+    //SEW goto[StartSweep] continues the outer loop with the next scan.
+    //SEW [IncrementOneStep] is commented out to be clear it is not used for any goto.
+    //[IncrementOneStep]
+
+    if (vars->thisstep == vars->sweepEndStep && hwdIf->syncsweep == 1)
+    {
+      hwdIf->SyncSweep();
+    }
+    //ver114-5a modified the following
+    if (vars->sweepDir==1)   //ver114-4k added this block to handle possible reverse sweeps
+    {
+      if (vars->thisstep<vars->sweepEndStep)
+      {
+        vars->thisstep = vars->thisstep + 1;
+        continue;
+        //goto CommandThisStep();
       }
     }
-  }
-  else    //ver114-5c No longer need to retest scanResumed
-  {
-    vars->thisstep=vars->sweepStartStep;  //ver114-4k
-  }
-
-  vars->haltedAfterPartialRestart=0; //Reset. Will stay zero until next partial restart. 116-1b
-  hwdIf->scanResumed=0;   //Reset flag
-  CommandThisStep();
-}
-
-void MainWindow::CommandThisStep()
-{
-  //15.[CommandThisStep]. command relevant Control Board and modules
-  //SEW CommandThisStep begins the inner loop that moves from step to step to complete a single
-  //SEW scan.This branch label is accessed only from the end of the loop.
-  //[CommandThisStep]//needs:thisstep ; commands PLL1,DDS1,PLL3,DDS3,PDM //ver111-7
-  //a. first, check to see if any or all the 5 module commands are necessary [DetermineModule]
-  //b. calculate how much delay is needed for each module[DetermineModule], but use only the largest one[WaitStatement].
-  //c. send individual data, clocks, and latch commands that are necessary for[CommandOrigCB]
-  //or for SLIM, use [CommandAllSlims] for commanding concurrently //ver111-31c
-  hwdIf->CommandCurrentStep(vars->thisstep);  //ver116-4j made this a separate routine
-
-  //16.Determine sequence of operations after commanding the modules
-  if (hwdIf->onestep == 1)   //in the One Step mode
-  {
-    hwdIf->glitchhlt = 10; //add extra settling time
-    hwdIf->ReadStep(); //read this step
-    ProcessAndPrint(); //process and print this step
-    DisplayButtonsForHalted();
-
-    graph->mAddMarker("Halt", vars->thisstep+1, "1");   //ver114-4d
-    //If marker is shown on graph, we need to redraw the whole graph
-    //Otherwise just redraw the marker info
-    if (graph->doGraphMarkers)
-      graph->RefreshGraph(0);
-    else
-      graph->mDrawMarkerInfo();  //No erasure gap in redraw ver114-5m
-    if (vars->thisstep == vars->sweepEndStep)
-    {
-      //Note reversal is after graph is redrawn
-      if (vars->alternateSweep) ReverseSweepDirection(); //ver114-4m; ver114-5e
-      hwdIf->haltWasAtEnd=1;  //ver114-5c
-    }
     else
     {
-      hwdIf->haltWasAtEnd=0;  //ver114-5c
+      if (vars->thisstep>vars->sweepEndStep)
+      {
+        vars->thisstep = vars->thisstep - 1;
+        continue;
+        // goto CommandThisStep();
+      }
     }
-    return;
-  }
+    //If we are here, we have just read the final step of a sweep
 
-  if (graph->haltsweep == 0)  //in first step after a Halt
-  {
-    graph->haltsweep = 1; //change flag to say we are not in first step after a Halt, for future steps
-    hwdIf->glitchhlt = 10;  //add extra settling time
-    hwdIf->ReadStep(); //read this step //ver113-6d
-  }
-  else  //if in middle of sweep. process and print the previous step, then read this step
-  {
-    hwdIf->ProcessAndPrintLastStep();
-    hwdIf->ReadStep();//read this step //ver113-6d
-  }
-  //moved sweep time here, so it prints after any refresh action from the prior scan
-  if (graph->displaySweepTime && vars->thisstep == vars->sweepStartStep)
-  {
-    int currTime = util.time("ms").toInt();
-    if (hwdIf->suppressSweepTime == 0)
+    if (graph->haltAtEnd==0)
     {
-      vars->message= "Sweep Time="+util.usingF("####.##", (currTime-hwdIf->startTime)/1000)+" sec.";
-      graph->PrintMessage();   //ver114-4h
+      //Alternate sweep directions if required. When we switch direction, thisstep
+      //was the final point of one sweep and becomes the first point of the next.
+      //We process and print it  immediately as the last point of this sweep; then reverse
+      //direction and start with the same point. To avoid re-processing it at the next step we
+      //set haltsweep=0.
+      if (vars->alternateSweep)
+      {
+        ProcessAndPrint();
+        ReverseSweepDirection();
+        graph->haltsweep=0;
+      }
+      dostart = true;
     }
-    hwdIf->suppressSweepTime=0; //Only suppress on first scan //ver114-4h
-    hwdIf->startTime=currTime;        //timer for testing
   }
-  PostScan();
+  Halted();
 }
-
-void MainWindow::PostScan()
+int MainWindow::PostScan()
 {
   //17.[Scan] Check to see if a button has been pushed
   // Note that on any user action, if haltsweep=1 the action must have been detected
@@ -2724,70 +2804,28 @@ void MainWindow::PostScan()
   //control in a non-global namespace, and the user will be unable to take actions that require access
   //to [xyz] routines. To cause a halt, wait or restart in such a subroutine, the subroutine should set
   //the global variable continueCode to 1, 2 or 3.
-
+  QApplication::processEvents();
   if (graph->continueCode!=0)  // =0 means continue normally
   {
     if (graph->continueCode==1)
     {
       graph->continueCode=0;
-      Halted();
-      return;
+      return doHalt;
     }   //=1 means halt immediately
     if (graph->continueCode==2)
     {
       graph->continueCode=0;
       graph->haltsweep=0;
-      return;
+      return doWait;
     }     //=2 means wait immediately
     graph->continueCode=0;
     graph->haltsweep=0;
-    Restart();    //Anything else means restart
-    return;
+    //Restart();    //Anything else means restart
+    return doRestart;
   }
-  IncrementOneStep();
+  return doNothing;
 }
 
-void MainWindow::IncrementOneStep()
-{
-  //18.[IncrementOneStep]
-  //SEW IncrementOneStep is the end of both the inner loop over points and the outer loop
-  //SEW over scans. goto [CommandThisStep] continues the inner loop with the next point.
-  //SEW goto[StartSweep] continues the outer loop with the next scan.
-  //SEW [IncrementOneStep] is commented out to be clear it is not used for any goto.
-  //[IncrementOneStep]
-  if (vars->thisstep == vars->sweepEndStep && hwdIf->syncsweep == 1) hwdIf->SyncSweep(); //ver112-2b //ver114-4k
-  //ver114-5a modified the following
-  if (vars->sweepDir==1)   //ver114-4k added this block to handle possible reverse sweeps
-  {
-    // fix me handle goto
-    //if (vars->thisstep<vars->sweepEndStep) then thisstep = thisstep + 1 : goto [CommandThisStep]    //ver114-4k
-  }
-  else
-  {
-    // fix me handle goto
-    //if thisstep>sweepEndStep then thisstep = thisstep - 1 :goto [CommandThisStep]    //ver114-4k
-  }
-  //If we are here, we have just read the final step of a sweep
-
-  if (graph->haltAtEnd==0)
-  {
-    //Alternate sweep directions if required. When we switch direction, thisstep
-    //was the final point of one sweep and becomes the first point of the next.
-    //We process and print it  immediately as the last point of this sweep; then reverse
-    //direction and start with the same point. To avoid re-processing it at the next step we
-    //set haltsweep=0.
-    if (vars->alternateSweep)  //ver114-5c
-    {
-      ProcessAndPrint();
-      ReverseSweepDirection();
-      graph->haltsweep=0;
-    }
-    // fix me handle goto
-    //goto [StartSweep]  Repeat loop over scans if halt flag not set
-  }
-
-  Halted();
-}
      //We fall out of this loop only when haltAtEnd=1 and we reach thisstep=sweepEndStep
 //[EndSweepSeries] //This label marks the end of the scan loops.
 
@@ -2813,7 +2851,7 @@ void MainWindow::FinishSweeping()
   if (graph->haltAtEnd==0)
     graph->mAddMarker("Halt", vars->thisstep+1, "1"); //Add Halt marker ver114-4d
   graph->haltsweep=0; //do now so RefreshGraph will "flush" ver115-1a
-if (vars->isStickMode==0)
+  if (vars->isStickMode==0)
   {
     if (graph->refreshOnHalt)   //ver115-8c
     {
@@ -2829,7 +2867,8 @@ if (vars->isStickMode==0)
   }
   if (vars->specialOneSweep && vars->thisstep != vars->sweepEndStep)
   {
-    util.beep(); vars->message="Sweep Aborted"; //ver115-4b
+    util.beep();
+    vars->message="Sweep Aborted";
   }
   else
   {
@@ -2837,7 +2876,7 @@ if (vars->isStickMode==0)
     {
       util.beep();
       vars->message="Calibration Complete";
-    } //ver115-4b
+    }
   }
   //test is used for troubleshooting. Coder can insert
   //test = (any variable) anywhere in the code, and it will get displayed in the Messages Box during Halt.
@@ -2849,9 +2888,11 @@ if (vars->isStickMode==0)
   if (vars->thisstep==vars->sweepEndStep)
   {
     if (vars->alternateSweep)
+    {
       ReverseSweepDirection();
+    }
   }
-  emit CleanupAfterSweep();
+  CleanupAfterSweep();
 }
 void MainWindow::ReverseSweepDirection()
 {
@@ -2860,12 +2901,14 @@ void MainWindow::ReverseSweepDirection()
   if (vars->sweepDir==1)
   {
     vars->sweepDir=-1;
-    vars->sweepStartStep=vars->steps; vars->sweepEndStep=0;
+    vars->sweepStartStep=vars->steps;
+    vars->sweepEndStep=0;
   }
   else
   {
     vars->sweepDir=1;
-    vars->sweepStartStep=0; vars->sweepEndStep=vars->steps;
+    vars->sweepStartStep=0;
+    vars->sweepEndStep=vars->steps;
   }
   graph->gSetSweepDir(vars->sweepDir); //Notify graph module of new direction
 }
@@ -2878,10 +2921,10 @@ void MainWindow::ProcessAndPrint()
 //That correction is then added to phase in ConvertPhadata.Note that ConvertPhadata must now be
 //called after ConvertMagPhaseData so difPhase is valid when ConvertPhadata is executed.
   hwdIf->ConvertMagPhaseData(); //convert magdata (bits read) to magpower (dBm)
-  if (vars->msaMode!="SA")   //modver115-1e
+  if (vars->msaMode!=modeSA)
   {
     //convert phadata (bits read) to phase (degrees) if we have phase, but not for special graphs, which set phase directly
-    if (vars->msaMode!="ScalarTrans" && vars->doSpecialGraph==0)
+    if (vars->msaMode!=modeScalarTrans && vars->doSpecialGraph==0)
       hwdIf->ConvertPhadata(); //ver116-4h
     hwdIf->ProcessDataArrays();   //Enter data in S21DataArray or ReflectArray
   }
@@ -3011,13 +3054,13 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
 
   //Note x values must be calculated first (in [UpdateGraphParams]) ; modVer115-1c
   //If calInProgress=1, InstallSelectedxxx will just set applyCal=0 and installed base steps=-1    //ver116-4b
-  if (vars->msaMode=="Reflection")
+  if (vars->msaMode==modeReflection)
   {
     hwdIf->oslCal.InstallSelectedOSLCal();
   }
   else
   {
-    if (vars->msaMode!="SA")
+    if (vars->msaMode!=modeSA)
       vnaCal.InstallSelectedLineCal(graph->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());  //ver115-8c
   }
   vars->cycleNumber=1;
@@ -3100,7 +3143,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
     vars->message="";
     graph->PrintMessage();
   }
-  if (vars->msaMode=="SA" && vars->gentrk==0 && vars->multiscanInProgress==0)
+  if (vars->msaMode==modeSA && vars->gentrk==0 && vars->multiscanInProgress==0)
   {
     if ((vars->endfreq-vars->startfreq)/vars->steps >activeConfig.finalbw/1000)      //compare as MHz
     {
@@ -3115,9 +3158,9 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   for (int i=0; i < vars->steps;i++)
   {
     int thisfreq=graph->gGetPointXVal(i+1);    //Point number is 1 greater than step number SEWgraph
-    if (vars->msaMode!="SA")   //Store actual signal freq in VNA arrays ver116-1b
+    if (vars->msaMode!=modeSA)   //Store actual signal freq in VNA arrays ver116-1b
     {
-      if (vars->msaMode!="Reflection")
+      if (vars->msaMode!=modeReflection)
         vars->ReflectArray[vars->thisstep][0]=thisfreq;
       else
         vars->S21DataArray[vars->thisstep][0]=thisfreq;
@@ -3149,7 +3192,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
     hwdIf->CreateCmdAllArray(); //ver111-31b
   }
   CalcFreqCorrection();     //Calculate power correction at each frequency SEWgraph1
-  if (vars->msaMode=="SA" && vars->frontEndActiveFilePath!="")
+  if (vars->msaMode==modeSA && vars->frontEndActiveFilePath!="")
     hwdIf->frontEndInterpolateToScan();  //Calculate corrections for front end ver115-9d
   graph->continueCode=0;     //Set to other values by subroutines to cause halt, wait or restart
 
@@ -3164,7 +3207,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
 
   //Save some sweep settings for reflection and transmission for use when changing
   //back to a previously used mode, so we know the nature of the last gathered data
-  if (vars->msaMode=="Reflection")    //ver116-1b
+  if (vars->msaMode==modeReflection)    //ver116-1b
   {
     vars->refLastSteps=vars->steps;
     vars->refLastStartFreq=vars->startfreq;
@@ -3186,7 +3229,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   }
   else
   {
-    if (vars->msaMode=="VectorTrans")
+    if (vars->msaMode==modeVectorTrans)
     {
       vars->transLastSteps=vars->steps ;
       vars->transLastStartFreq=vars->startfreq ;
@@ -3208,7 +3251,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
     }
   }
 
-  if (vars->returnBeforeFirstStep)   //ver115-2a
+  if (vars->returnBeforeFirstStep)
   {
     vars->thisstep=vars->sweepStartStep;
     vars->returnBeforeFirstStep=0;
@@ -3216,7 +3259,8 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
     CleanupAfterSweep();
     return;
   }
-  StartSweep();
+  updateView();
+  QTimer::singleShot(0, this, SLOT(StartSweep()));
 }
 
 void MainWindow::LoadDataFileWithContext(QString dataFileName)
@@ -3294,7 +3338,7 @@ void MainWindow::LoadDataFileWithContext(QString dataFileName)
   {
     vars->planeadj=0;
     vnaCal.S21JigR0=hwdIf->touch.touchRef;  //ver116-4j
-    if (vars->msaMode=="Reflection")
+    if (vars->msaMode==modeReflection)
       vnaCal.S11BridgeR0=hwdIf->touch.touchRef; //ver116-4j
   }
 
@@ -3431,7 +3475,7 @@ void MainWindow::PartialRestart()
   //User should set suppressHardwareInitOnRestart=1 if desired to save time by suppressing initialization ver116-4d
   //This flag is automatically turned off after Restart, so it is a one time thing.
   vars->returnBeforeFirstStep=1; //So we stop before actually scanning, at which point this flag is reset
-  Restart();
+  QTimer::singleShot(0, this, SLOT(Restart()));
 }
 
 void MainWindow::CalcFreqCorrection()
@@ -3611,7 +3655,14 @@ QString MainWindow::SweepContext()
   s1= s1+newLine+"BaseFreq="+QString::number(vars->baseFrequency);
   s1= s1+newLine+"SpecialGraph="+QString::number(vars->doSpecialGraph);
   s1=s1+newLine+ "RLCSpec="+vars->doSpecialRLCSpec+";;"+vars->doSpecialCoaxName; //ver115-4b
-  if (vars->useAutoWait) s1=s1+newLine+"Wait="+vars->autoWaitPrecision; else s1= s1+newLine+"Wait="+QString::number(vars->wate);
+  if (vars->useAutoWait)
+  {
+    s1=s1+newLine+"Wait="+vars->autoWaitPrecision;
+  }
+  else
+  {
+    s1= s1+newLine+"Wait="+QString::number(vars->wate);
+  }
   s1= s1+newLine+"PlaneAdj="+QString::number(vars->planeadj);
   s1= s1+newLine+"Path="+util.Word(vars->path,2);    //path is in form "Path N"
   s1= s1+newLine+"SGPreset="+QString::number(vars->sgout);     //ver114-4h
@@ -3675,10 +3726,24 @@ void MainWindow::RestoreSweepContext()
     }
     else if (tag == "MSAMODE")
     {
-      //if restoreIsValidation=0 and tLine$<>msaMode$ then changeModeTo$=tLine$ : gosub [ChangeMode]  //ver114-6f
       if (vars->restoreIsValidation==0)
       {
-        vars->msaMode=tLine;
+        if (tLine == "SA")
+        {
+          vars->msaMode = modeSA;
+        }
+        else if (tLine == "ScalarTrans")
+        {
+          vars->msaMode = modeScalarTrans;
+        }
+        else if (tLine == "VectorTrans")
+        {
+          vars->msaMode = modeVectorTrans;
+        }
+        else if (tLine == "Reflection")
+        {
+          vars->msaMode = modeReflection;
+        }
       }
     }
     else if (tag == "BASEFREQ")
@@ -3798,22 +3863,22 @@ void MainWindow::RestoreSweepContext()
       if (contextVersion=="A")
       {
         float v1=0,  v2=0;
-        if (vars->msaMode=="SA")
+        if (vars->msaMode==modeSA)
         {
           v1=constNoGraph;
           v2=constMagDBM;
         }
-        if (vars->msaMode=="ScalarTrans")
+        if (vars->msaMode==modeScalarTrans)
         {
           v1=constNoGraph;
           v2=constMagDB;
         }
-        if (vars->msaMode=="VectorTrans")
+        if (vars->msaMode==modeVectorTrans)
         {
           v1=constAngle;
           v2=constMagDB;
         }
-        if (vars->msaMode=="Reflection")
+        if (vars->msaMode==modeReflection)
         {
           v1=constGraphS11Ang;
           v2=constGraphS11DB;
@@ -3942,7 +4007,7 @@ void MainWindow::FilterDataType(int &t, int axisNum)
   //Make sure data types are valid for current msaMode$
   //Change to default values if invalid
   //ver115-3b changed to do only a single variable, so we get called once per axis.
-  if (vars->msaMode=="SA")
+  if (vars->msaMode==modeSA)
   {
     if (t!=constMagDBM && t!=constMagWatts && t!= constMagV && t!=constNoGraph)
     {
@@ -3956,7 +4021,7 @@ void MainWindow::FilterDataType(int &t, int axisNum)
       }
     }
   }
-  else if (vars->msaMode=="ScalarTrans")
+  else if (vars->msaMode==modeScalarTrans)
   {
     if (t!=constMagDB && t!=constMagRatio && t!=constInsertionLoss && t!=constNoGraph)
     {
@@ -3970,7 +4035,7 @@ void MainWindow::FilterDataType(int &t, int axisNum)
       }
     }
   }
-  else if (vars->msaMode=="VectorTrans")
+  else if (vars->msaMode==modeVectorTrans)
   {
     if (t!=constMagDB && t!=constMagDBM && t!=constMagRatio && t!=constAngle
         && t!=constRawAngle && t!=constGD && t!=constInsertionLoss
@@ -3986,7 +4051,7 @@ void MainWindow::FilterDataType(int &t, int axisNum)
       }
     }
   }
-  else if (vars->msaMode=="Reflection")
+  else if (vars->msaMode==modeReflection)
   {
     // fix me what is || t > constGraphS11SWR
     if ((t<constGraphS11DB )
@@ -4362,17 +4427,17 @@ void MainWindow::on_actionPrimary_Axis_triggered()
 
   gridappearance->gUsePresetColors(gridappearance->gGetLastPresetColors(), graph->gPrimaryAxis);  //Reselect same appearance in case primary axis change had effect.
   gridappearance->SetCycleColors();
-  if (vars->msaMode == "Reflection")
+  if (vars->msaMode == modeReflection)
   {
     RestartReflectionMode();
     return;
   }
-  else if (vars->msaMode == "ScalarTrans" || vars->msaMode == "VectorTrans")
+  else if (vars->msaMode == modeScalarTrans || vars->msaMode == modeVectorTrans)
   {
     RestartTransmissionMode();
     return;
   }
-  else   // "SA"
+  else   // modeSA
   {
     if (vars->gentrk==1)
     {
@@ -4398,19 +4463,19 @@ void MainWindow::on_actionSweep_triggered()
   dialogFreqAxisPreference sweepWindow(this);
 
   sweepStruct config;
-  if (vars->msaMode == "SA")
+  if (vars->msaMode == modeSA)
   {
     config.msaMode = modeSA;
   }
-  else if (vars->msaMode == "Reflection")
+  else if (vars->msaMode == modeReflection)
   {
-    config.msaMode = modeRefelection;
+    config.msaMode = modeReflection;
   }
-  else if (vars->msaMode == "VectorTrans")
+  else if (vars->msaMode == modeVectorTrans)
   {
     config.msaMode = modeVectorTrans;
   }
-  else if (vars->msaMode == "ScalarTrans")
+  else if (vars->msaMode == modeScalarTrans)
   {
     config.msaMode = modeScalarTrans;
   }

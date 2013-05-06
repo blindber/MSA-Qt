@@ -137,6 +137,7 @@ msagraph::msagraph(QWidget *parent)
   gGraphPix.mresize(805,3);
   gTrace1.resize(805);
   gTrace2.resize(805);
+  gErase2.resize(805);
   referenceSource.mresize(802, 3);
   referenceTransform.mresize(802, 3);
   referenceLineType = 0;
@@ -374,7 +375,8 @@ void msagraph::gSetMaxPoints(int n)
     gGraphVal.mresize(gMaxPoints+5,3);
     gGraphPix.mresize(gMaxPoints+5,3);
     gTrace1.resize(gMaxPoints+5);
-    gTrace2.resize(gMaxPoints+5); //ver114-6b
+    gTrace2.resize(gMaxPoints+5);
+    gErase2.resize(gMaxPoints+5);
     gNumPoints=0;
   }
 }
@@ -2384,13 +2386,13 @@ void msagraph::gDrawSingleTrace()
 
   //Draws single Normal trace 2; not histogram; not log Y values; not phase trace
   int prevPoint = vars->thisstep - vars->sweepDir + 1;      //thisstep runs from 0; here 1 is first point. //ver114-4k
-  int currPoint=prevPoint+vars->sweepDir;   //ver114-4k
+  int currPoint=prevPoint+vars->sweepDir;
   int prevErasePoint=prevPoint+gEraseLead;     //Erase is ahead of draw by gEraseLead points
-  int thisErasePoint=prevErasePoint+vars->sweepDir;    //ver114-4k
+  int thisErasePoint=prevErasePoint+vars->sweepDir;
   if (gIsFirstDynamicScan)
   {
     //1. If first scan, we need to count the points, but not erase
-    if (gNumPoints>gMaxPoints)
+    if (gNumPoints > gMaxPoints)
     {
       QMessageBox::warning(0, "Error", "Too many points to graph.");
       return;
@@ -2417,8 +2419,8 @@ void msagraph::gDrawSingleTrace()
     }
     if (doErase)
     {
-      //cmd$=gErase2$;gTrace2$(thisErasePoint)
-      //#graphBox$, cmd$    //Send command to erase
+      graphScene->removeItem(gErase2[thisErasePoint]);
+      delete gErase2[thisErasePoint];
     }  //End Erase
   }
 
@@ -2453,22 +2455,14 @@ void msagraph::gDrawSingleTrace()
   }
   else
   {
-    //   thisCmd$="line ";lastX; " ";lastY2;" "; xPix;" ";yPix;"line ";xPix;" ";yPix;" ";lastX; " ";lastY2
-
     QPen pen(QColor(util.fixColor(gridappearance->gTrace2Color)));
     pen.setWidth(gTrace2Width);
 
-    graphScene->addLine(lastX, lastY2, xPix, yPix,pen);
+    gErase2[vars->thisstep] = graphScene->addLine(lastX, lastY2, xPix, yPix,pen);
   }
 
-  //ver114-6d permanently enable accum
-  //      gTrace2[currPoint]=thisCmd;
   gTrace2[currPoint] = QPointF(xPix, yPix);
-  //cmd$=gDraw2$;thisCmd$
-  //#graphBox$, cmd$   //Draw lines
   gPrevPointNum=currPoint;
-
-
 }
 
 void msagraph::gDrawNextPointValue(float y1, float y2)
@@ -2726,7 +2720,7 @@ void msagraph::gInitDraw()
   gDraw1="size "+QString::number(gTrace1Width)+";color "+gridappearance->gTrace1Color + ";";
   gDraw2="size "+QString::number(gTrace2Width)+";color "+gridappearance->gTrace2Color + ";";
   gErase1="size "+QString::number(gTrace1Width)+";color "+gridappearance->gBackColor + ";";
-  gErase2="size "+QString::number(gTrace2Width)+";color "+gridappearance->gBackColor + ";";
+ // gErase2="size "+QString::number(gTrace2Width)+";color "+gridappearance->gBackColor + ";";
 }
 
 void msagraph::gInitErase()
@@ -3108,7 +3102,7 @@ void msagraph::DrawSetupInfo()
   QFont Tahoma("Tahoma", 8, QFont::Bold);
   graphScene->setFont(Tahoma);
 
-  if (vars->msaMode=="SA") //ver115-1b rewrote this if... block
+  if (vars->msaMode==modeSA) //ver115-1b rewrote this if... block
   {
     //SA mode, either with or without TG
     if (vars->gentrk==0) //ver115-4f
@@ -3122,16 +3116,16 @@ void msagraph::DrawSetupInfo()
   }
   else
   {
-    if (vars->msaMode=="ScalarTrans")
+    if (vars->msaMode==modeScalarTrans)
     {
       gPrintText("SNA Transmission", InfoX-10,16,textColor);   //ver115-4e
     }
-    if (vars->msaMode=="VectorTrans")
+    if (vars->msaMode==modeVectorTrans)
     {
       gPrintText("VNA Transmission", InfoX-10,16,textColor);
     }
         //ver115-1c revised the printing of the cal level
-    if (vars->msaMode=="Reflection")
+    if (vars->msaMode==modeReflection)
       gPrintText("VNA Reflection", InfoX-10,16,textColor);
     QColor col;
     if (vnaCal->applyCalLevel < vnaCal->desiredCalLevel)
@@ -3140,7 +3134,7 @@ void msagraph::DrawSetupInfo()
     }
     if (vnaCal->applyCalLevel==0)
     {
-        if (vars->msaMode=="Reflection")
+        if (vars->msaMode==modeReflection)
         {
           col = Qt::red;  //no reflection cal, print in red
         }
@@ -3205,7 +3199,7 @@ void msagraph::DrawSetupInfo()
     stepSize=util.uFormatted(1000000*vars->sweepwidth/nHorDiv,"3,4,5//UseMultiplier//suffix=Hz");
     gPrintText(util.uCompact(stepSize)+"/Div", InfoX, InfoY,textColor); InfoY=InfoY+16;
   }
-  if (vars->msaMode=="SA" && activeConfig->TGtop>0)   //ver115-4f
+  if (vars->msaMode==modeSA && activeConfig->TGtop>0)   //ver115-4f
   {
     if (vars->gentrk==0)
     {
@@ -3237,16 +3231,16 @@ void msagraph::DrawSetupInfo()
       }
     }
   }
-  if (vars->msaMode!="SA" && vars->msaMode!="ScalarTrans")
+  if (vars->msaMode!=modeSA && vars->msaMode!=modeScalarTrans)
   {
     gPrintText("Exten="+QString::number(vars->planeadj)+" ns", InfoX, InfoY,textColor);
     InfoY=InfoY+16;  //ver114-5f
   }
-  if (vars->msaMode=="Reflection") //ver116-4k
+  if (vars->msaMode==modeReflection) //ver116-4k
   {
     //gPrintText("Z0=";uFormatted$(S11GraphR0, "3,4,5//UseMultiplier//DoCompact//SuppressMilli"), InfoX, InfoY); InfoY=InfoY+16;
   }
-  if (vars->msaMode!="SA")
+  if (vars->msaMode!=modeSA)
   {
   //  #graphBox$, "font Tahoma 8 bold;color ";textColor$;";backcolor ";backColor$
     QString directText;
@@ -3703,7 +3697,7 @@ void msagraph::CreateReferenceSource()
     }   //set up for uRLCComboResponse
       //Calc response in whatever S11 or S21 setup the user has chosen
     int doSpecialR0; QString doSpecialJig;
-    if (vars->msaMode=="Reflection")
+    if (vars->msaMode==modeReflection)
     {
       doSpecialR0=vnaCal->S11BridgeR0; doSpecialJig="S11";   //ver115-2a
     }
@@ -3747,10 +3741,10 @@ void msagraph::CreateReferenceSource()
       //ver115-7a modified this
       int source1, source2;
       referenceSourceNumPoints=gNumDynamicSteps()+1;
-      if (vars->msaMode=="SA") { source1=constMagDBM; source2=constNoGraph;}
-      if (vars->msaMode=="ScalarTrans") { source1=constMagDB; source2=constNoGraph;}
-      if (vars->msaMode=="VectorTrans") { source1=constMagDB; source2=constAngle;}
-      if (vars->msaMode=="Reflection") { source1=constGraphS11DB; source2=constGraphS11Ang;}
+      if (vars->msaMode==modeSA) { source1=constMagDBM; source2=constNoGraph;}
+      if (vars->msaMode==modeScalarTrans) { source1=constMagDB; source2=constNoGraph;}
+      if (vars->msaMode==modeVectorTrans) { source1=constMagDB; source2=constAngle;}
+      if (vars->msaMode==modeReflection) { source1=constGraphS11DB; source2=constGraphS11Ang;}
       for (int i=1; i <= referenceSourceNumPoints; i++)
       {
         referenceSource[i][0]=gGetPointXVal(i);   //Actual tuning freq, in MHz
@@ -3789,7 +3783,7 @@ void msagraph::CalcReferencesWholeStep(int stepNum, float &ref1, float &ref2)
     ref2=referenceSource[pointNum][2];
     return;
   }
-  if (vars->msaMode=="Reflection")
+  if (vars->msaMode==modeReflection)
   {
     //For reflection we have to calculate a bunch of derived data, such as impedance,
     //which may be needed to calculate the graph data. This is done frequency by frequency
@@ -3975,13 +3969,13 @@ void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArra
   {
     y2=vars->auxGraphData[currStep][vars->Y2DataType-constAux0];
   }
-  if (vars->msaMode=="Reflection")
+  if (vars->msaMode==modeReflection)
   {
     CalcReflectGraphData(currStep, y1, y2, useWorkArray);
   }
   else
   {
-    if (vars->msaMode!="SA")
+    if (vars->msaMode!=modeSA)
     {
       CalcTransmitGraphData(currStep, y1, y2, useWorkArray);
     }
@@ -5605,7 +5599,7 @@ void msagraph::DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QS
   }
   else if (componConst == constMagDBM)
   {
-    if (vars->msaMode=="SA")
+    if (vars->msaMode==modeSA)
     {
       yAxisLabel="Magnitude (dBm)" ; yLabel="dBm";
     }
@@ -5622,7 +5616,7 @@ void msagraph::DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QS
   }
   else if (componConst == constMagDB)         //Only done for Transmission
   {
-    if (vars->msaMode=="ScalarTrans")  //ver115-1a
+    if (vars->msaMode==modeScalarTrans)  //ver115-1a
     {
       yAxisLabel="Transmission (dB)"  ; yLabel="dB";
     }
@@ -5634,7 +5628,7 @@ void msagraph::DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QS
   }
   else if (componConst == constMagRatio)  //Only done for TG mode transmission
   {
-    if (vars->msaMode=="ScalarTrans")   //ver115-4f
+    if (vars->msaMode==modeScalarTrans)   //ver115-4f
     {
       yAxisLabel="Trans (Ratio)" ; yLabel="Ratio";
     }
@@ -5732,7 +5726,7 @@ void msagraph::InitGraphParams()
   vars->sgout=10;
   vars->gentrk=0 ;
   vars->normrev=0;
-  vars->msaMode="SA";
+  vars->msaMode=modeSA;
   vars->primaryAxisNum=2;   //Primary Y axis. Eg. on restart in SA mode, mag dBm goes here moved ver116-4m
   SetDefaultGraphData();    //ver115-3b
   vnaCal->S21JigAttach="Series";  //ver115-1b
@@ -5824,7 +5818,7 @@ void msagraph::SetCenterSpanFreq(float cent, float span)
 void msagraph::GetDefaultGraphData(int axisNum, int &axisType, int &axisMin, int &axisMax)
 {
   //get axis default data type and range for this mode ver116-4h
-  if (vars->msaMode== "Reflection")
+  if (vars->msaMode== modeReflection)
   {
     if (vars->primaryAxisNum==axisNum)
     {
@@ -5835,7 +5829,7 @@ void msagraph::GetDefaultGraphData(int axisNum, int &axisType, int &axisMin, int
       axisType=constGraphS11Ang ; axisMin=-180 ; axisMax=180;
     }
   }
-  else if (vars->msaMode== "ScalarTrans")
+  else if (vars->msaMode== modeScalarTrans)
   {
     if (vars->primaryAxisNum==axisNum)
     {
@@ -5846,7 +5840,7 @@ void msagraph::GetDefaultGraphData(int axisNum, int &axisType, int &axisMin, int
       axisType=constNoGraph ; axisMin=-180 ; axisMax=180;
     }
   }
-  else if (vars->msaMode== "VectorTrans")
+  else if (vars->msaMode== modeVectorTrans)
   {
     if (vars->primaryAxisNum==axisNum)
     {
@@ -6227,7 +6221,7 @@ void msagraph::ToggleTransmissionReflection()
 
 
   int restoreSettingsAfterChange=0;
-  if (vars->menuMode=="VectorTrans")  //menuMode$ has prior mode ver116-1b
+  if (vars->menuMode==modeVectorTrans)  //menuMode$ has prior mode ver116-1b
   {
     //If changing from vector trans mode and sweep frequencies are the same, we preserve some settings
     if (vars->refLastSteps!=0 && vars->refLastSteps==vars->steps && vars->refLastStartFreq==vars->startfreq
@@ -6239,14 +6233,14 @@ void msagraph::ToggleTransmissionReflection()
         && vars->transLastEndFreq==vars->endfreq && vars->transLastIsLinear==gGetXIsLinear()) restoreSettingsAfterChange=1;
   }
 
-  if (vars->msaMode=="Reflection") vars->msaMode="VectorTrans"; else vars->msaMode="Reflection"; //switch mode
+  if (vars->msaMode==modeReflection) vars->msaMode=modeVectorTrans; else vars->msaMode=modeReflection; //switch mode
   ChangeMode();  //Conform to new mode
   if (restoreSettingsAfterChange==0)
   {
     return;
   }
 
-  if (vars->msaMode=="Reflection")    //These changes will be fully implemented at PartialRestart
+  if (vars->msaMode==modeReflection)    //These changes will be fully implemented at PartialRestart
   {
     SetYAxes(vars->refLastY1Type, vars->refLastY1Top, vars->refLastY1Bot, vars->refLastY1AutoScale,
             vars->refLastY2Type, vars->refLastY2Top, vars->refLastY2Bot, vars->refLastY1AutoScale);
@@ -6730,7 +6724,7 @@ void msagraph::DetectChanges(int doRestart)
   //but do not do anything to the existing data. Note that the calibration
   //will be invalidated elsewhere in these cases, so there is no meaningful way
   //to transform the data.
-  if (vars->msaMode=="Reflection")
+  if (vars->msaMode==modeReflection)
   {
     if (vars->prevS21JigAttach!=vnaCal->S21JigAttach) doRestart=1;
     if (vars->prevS21JigR0!=vnaCal->S21JigR0) doRestart=1;
@@ -6828,7 +6822,7 @@ void msagraph::DetectChanges(int doRestart)
   }
 
   //If data changes, recalc x pixel values and require a restart, though proceeding will destroy the new data
-  if (vars->msaMode=="Reflection" && vars->prevS11GraphR0!=vnaCal->S11GraphR0)
+  if (vars->msaMode==modeReflection && vars->prevS11GraphR0!=vnaCal->S11GraphR0)
   {
     continueCode=3 ;
     doTransform=1;

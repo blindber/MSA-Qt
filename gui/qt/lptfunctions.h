@@ -94,8 +94,8 @@ public:
   void Read8Bitpha();
   void Read12Bitmag();
   void Read12Bitpha();
-  void Process16MagPha();
-  int Process16Mag();
+  void Process16MagPha(int &magdata, int &phadata);
+  void Process16Mag(int &magdata);
   void Process22MagPha();
   void Process22Mag();
   void CommandPLLorig();

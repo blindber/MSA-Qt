@@ -208,6 +208,8 @@ void hwdInterface::initVars()
     pdmlowlim = 819 ;
     pdmhighlim = 3277; //establish boundries for 12 bit serial A to D ver111-37a
   }
+  lpt.init(inpoutLib, activeConfig->globalPort);
+  //lpt.init(ntPortLin);
 
 }
 
@@ -696,7 +698,7 @@ void hwdInterface::CreateBaseForDDSarray()
   //the formula for the frequency output of the DDS(AD9850, 9851, or any 32 bit DDS) is:
   //ddsoutput = base*ddsclock/2^32, where "base" is the decimal equivalent of command words
   //to find "base": first, use: fullbase = (ddsoutput*2^32/ddsclock)
-  double fullbase=(ddsoutput*pow(2,32)/ddsclock); //decimal number, including fraction
+  double fullbase=(ddsoutput*pow(2.0,32.0)/ddsclock); //decimal number, including fraction
   //then, round it off to the nearest whole bit
   //(the following has a problem) 11-03-08
   //if ddsoutput is greater than ddsclock/2, the program will error out. I don//t know why but
@@ -717,10 +719,10 @@ void hwdInterface::CreateBaseForDDSarray()
   //now, the actual ddsoutput can be determined by: ddsoutput = base*ddsclock/2^32
   //Create Parallel Words //needed:base
   w0= 0; //a "1" here will activate the x4 internal multiplier, but not recommended
-  w1= int(base/pow(2,24));  //w1 thru w4 converts decimal base code to 4 words, each are 8 bit binary
-  w2= int((base-(w1*pow(2,24)))/pow(2,16));
-  w3= int((base-(w1*pow(2,24))-(w2*pow(2,16)))/pow(2,8));
-  w4= int(base-(w1*pow(2,24))-(w2*pow(2,16))-(w3*pow(2,8)));
+  w1= int(base/pow(2.0,24));  //w1 thru w4 converts decimal base code to 4 words, each are 8 bit binary
+  w2= int((base-(w1*pow(2.0,24)))/pow(2.0,16));
+  w3= int((base-(w1*pow(2.0,24))-(w2*pow(2.0,16)))/pow(2.0,8));
+  w4= int(base-(w1*pow(2.0,24))-(w2*pow(2.0,16))-(w3*pow(2.0,8)));
   if (activeConfig->cb == 3)
   {
     //   Int64SW.msLong.struct = 0 //USB:05/12/2010
@@ -1122,7 +1124,7 @@ void hwdInterface::SyncSweep()
   {
     ReadPhase();
     //scan //this is a fail safe. Click any button to get out of this loop. ver113-6e
-    QCoreApplication::processEvents();
+    //QCoreApplication::processEvents();
     if (phadata > .8 * activeConfig->maxpdmout && phadata < .9 * activeConfig->maxpdmout)
       return;
   }
@@ -1130,32 +1132,34 @@ void hwdInterface::SyncSweep()
 
 void hwdInterface::ConvertDataToPower()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  [ConvertDataToPower] 'ver112-2b
-      'this routine is a traffic director when the blue Magnitude trace is used for other data.
-      'enters from [CalcMagpowerPixel] if convdatapwr = 1
-          if syncsweep = 1 then goto [ConvertSync]
-          goto [ConvertPDMlin]
-*/
+  //this routine is a traffic director when the blue Magnitude trace is used for other data.
+  //enters from [CalcMagpowerPixel] if convdatapwr = 1
+  if (syncsweep == 1)
+  {
+    ConvertSync(vars->thisstep);
+    return;
+  }
+  ConvertPDMlin();
 }
 
-void hwdInterface::ConvertSync()
+void hwdInterface::ConvertSync(int step)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[ConvertSync] 'ver112-2b
-    'this will take the phase difference of the previous step's and this step's phase
-    'and convert it to power, for display
-    'enters from [ConvertDataToPower] if syncsweep = 1
-        if thisstep = 0 then return 'the last step in the sweep - step 0 is bogus data
-    'grab raw phase bits from previous sweep and create deltabits
-        deltabits = phaarray(thisstep-sweepDir,3) - phaarray(thisstep,3) 'ver114-4m
-    'convert deltabits to delta phase
-        deltaphase = 360 * deltabits/maxpdmout
-        power = deltaphase
-        return
-*/
+
+  //this will take the phase difference of the previous step//s and this step//s phase
+  //and convert it to power, for display
+  //enters from [ConvertDataToPower] if syncsweep = 1
+  if (step == 0)
+  {
+    return; //the last step in the sweep - step 0 is bogus data
+  }
+  //grab raw phase bits from previous sweep and create deltabits
+  float deltabits = vars->phaarray[step-vars->sweepDir][3] - vars->phaarray[step][3];
+  //convert deltabits to delta phase
+  float deltaphase = 360 * deltabits/activeConfig->maxpdmout;
+  power = deltaphase;
+  return;
+
 }
 
 void hwdInterface::PresetVNAlin()
@@ -1668,14 +1672,13 @@ void hwdInterface::Command4112R()
     gosub [CommandPLL]'needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
     return
     */
+
 }
 
 
 void hwdInterface::InitializeHardware()
 {
 
-  lpt.init(inpoutLib, activeConfig->globalPort);
-  //lpt.init(ntPortLin);
   //These hardware initializations are performed on startup and usually repeated on Restart. The reason
   //they are repeated on Restart is to fix any hardware glitches that might occur. Whenever it is known
   //that a hardware change is made, such as filter selection changing, it is best to take action immediately,
@@ -1718,104 +1721,103 @@ void hwdInterface::InitializeHardware()
   //ver116-4d deleted call to SelectLatchedSwitches
 
   //6.if configured, initialize DDS3 by reseting to serial mode. Frequency is commanded to zero
-  if (vars->suppressHardware)
+  if (!vars->suppressHardware)
   {
-    SkipHardwareInitialization();  //In case there is no hardware ver115-6c
-    return;
-  }
 
-  if (activeConfig->TGtop != 0) //goto endInitializeTrkGen;// there is no Tracking Generator ver111-22
-  {
-    //Initialize DDS 3
-    if (activeConfig->cb == 0 && activeConfig->TGtop == 2)
+    if (activeConfig->TGtop != 0) //goto endInitializeTrkGen;// there is no Tracking Generator ver111-22
     {
-      Jcontrol = INIT;
-      swclk = 32;sfqud = 2;
-      lpt.ResetDDS3ser();
-    } //ver111-7
-    //[ResetDDS3ser]needs:port,control,Jcontrol,swclk,sfqud,contclear ; resets DDS3 into Serial mode
+      //Initialize DDS 3
+      if (activeConfig->cb == 0 && activeConfig->TGtop == 2)
+      {
+        Jcontrol = INIT;
+        swclk = 32;
+        sfqud = 2;
+        lpt.ResetDDS3ser();
+      } //ver111-7
+      //[ResetDDS3ser]needs:port,control,Jcontrol,swclk,sfqud,contclear ; resets DDS3 into Serial mode
+      if (activeConfig->cb == 2)
+      {
+        lpt.ResetDDS3serSLIM(vars->phaarray[vars->thisstep][0], filtbank);
+      }
+      if (activeConfig->cb == 3)
+      {
+        ResetDDS3serUSB();
+      }
+      //7.if configured, initialize PLO3. No frequency command yet.
+      //Initialize PLL 3. //CreatePLL3R,CommandPLL3R
+      appxpdf=activeConfig->PLL3phasefreq; //ver111-4
+      if (activeConfig->TGtop == 1)
+        vars->reference=activeConfig->masterclock; //ver111-4
+      if (activeConfig->TGtop == 2)
+        vars->reference=activeConfig->appxdds3; //ver111-4
+      CreateRcounter();//needs:reference,appxpdf ; creates:rcounter //ver111-14
+      rcounter3=rcounter;
+      pdf3=pdf; //ver111-7
+      //CommandPLL3R and Init Buffers
+      datavalue = 8;
+      levalue = 4; //PLL3 data and le bit values ver111-28
+      CommandPLL3R();//needs:PLL3mode,PLL3phasepolarity,INIT,PLL3 ; Initializes and commands PLL3 R Buffer(s) //ver111-7
+    }
+
+
+    //[endInitializeTrkGen]   //skips to here if no TG
+
+    //8.initialize and command PLO2 to proper frequency
+    //CreatePLL2R
+    appxpdf=activeConfig->PLL2phasefreq; //ver111-4
+    vars->reference=activeConfig->masterclock; //ver111-4
+    CreateRcounter();//needed:reference,appxpdf ; creates:rcounter,pdf //ver111-14
+    rcounter2 = rcounter; //ver111-7
+    pdf2 = pdf;    //actual phase detector frequency of PLL 2 //ver111-7
+    //CommandPLL2R and Init Buffers
+    datavalue = 16;
+    levalue = 16; //PLL2 data and le bit values ver111-28
+    CommandPLL2R();//needs:PLL2phasepolarity,SELT,PLL2 ; Initializes and commands PLL2 R Buffer(s)
+    //CreatePLL2N
+    appxVCO = appxLO2;
+    vars->reference = activeConfig->masterclock;
+    CreateIntegerNcounter();//needs:appxVCO,reference,rcounter ; creates:ncounter,fcounter(0)
+    ncounter2 = ncounter;
+    fcounter2 = fcounter;
+    CreatePLL2N();//needs:ncounter,fcounter,PLL2 ; returns with Bcounter,Acounter, and N Bits N0-N23
+    Bcounter2=Bcounter; Acounter2=Acounter;
+    LO2=((Bcounter*preselector)+Acounter+(fcounter/16))*pdf2; //actual LO2 frequency  //ver115-1c LO2 is now global
+    //CommandPLL2N
+    Jcontrol = SELT;
+    LEPLL = 8;
+    datavalue = 16;
+    levalue = 16; //PLL2 data and le bit values ver111-28
+    CommandPLL(vars->thisstep);//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111-5
+
+    //9.Initialize PLO 1. No frequency command yet.
+    //[InitializePLL1]//set PLL1 to proper Rcount and initialize
+    //        appxpdf=PLL1phasefreq //ver111-4
+    //        reference=appxdds1 //ver111-4
+    //        gosub [CreateRcounter]//needed:reference,appxpdf ; creates:rcounter,pdf
+    //        rcounter1 = rcounter //ver111-4
+    //Create rcounter1 ver114-2e
+    rcounter1=(int)(activeConfig->appxdds1/activeConfig->PLL1phasefreq);
+    if ((activeConfig->appxdds1/activeConfig->PLL1phasefreq) - rcounter1 >= 0.5)
+      rcounter1 = rcounter1 + 1;   //rounds off rcounter  ver114-2e
+    if (vars->spurcheck==1 && activeConfig->PLL1mode==0)
+      rcounter1 = rcounter1 +1; //only do this for IntegerN PLL  ver114-2e
+
+    //CommandPLL1R and Init Buffers
+    datavalue = 2;
+    levalue = 1; //PLL1 data and le bit values ver111-28
+    CommandPLL1R();//needs:rcounter1,PLL1mode,PLL1phasepolarity,SELT,PLL1 ; Initializes and commands PLL1 R Buffer(s)
+
+    //10.initialize DDS1 by resetting. Frequency is commanded to zero
+    //It should power up in parallel mode, but could power up in a bogus condition.
+    if (activeConfig->cb == 0 && activeConfig->dds1parser == 0)
+      lpt.ResetDDS1par();//(Orig Control)//needs:control,STRBAUTO,contclear ; resets DDS1 on J5, parallel ver111-21
+    if (activeConfig->cb == 0 && activeConfig->dds1parser == 1)
+      lpt.ResetDDS1ser();//(Orig Control)//needed:control,AUTO,STRB,contclear  ; resets DDS1 on J5, into serial mode ver111-21
     if (activeConfig->cb == 2)
-    {
-      lpt.ResetDDS3serSLIM(vars->phaarray[vars->thisstep][0], filtbank);
-    }
+      lpt.ResetDDS1serSLIM(vars->phaarray[vars->thisstep][0], filtbank);//reset serial DDS1 without disturbing Filter Bank or PDM //ver111-29
     if (activeConfig->cb == 3)
-    {
-      ResetDDS3serUSB();
-    }
-    //7.if configured, initialize PLO3. No frequency command yet.
-    //Initialize PLL 3. //CreatePLL3R,CommandPLL3R
-    appxpdf=activeConfig->PLL3phasefreq; //ver111-4
-    if (activeConfig->TGtop == 1)
-      vars->reference=activeConfig->masterclock; //ver111-4
-    if (activeConfig->TGtop == 2)
-      vars->reference=activeConfig->appxdds3; //ver111-4
-    CreateRcounter();//needs:reference,appxpdf ; creates:rcounter //ver111-14
-    rcounter3=rcounter;
-    pdf3=pdf; //ver111-7
-    //CommandPLL3R and Init Buffers
-    datavalue = 8;
-    levalue = 4; //PLL3 data and le bit values ver111-28
-    CommandPLL3R();//needs:PLL3mode,PLL3phasepolarity,INIT,PLL3 ; Initializes and commands PLL3 R Buffer(s) //ver111-7
+      ResetDDS1serUSB();//reset serial DDS1 without disturbing Filter Bank or PDM  //USB:01-08-2010
   }
-
-
-  //[endInitializeTrkGen]   //skips to here if no TG
-
-  //8.initialize and command PLO2 to proper frequency
-  //CreatePLL2R
-  appxpdf=activeConfig->PLL2phasefreq; //ver111-4
-  vars->reference=activeConfig->masterclock; //ver111-4
-  CreateRcounter();//needed:reference,appxpdf ; creates:rcounter,pdf //ver111-14
-  rcounter2 = rcounter; //ver111-7
-  pdf2 = pdf;    //actual phase detector frequency of PLL 2 //ver111-7
-  //CommandPLL2R and Init Buffers
-  datavalue = 16;
-  levalue = 16; //PLL2 data and le bit values ver111-28
-  CommandPLL2R();//needs:PLL2phasepolarity,SELT,PLL2 ; Initializes and commands PLL2 R Buffer(s)
-  //CreatePLL2N
-  appxVCO = appxLO2;
-  vars->reference = activeConfig->masterclock;
-  CreateIntegerNcounter();//needs:appxVCO,reference,rcounter ; creates:ncounter,fcounter(0)
-  ncounter2 = ncounter;
-  fcounter2 = fcounter;
-  CreatePLL2N();//needs:ncounter,fcounter,PLL2 ; returns with Bcounter,Acounter, and N Bits N0-N23
-  Bcounter2=Bcounter; Acounter2=Acounter;
-  LO2=((Bcounter*preselector)+Acounter+(fcounter/16))*pdf2; //actual LO2 frequency  //ver115-1c LO2 is now global
-  //CommandPLL2N
-  Jcontrol = SELT;
-  LEPLL = 8;
-  datavalue = 16;
-  levalue = 16; //PLL2 data and le bit values ver111-28
-  CommandPLL(vars->thisstep);//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111-5
-
-  //9.Initialize PLO 1. No frequency command yet.
-  //[InitializePLL1]//set PLL1 to proper Rcount and initialize
-  //        appxpdf=PLL1phasefreq //ver111-4
-  //        reference=appxdds1 //ver111-4
-  //        gosub [CreateRcounter]//needed:reference,appxpdf ; creates:rcounter,pdf //ver111-4
-  //        rcounter1 = rcounter //ver111-4
-  //Create rcounter1 ver114-2e
-  rcounter1=(int)(activeConfig->appxdds1/activeConfig->PLL1phasefreq);   //ver114-2e
-  if ((activeConfig->appxdds1/activeConfig->PLL1phasefreq) - rcounter1 >= 0.5)
-    rcounter1 = rcounter1 + 1;   //rounds off rcounter  ver114-2e
-  if (vars->spurcheck==1 && activeConfig->PLL1mode==0)
-    rcounter1 = rcounter1 +1; //only do this for IntegerN PLL  ver114-2e
-
-  //CommandPLL1R and Init Buffers
-  datavalue = 2;
-  levalue = 1; //PLL1 data and le bit values ver111-28
-  CommandPLL1R();//needs:rcounter1,PLL1mode,PLL1phasepolarity,SELT,PLL1 ; Initializes and commands PLL1 R Buffer(s)
-
-  //10.initialize DDS1 by resetting. Frequency is commanded to zero
-  //It should power up in parallel mode, but could power up in a bogus condition.
-  if (activeConfig->cb == 0 && activeConfig->dds1parser == 0)
-    lpt.ResetDDS1par();//(Orig Control)//needs:control,STRBAUTO,contclear ; resets DDS1 on J5, parallel ver111-21
-  if (activeConfig->cb == 0 && activeConfig->dds1parser == 1)
-    lpt.ResetDDS1ser();//(Orig Control)//needed:control,AUTO,STRB,contclear  ; resets DDS1 on J5, into serial mode ver111-21
-  if (activeConfig->cb == 2)
-    lpt.ResetDDS1serSLIM(vars->phaarray[vars->thisstep][0], filtbank);//reset serial DDS1 without disturbing Filter Bank or PDM //ver111-29
-  if (activeConfig->cb == 3)
-    ResetDDS1serUSB();//reset serial DDS1 without disturbing Filter Bank or PDM  //USB:01-08-2010
   SkipHardwareInitialization();
 }
 
@@ -1856,8 +1858,8 @@ void hwdInterface::ReadStep()
 {
 
   //and put raw data bits into arrays. //heavily modified ver116-1b
-  int nonPhaseMode=((vars->msaMode=="SA") || (vars->msaMode=="ScalarTrans"));   //ver116-4e
-  int doingPhase= ((vars->suppressPhase==0) && (nonPhaseMode==0));   //ver116-4e
+  int nonPhaseMode=((vars->msaMode==modeSA) || (vars->msaMode==modeScalarTrans));
+  int doingPhase= ((vars->suppressPhase==0) && (nonPhaseMode==0));
   int phaseIsStable;
   int magIsStable=0;
   int changePhaseADC=0;
@@ -1865,12 +1867,12 @@ void hwdInterface::ReadStep()
   int repeatOnceMore=0;
   if (vars->useAutoWait)
   {
-    vars->wate=(int)(vars->autoWaitTC+0.5);  //wait this much between measurements ver116-4j
+    vars->wate=(int)(vars->autoWaitTC+0.5);  //wait this much between measurements
     if (doingPhase) phaseIsStable=0; else phaseIsStable=1;
   }
   int prevReadPhaseData = 0;
   int prevReadMagData = 0;
-  for (int readStepCount=1; readStepCount <= 25; readStepCount++)    //ver116-1b added auto wait time procedures
+  for (int readStepCount=1; readStepCount <= 25; readStepCount++)
   {
     //If doing auto wait, repeat up to 25 times until readings become stable, as shown by comparing two
     //successive readings. If not doing auto wait, we bail out in the middle of the first pass.
@@ -1899,9 +1901,8 @@ void hwdInterface::ReadStep()
     //readTime=uTickCount()  //DEBUG
     if (magdata == 0)
     {
-      //ver116-4r deleted            UsbAdcControl.Adcs.struct = 1 // USB: 15/08/10
       ReadMagnitude();//and return with raw magdata bits
-    } //USB:05/12/2010
+    }
 
     vars->magarray[vars->thisstep][3] = magdata; //put raw data into array
     //the phadata could be in dead zone, but magnitude is still valid.
@@ -2173,7 +2174,7 @@ void hwdInterface::ReadMagnitude()
     {
       lpt.ReadAD16Status();
     }
-    magdata = lpt.Process16Mag();
+    lpt.Process16Mag(magdata);
   }
     //and return here with just magdata //ver111-33b
     if (activeConfig->cb != 3 && activeConfig->adconv == 22)
@@ -2186,13 +2187,13 @@ void hwdInterface::ReadMagnitude()
 void hwdInterface::ReadPhase()
 {
   //needed: port,status ; creates: phadata (and magdata for serial A/D//s)
-  if (vars->suppressHardware)  //ver115-6c
+  if (vars->suppressHardware)
   {
     phadata=0;
   }
   else
   {
-    switch(activeConfig->adconv)  //ver116-1b
+    switch(activeConfig->adconv)
     {
     case 8:
       lpt.Read8Bitpha(); //and return here with phadata only
@@ -2208,7 +2209,7 @@ void hwdInterface::ReadPhase()
       if (activeConfig->cb != 3 && activeConfig->adconv == 16)
       {
         lpt.ReadAD16Status();
-        lpt.Process16MagPha();
+        lpt.Process16MagPha(magdata, phadata);
       }
       if (activeConfig->cb != 3 && activeConfig->adconv == 22)
       {
@@ -2386,7 +2387,7 @@ void hwdInterface::ProcessDataArrays()
   //For reflection mode; do jig calc and/or apply OSL calibration ver115-1b
   //But data as is if we are doing calibration. ver115-1e
   TransferToDataArrays();
-  if (vars->msaMode=="VectorTrans" || vars->msaMode=="ScalarTrans")
+  if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
   {
     if (vars->calInProgress==0 && vars->planeadj!=0)
     {
@@ -2397,7 +2398,7 @@ void hwdInterface::ProcessDataArrays()
   }
   else
   {
-    if (vars->msaMode=="Reflection")
+    if (vars->msaMode==modeReflection)
     {
       ConvertRawDataToReflection(vars->thisstep);    //Apply calibration and calculate all reflection related data; apply OSL if necessary ver116-4n
     }
@@ -2421,14 +2422,14 @@ void hwdInterface::TransferToDataArrays()
   //scanning process.
   //Note data in datatable has no adjustment for planeadj, but these other arrays do
 
-  if (vars->msaMode=="VectorTrans" || vars->msaMode=="ScalarTrans")
+  if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
   {
     vars->S21DataArray[vars->thisstep][0]=thisfreq;   //actual signal freq
     vars->S21DataArray[vars->thisstep][1]=thisDB;   //mag
     vars->S21DataArray[vars->thisstep][2]=thisAng;  //phase--may be changed by plane extension
     vars->S21DataArray[vars->thisstep][3]=thisAng;  //phase before plane extension ver116-1b
   }
-  if (vars->msaMode=="Reflection")
+  if (vars->msaMode==modeReflection)
   {
     for (int i=1; i <= 16; i++)
     {
@@ -2545,19 +2546,19 @@ void hwdInterface::ConvertMagPhaseData()
     magdata = vars->magarray[vars->thisstep][3];
     //Apply mag calibration to get power and phase correction
 
-    if (vars->msaMode!="SA" && vars->msaMode!="ScalarTrans") doPhaseCor=1; else doPhaseCor=0; //ver115-1a
+    if (vars->msaMode!=modeSA && vars->msaMode!=modeScalarTrans) doPhaseCor=1; else doPhaseCor=0; //ver115-1a
     calMan->calConvertMagPhase(magdata, doPhaseCor, power, difPhase);    //ver114-5n
     //int thisfreq = vars->datatable[vars->thisstep][1];
     freqerror=vars->freqCorrection[vars->thisstep]; //find freq cal adjustment SEWgraph1
     //In SA mode, if there is an active front end file, we add the front end correction factor
-    if (vars->msaMode=="SA")
+    if (vars->msaMode==modeSA)
     {
       if (vars->frontEndActiveFilePath!="") freqerror=freqerror-vars->frontEndCorrection[vars->thisstep];    //ver115-9d
     }
   }
   else
   {
-    if (vars->calInProgress && vars->msaMode!="Reflection")  //ver116-4b
+    if (vars->calInProgress && vars->msaMode!=modeReflection)  //ver116-4b
     {
       //If calibrating transmission, we want to use ideal results so when we display the actual doSpecialGraph
       //it will come out the way we want.
@@ -2576,19 +2577,23 @@ void hwdInterface::ConvertMagPhaseData()
   //[CalcMagpowerPixel]
   power = power + freqerror;
   if (convdatapwr == 1)
-    ConvertDataToPower(); //ver112-2b
+  {
+    ConvertDataToPower();
+  }
   //round off MSA input power to .01 dBm, magpower, no matter which AtoD is used
-  int magpower = power; //ver115-2d
+  float magpower = power;
   //Note if calInProgress=1, applyCalLevel will have been set to 0 by cal installation routine
   if (vnaCal->applyCalLevel>0)
   {
-    if (vars->msaMode!="SA")
+    if (vars->msaMode!=modeSA)
       magpower = magpower - vars->lineCalArray[vars->thisstep][1];
   }  //ver116-4n  subtract reference.
   if (magpower>=0)
     magpower=(int)(magpower*100000+0.5)/100000;
   else
     magpower=(int)(magpower*100000-0.5)/100000; //round to five decimal places ver115-4d
+
+  magpower = -50 + 50 * sin((float)vars->thisstep);  ////fix me debugging
   vars->datatable[vars->thisstep][2] = magpower;    //put current power measurement into the array
   return; //to [ProcessAndPrint]
 
@@ -2603,7 +2608,7 @@ void hwdInterface::CalcMagpowerPixel()
     'round off MSA input power to .01 dBm, magpower, no matter which AtoD is used
     magpower = power 'ver115-2d
         'Note if calInProgress=1, applyCalLevel will have been set to 0 by cal installation routine
-    if applyCalLevel>0 then if (msaMode$<>"SA") then  magpower = magpower - lineCalArray(thisstep,1)  'ver116-4n  subtract reference.
+    if applyCalLevel>0 then if (msaMode$<>modeSA) then  magpower = magpower - lineCalArray(thisstep,1)  'ver116-4n  subtract reference.
     if magpower>=0 then magpower=int(magpower*100000+0.5)/100000 else magpower=int(magpower*100000-0.5)/100000 'round to five decimal places ver115-4d
     datatable(thisstep,2) = magpower    'put current power measurement into the array
     return 'to [ProcessAndPrint]
@@ -2644,7 +2649,7 @@ difPhase=0 : freqerror=0  'ver114-7e
         call calGetMagPoint 1,minADC, calMag, calPhase    'ignore calMag and calPhase
         call calGetMagPoint calNumMagPoints(),maxADC, calMag, calPhase
         magdata=3*(1+RND(1)/20)*(maxADC)/4 +  3000*sin(10*datatable(thisstep,1)) 'ver114-7b
-        if msaMode$="VectorTrans" or msaMode$="ScalarTrans" then magdata=1.1*magdata    'Increase transmission values ver116-1b
+        if msaMode$=modeVectorTrans or msaMode$=modeScalarTrans then magdata=1.1*magdata    'Increase transmission values ver116-1b
         'Note: without being connected to MSA, which is when DoSpecialGraph is useful,
         'phase will bounce between 0 and 180 and thus will show some graph action.
         call calConvertMagPhase magdata, 1, power, difPhase 'ver114-5n
@@ -2667,7 +2672,7 @@ difPhase=0 : freqerror=0  'ver114-7e
             'doSpecialGraph=5
             'For SA mode, do response of a 1 MHz square wave.
             'For VNA modes, Calc response of an RLC circuit with optional transmission line 'ver114-7e
-       if msaMode$="SA" then    'ver115-4c added the 1 MHz square wave for SA mode
+       if msaMode$=modeSA then    'ver115-4c added the 1 MHz square wave for SA mode
             currXVal=gGetPointXVal(thisstep+1)
             specialWholeFreq=int(currXVal+0.5) : specialFractFreq=currXVal-specialWholeFreq 'fract may be -0.5 to +0.5
             specialNoise=(1e-11)*finalbw*(1+4*Rnd(0))
@@ -2683,7 +2688,7 @@ difPhase=0 : freqerror=0  'ver114-7e
             uWorkNumPoints=1 : uWorkArray(1,0)=gGetPointXVal(thisstep+1) 'ver115-1c  'set up for uRLCComboResponse
             uWorkArray(1,1)=0:uWorkArray(1,2)=0 'Default in case of error
             'Calc response in whatever S11 or S21 setup the user has chosen
-            if msaMode$="Reflection" then
+            if msaMode$=modeReflection then
                 doSpecialR0=S11BridgeR0 : doSpecialJig$="S11"   'ver115-4a
             else
                 doSpecialR0=S21JigR0
@@ -2868,7 +2873,7 @@ sub FunctChangeAndSaveSweepParams saveSettings, bandToBase, newSteps, newStart, 
     call gSetXIsLinear newLinear
     call gSetNumDynamicSteps globalSteps    'Tell graph module
     call SetStartStopFreq newStart, newEnd
-    if bandToBase and (msaMode$="VectorTrans" or msaMode$="ScalarTrans") then
+    if bandToBase and (msaMode$=modeVectorTrans or msaMode$=modeScalarTrans) then
         call TransferBandToBaseLineCal  'Make current band cal into a base cal so it can be interpolated
         desiredCalLevel=1   'Use the base cal we just created
         call SignalNoCalInstalled   'ver116-4b
@@ -2933,7 +2938,7 @@ void hwdInterface::FunctRestoreSweepParams()
     call SetStartStopFreq functSaveStartFreq, functSaveEndFreq
     call gSetNumDivisions functSaveNumHorDiv, functSaveNumVertDiv
 
-    if msaMode$="VectorTrans" or msaMode$="ScalarTrans" then
+    if msaMode$=modeVectorTrans or msaMode$=modeScalarTrans then
         dum=LoadBaseLineCalFile()   'Reload base cal file to restore prior state
     end if
     desiredCalLevel=functSaveDesiredCalLevel    'ver115-5e
@@ -2948,7 +2953,7 @@ void hwdInterface::FillRegularGraphData(int axisNum)
 function FillRegularGraphData(axisNum) 'Fill axisGraphData$ and axisDataType for regular scan graphs; return number of graphs
     'Added by ver116-1b
     for i=0 to 40 : axisGraphData$(i)="" : next i
-    if msaMode$="SA" then
+    if msaMode$=modeSA then
         axisGraphData$(0)="Magnitude (dBm)" : axisDataType(0)=constMagDBM
         axisGraphData$(1)="Magnitude (Watts)" : axisDataType(1)=constMagWatts
         axisGraphData$(2)="Magnitude (Volts)" : axisDataType(2)=constMagV
@@ -2956,7 +2961,7 @@ function FillRegularGraphData(axisNum) 'Fill axisGraphData$ and axisDataType for
                         axisGraphData$(3)="None" : axisDataType(3)=constNoGraph   'ver115-3b
         numGraphs=4   'ver115-4a
     end if
-    if msaMode$="ScalarTrans" then
+    if msaMode$=modeScalarTrans then
         axisGraphData$(0)="Transmission (dB)": axisDataType(0)=constMagDB   'ver115-4f
         axisGraphData$(1)="Transmission (Ratio)" : axisDataType(1)=constMagRatio    'ver115-4f
         axisGraphData$(2)="Insertion Loss (db)" : axisDataType(2)=constInsertionLoss
@@ -2965,7 +2970,7 @@ function FillRegularGraphData(axisNum) 'Fill axisGraphData$ and axisDataType for
                         axisGraphData$(3)="None" : axisDataType(3)=constNoGraph: numGraphs=numGraphs+1 'ver116-1b
     end if
 
-    if msaMode$="VectorTrans" then
+    if msaMode$=modeVectorTrans then
         axisGraphData$(0)="S21 Magnitude (dB)" :axisDataType(0)=constMagDB
         axisGraphData$(1)="S21 Phase Angle" : axisDataType(1)=constAngle
         axisGraphData$(2)="Raw Power (dBm)" : axisDataType(2)=constMagDBM
@@ -2978,7 +2983,7 @@ function FillRegularGraphData(axisNum) 'Fill axisGraphData$ and axisDataType for
                         axisGraphData$(6)="None" : axisDataType(6)=constNoGraph: numGraphs=numGraphs+1 'ver116-1b
     end if
         'ver115-2d changed some reflection graph names
-    if msaMode$="Reflection" then   'ver115-1f added impedance and renumbered
+    if msaMode$=modeReflection then   'ver115-1f added impedance and renumbered
         axisGraphData$(0)="S11 Magnitude (dB)" : axisDataType(0)=constGraphS11DB
         axisGraphData$(1)="S11 Phase Angle (Deg)" : axisDataType(1)=constGraphS11Ang
         axisGraphData$(2)="Reflect Coef. Mag (Rho)" : axisDataType(2)=constRho
@@ -3027,7 +3032,7 @@ void hwdInterface::RecalcPlaneExtendAndR0AndRedraw()
 sub RecalcPlaneExtendAndR0AndRedraw  'Recalculate ReflectArray or S21DataArray for new planeadj, and Reflect array for new R0 and redraw graph
     call gGetMinMaxPointNum pStart, pEnd    'start and stop of points actually in current graph
     for currStep=pStart-1 to pEnd-1     'step numbers are one less than point numbers
-        if msaMode$="Reflection" then
+        if msaMode$=modeReflection then
             'For reflection, ReflectArray contains intermediate values of db and angle before plane
             'extension was done, and before any R0 transform. We just start with those and recalculate.
             currFreq=ReflectArray(currStep,0)
@@ -3115,10 +3120,10 @@ void hwdInterface::titleFinished()
         #TwoPortGraphBox$, "flush"
     else
         call gSetTitleLine 1, t1$ : call gSetTitleLine 2, t2$ : call gSetTitleLine 3, t3$
-        if msaMode$="Reflection" then 'ver116-1b
+        if msaMode$=modeReflection then 'ver116-1b
             refLastTitle$(1)=t1$ : refLastTitle$(2)=t2$ : refLastTitle$(3)=t3$
         else
-            if msaMode$="VectorTrans" then transLastTitle$(1)=t1$ : transLastTitle$(2)=t2$ : transLastTitle$(3)=t3$
+            if msaMode$=modeVectorTrans then transLastTitle$(1)=t1$ : transLastTitle$(2)=t2$ : transLastTitle$(3)=t3$
         end if
             'Refresh the graph,but in stick mode this will eliminate
         'the stuck traces, so just reprint the title ver114-7d revised this procedure
@@ -3701,7 +3706,7 @@ void hwdInterface::FillDDS1array(int step)
   dds_1[step].array[43] = w3;
   dds_1[step].array[44] = w4;
   dds_1[step].base = base; //base is decimal command
-  dds_1[step].freq = base*ddsclock / pow(2,32); //actual dds 1 output freq
+  dds_1[step].freq = base*ddsclock / pow(2.0,32); //actual dds 1 output freq
 }
 
 void hwdInterface::FillDDS3array(int )
@@ -3860,7 +3865,7 @@ void hwdInterface::DetermineModule(int step)
     vars->lastdds3output = vars->dds3output;
   }
 
-  if (vars->suppressPhase || vars->msaMode=="SA" || vars->msaMode=="ScalarTrans")
+  if (vars->suppressPhase || vars->msaMode==modeSA || vars->msaMode==modeScalarTrans)
     return; // not in VNA mode, skip the PDM
   pdmcmd = vars->phaarray[step][0];
   if (pdmcmd == vars->lastpdmstate)
@@ -3969,7 +3974,7 @@ void hwdInterface::SpecialTests()
     button #special.dds3track, "DDS 3 Track", [DDS3Track], UL, 5, 105, 75, 20 'ver111-39d
     statictext #special.dds3trktxt, "0-32", 80, 107, 25, 15 'ver112-2c
     button #special.dds1track, "DDS 1 Sweep", [DDS1Sweep], UL, 115, 105, 75, 20 'ver112-2c
-    if msaMode$<>"SA" and msaMode$<>"ScalarTrans" then
+    if msaMode$<>modeSA and msaMode$<>modeScalarTrans then
         button #special.pdminv, "Change PDM", [ChangePDM], UL, 5, 130, 90, 20 'ver115-4d
         button #special.insert, "Sync Test PDM", [SyncTestPDM], UL, 5, 155, 90, 20 'ver112-2f
         button #special.prevnalin, "Preset Phase Linearity", [PresetVNAlin], UL, 5, 180, 150, 20 'ver112-2f ver114-5n ver114-8c
@@ -4083,7 +4088,7 @@ void hwdInterface::MSAinputData()
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 [MSAinputData]  'renamed ver115-5d
-    if msaMode$<>"SA" and msaMode$<>"ScalarTrans" then goto [MagnitudePhaseMSAinput]    'Do phase if we have it
+    if msaMode$<>modeSA and msaMode$<>modeScalarTrans then goto [MagnitudePhaseMSAinput]    'Do phase if we have it
     gosub [OpenDataWindow]
     print #datawin," Step           Calc Mag  Mag AtoD Freq Cal"
     print #datawin," Num   Freq(MHz)  Input   Bit Val   Factor"
@@ -4284,7 +4289,7 @@ void hwdInterface::LineCalArray()
   /*'ver115-2d
     gosub void hwdInterface::OpenDataWindow()
     xclm$="!"
-    if msaMode$="Reflection" then print #datawin,"Cal Reference" else print #datawin,"Line Calibration" 'ver115-4d
+    if msaMode$=modeReflection then print #datawin,"Cal Reference" else print #datawin,"Line Calibration" 'ver115-4d
     print #datawin,"!select 1 1"
     print #datawin,"!insert xclm$ +"
     print #datawin, " Freq(MHz)   Cal_Mag Cal_Ang"
@@ -4545,15 +4550,15 @@ void hwdInterface::CopyModeDataToVNAData(int doIntermed)
     redim VNAData(globalSteps, 2)   'Allow for freq, db and ang
     for i=0 to globalSteps
         select case msaMode$
-            case "SA"
+            case modeSA
                 f=ActualSignalFrequency(datatable(i,1), datatable(i,4)) 'true freq in MHz, not what hardware thinks it tuned to ver116-4m 'ver116-4s
                 db=datatable(i,2)   'dBm
                 ang=0
-            case "ScalarTrans"
+            case modeScalarTrans
                 f=S21DataArray(i,0) 'true freq
                 db=S21DataArray(i,1)   'dB
                 ang=0
-            case "VectorTrans"
+            case modeVectorTrans
                 f=S21DataArray(i,0) 'true freq
                 db=S21DataArray(i,1)   'dB
                 if doIntermed then ang=S21DataArray(i,2) : ang=S21DataArray(i,2)    'deg, intermediate or final ver116-4j
@@ -4570,7 +4575,7 @@ void hwdInterface::CopyModeDataToVNAData(int doIntermed)
     for i=1 to 4: VNADataTitle$(i)=gGetTitleLine$(i) : next i
     VNADataNumSteps=globalSteps : VNADataLinear=gGetXIsLinear()
         'In SA mode we will end up with a bogus value for VNADataZ0, but it is meaningless anyway.
-    if msaMode$="Reflection" then VNADataZ0=S11GraphR0 else VNADataZ0=S21JigR0
+    if msaMode$=modeReflection then VNADataZ0=S11GraphR0 else VNADataZ0=S21JigR0
     */
 }
 void hwdInterface::autoWaitPrecalculate()
@@ -4586,7 +4591,7 @@ void hwdInterface::autoWaitPrecalculate()
   else if (vars->autoWaitPrecision == "Normal")
   {
       autoWaitMaxErrorDegrees=0.1;
-      if (vars->msaMode=="SA") autoWaitMaxErrorDB=0.25; else autoWaitMaxErrorDB=0.1;
+      if (vars->msaMode==modeSA) autoWaitMaxErrorDB=0.25; else autoWaitMaxErrorDB=0.1;
   }
   else   // "Precise"
   {
@@ -4601,7 +4606,7 @@ void hwdInterface::autoWaitPrecalculate()
   float maxErrorLowEndADC=autoWaitMaxErrorDB*vars->calLowEndSlope;
   float maxErrorCenterADC=autoWaitMaxErrorDB*vars->calCenterSlope;
   float maxErrorHighEndADC=autoWaitMaxErrorDB*vars->calHighEndSlope;
-  if (vars->msaMode=="SA" || vars->msaMode=="ScalarTrans") vars->autoWaitTC=vars->videoMagTC; else vars->autoWaitTC=qMax(vars->videoMagTC, vars->videoPhaseTC);    //ver116-4j
+  if (vars->msaMode==modeSA || vars->msaMode==modeScalarTrans) vars->autoWaitTC=vars->videoMagTC; else vars->autoWaitTC=qMax(vars->videoMagTC, vars->videoPhaseTC);    //ver116-4j
 
 
   //We do repeated reads
@@ -4618,7 +4623,7 @@ void hwdInterface::autoWaitPrecalculate()
   //if we knew the actual time, but the approach here is conservative.
   //For mag, N=1 so R=0.58
   //ver116-4j changed to use autoWaitTC rather than videoMagTC as the basic wait time
-  int N=vars->autoWaitTC/vars->videoMagTC;   //number of mag time constants that we wait
+  float N=vars->autoWaitTC/vars->videoMagTC;   //number of mag time constants that we wait
   float unsettledFract=exp(0-N);
   double R=qMax(0.3, (double)(unsettledFract/(1-unsettledFract)));    //Limit R to be conservative
   vars->autoWaitMaxChangeLowEndADC=int(maxErrorLowEndADC/R)+1;

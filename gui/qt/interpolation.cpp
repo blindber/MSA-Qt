@@ -218,65 +218,112 @@ void interpolation::intLinearInterpolation(int freq, int isPolar, int f1, int R1
 void interpolation::intCreateCubicCoeffTable(int doPart1, int doPart2, int isAngle, int favorFlat, int doingPhaseCorrection)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
- 'Create table of cubic coefficients intSrc() in intCubicCoeff ver116-1b
-    'We separately calculate for the specified parts of srcInt. If isAngle=1 then part2 is an angle.
-    'We pass favorFlat on to intCalcCubicCoeff, except if part2 is an angle we pass on favorFlat=1 for that part.
-    'Each entry of the cubic coefficient table will have 4 numbers. 0-3 are the A,B,C,D
-    'coefficients for interpolating the frequency power correction, which is a scalar.
-    'Angles must be in the range -180<=angle<=180
-    'If doingPhaseCorrection is 1, we are interpolating the phase correction factor,
-    'and want to force the correction to 180 if this point phase correction is >179 or <-179. Extreme
-    'correction values are used to indicate that phase at that level is unreliable, so the table of
-    'phase corrections may have values of 180 for all ADC readings at and below a certain level. ver116-1b
-    for i=1 to intSrcPoints
-        if doPart1=0 then
-            A=0 : B=0 : C=0 : D=0
-        else
-            partNum=1 : partIsAngle=0
-            call intCalcCubicCoeff i,partNum,partIsAngle,favorFlat,A,B,C,D
-        end if
-        intSrcCoeff(i,0)=A :intSrcCoeff(i,1)=B
-        intSrcCoeff(i,2)=C :intSrcCoeff(i,3)=D
-        forcedTo180=0
-        if doingPhaseCorrection=1 then  'ver116-1b
-            'If this point is 180, force calculation to 180
-            checkPhase=intSrc(i,2)
-            if checkPhase>179 or checkPhase<-179 then
-                'This point is 180; set coefficients so phase correction will calculate to 180
-                A=180 : B=0 : C=0 : D=0
-                forcedTo180=1   'Flag that we need no more calculation at this point
-            end if
-            if forcedTo180=0 then
-                'this point is not 180 but one of prior two points is, then treat the 180 value
-                'as being the same as this point. Note we may alter intSrc, but that is just a temporary
-                'array used only for these interpolations.
-                if i>1 then
-                    checkPhase=intSrc(i-1,2)
-                    if checkPhase>179 or checkPhase<-179 then intSrc(i-1,2)=intSrc(i,2)
-                end if
-                if i>2 then
-                    checkPhase=intSrc(i-2,2)
-                    if checkPhase>179 or checkPhase<-179 then intSrc(i-2,2)=intSrc(i,2)
-                end if
-            end if
-        end if
 
-        if doPart2=0 then
-            A=0 : B=0 : C=0 : D=0
+ //Create table of cubic coefficients intSrc() in intCubicCoeff ver116-1b
+    //We separately calculate for the specified parts of srcInt. If isAngle=1 then part2 is an angle.
+    //We pass favorFlat on to intCalcCubicCoeff, except if part2 is an angle we pass on favorFlat=1 for that part.
+    //Each entry of the cubic coefficient table will have 4 numbers. 0-3 are the A,B,C,D
+    //coefficients for interpolating the frequency power correction, which is a scalar.
+    //Angles must be in the range -180<=angle<=180
+    //If doingPhaseCorrection is 1, we are interpolating the phase correction factor,
+    //and want to force the correction to 180 if this point phase correction is >179 or <-179. Extreme
+    //correction values are used to indicate that phase at that level is unreliable, so the table of
+    //phase corrections may have values of 180 for all ADC readings at and below a certain level. ver116-1b
+
+  int A, B, C, D;
+  int partNum;
+  int partIsAngle;
+  int forcedTo180;
+  int checkPhase;
+  int doFlat;
+    for (int i=1; i <= intSrcPoints; i++)
+    {
+        if (doPart1==0)
+        {
+            A=0;
+            B=0;
+            C=0;
+            D=0;
+        }
         else
-            if forcedTo180=0 then    'ver116-1b
-                partNum=2 : partIsAngle=isAngle
-                'For an angle, specify to "favor flat", because
-                'we expect the phase not to approach vertical
-                if isAngle then doFlat=1 else doFlat=favorFlat
-                call intCalcCubicCoeff i,partNum,partIsAngle,doFlat,A,B,C,D
-            end if
-        end if
-        intSrcCoeff(i,4)=A :intSrcCoeff(i,5)=B
-        intSrcCoeff(i,6)=C :intSrcCoeff(i,7)=D
-    next i
-    */
+        {
+            partNum=1;
+            partIsAngle=0;
+            intCalcCubicCoeff(i,partNum,partIsAngle,favorFlat,A,B,C,D);
+        }
+        intSrcCoeff[i][0]=A;
+        intSrcCoeff[i][1]=B;
+        intSrcCoeff[i][2]=C;
+        intSrcCoeff[i][3]=D;
+        forcedTo180=0;
+        if (doingPhaseCorrection==1)
+        {
+            //If this point is 180, force calculation to 180
+            checkPhase=intSrc[i][2];
+            if (checkPhase>179 || checkPhase<-179)
+            {
+                //This point is 180; set coefficients so phase correction will calculate to 180
+                A=180;
+                B=0;
+                C=0;
+                D=0;
+                forcedTo180=1;   //Flag that we need no more calculation at this point
+            }
+            if (forcedTo180==0)
+            {
+                //this point is not 180 but one of prior two points is, then treat the 180 value
+                //as being the same as this point. Note we may alter intSrc, but that is just a temporary
+                //array used only for these interpolations.
+                if (i>1)
+                {
+                    checkPhase=intSrc[i-1][2];
+                    if (checkPhase>179 || checkPhase<-179)
+                    {
+                      intSrc[i-1][2]=intSrc[i][2];
+                    }
+                }
+                if (i>2)
+                {
+                    checkPhase=intSrc[i-2][2];
+                    if (checkPhase>179 || checkPhase<-179)
+                    {
+                      intSrc[i-2][2]=intSrc[i][2];
+                    }
+                }
+            }
+        }
+
+        if (doPart2==0)
+        {
+            A=0;
+            B=0;
+            C=0;
+            D=0;
+        }
+        else
+        {
+            if (forcedTo180==0)
+            {
+                partNum=2;
+                partIsAngle=isAngle;
+                //For an angle, specify to "favor flat", because
+                //we expect the phase not to approach vertical
+                if (isAngle)
+                {
+                  doFlat=1;
+                }
+                else
+                {
+                  doFlat=favorFlat;
+                }
+                intCalcCubicCoeff(i,partNum,partIsAngle,doFlat,A,B,C,D);
+            }
+        }
+        intSrcCoeff[i][4]=A;
+        intSrcCoeff[i][5]=B;
+        intSrcCoeff[i][6]=C;
+        intSrcCoeff[i][7]=D;
+    }
 }
 void interpolation::intCalcCubicCoeff(int pointNum, int partNum, int isAngle, int favorFlat, int &A, int &B, int &C, int &D)
 {

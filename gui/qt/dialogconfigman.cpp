@@ -698,7 +698,7 @@ QString dialogConfigMan::configFormatFilter(float freq, float bw)
   }
   else
   {
-    space.fill(' ', 5-(int)(log(bw)/log(10)));
+    space.fill(' ', 5-(int)(log((double)bw)/log((double)10)));
     bwPad=space; //Aligns bw at decimal;
   }
   QString sbw = bwPad+QString::number(bw);
@@ -745,20 +745,20 @@ void dialogConfigMan::configSelADconv()
   //Select ADC and automatically change maxpdmoutout to match
 
   int i = ui->adconv->currentIndex();
-  int maxP;
+  double maxP;
   switch(i)
   {
     case 0:  //8 bit
-        maxP=pow(2,8)-1;
+        maxP=pow(2.0,8.0)-1;
         break;
     case 1:  //12 bit
-        maxP=pow(2,12)-1;
+        maxP=pow(2.0,12.0)-1;
         break;
     case 2:  //16 bit
-        maxP=pow(2,16)-1;
+        maxP=pow(2.0,16.0)-1;
         break;
     default:  //12 bit
-        maxP=pow(2,12)-1;
+        maxP=pow(2.0,12.0)-1;
   }
   ui->PDM->setText(QString::number(maxP));
 }

@@ -45,10 +45,10 @@ class Q2DVector : public QVector< QVector<T> >
     { *this += l; return *this; }
     virtual ~Q2DVector() {}
 };
-typedef Q2DVector<bool> Q2DBoolVector;
+//typedef Q2DVector<bool> Q2DBoolVector;
 typedef Q2DVector<float> Q2DfloatVector;
 typedef Q2DVector<int> Q2DintVector;
-typedef Q2DVector<QString> Q2DQStringVector;
+//typedef Q2DVector<QString> Q2DQStringVector;
 
 
 class globalVars
@@ -139,8 +139,8 @@ public:
       int specialOneSweep;  //=1 when [Restart] is called to do one sweep and then return, rather than wait. ver 114-5f
       int returnBeforeFirstStep;    //=1 to initialize on Restart and return to caller before taking any data ver115-1d
       int haltedAfterPartialRestart;    //=1 after halting as a result of returnBeforeFirstStep. Set to 0 when scan continues. ver1166-1b
-      QString msaMode;//$      //=SA, ScalarTrans, VectorTrans or Reflection
-      QString menuMode;//$    //msaMode$ to which the graph window menus currently conform
+      int msaMode;//$      //=SA, ScalarTrans, VectorTrans or Reflection
+      int menuMode;//$    //msaMode$ to which the graph window menus currently conform
       QString restartTimeStamp;//$    //Date/time of last restart
       int primaryAxisNum;   //1 or 2, to indicate primary Y axis (e.g. where mag dBm defaults to) ver115-3b
 
@@ -283,7 +283,7 @@ public:
 
       //Globals used to remember state info to allow detection of user changes; added by ver114-6e
       //See RememberState and DetectChanges
-      QString prevMSAMode;     //msaMode$
+      int prevMSAMode;     //msaMode$
       //QString prevPath;        //Filter path. ver115-1a
       int prevFreqMode;     //frequency mode and auto band switch ver116-4s
       float prevStartF, prevEndF, prevBaseF;    //ver116-4k

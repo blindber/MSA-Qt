@@ -221,7 +221,7 @@ void referenceDialog::ShowEligibleTraces()
     ui->t2->setVisible(false);
   }
   bool fixed = ui->UseFixed->checkState();
-  if (settings.msaMode=="Reflection" && !fixed)
+  if (settings.msaMode==modeReflection && !fixed)
   {
     //Show smith only in reflection mode when reference lines are enabled
     //and not using fixed value reference
@@ -413,7 +413,7 @@ void referenceDialog::load()
   ui->colorSmith->setStyleSheet( QString("background: %1;").arg(settings.referenceColorSmith) );
 
   if (settings.referenceLineType==0) settings.referenceTrace=0;
-  if (settings.msaMode=="SA") ui->UseRLC->setVisible(false); //Can't do RLC in SA mode
+  if (settings.msaMode == modeSA) ui->UseRLC->setVisible(false); //Can't do RLC in SA mode
 
   if (settings.referenceTrace & 2)   //Do trace 2
   {
@@ -463,7 +463,7 @@ void referenceDialog::load()
   {
     ui->both->setChecked(true); //Graph ref and data without doing math
   }
-  if (settings.msaMode=="SA")   //Only SA has these boxes ver115-5d
+  if (settings.msaMode==modeSA)   //Only SA has these boxes ver115-5d
   {
     if (settings.referenceDoMath==2)
     {
@@ -484,7 +484,7 @@ void referenceDialog::load()
     ui->mathOnGraph->setVisible(false); //THESE ARE TEMPORARILY DISABLED ver115-5d
   }
 
-  if (settings.msaMode!="Reflection")
+  if (settings.msaMode!=modeReflection)
   {
     ui->smith->setVisible(false);
     ui->colorLabelSmith->setVisible(false);

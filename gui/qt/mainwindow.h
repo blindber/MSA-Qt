@@ -71,17 +71,15 @@ private:
   msagraph *graph;
   hwdInterface *hwdIf;
   DebugModule debug;
-  QTimer *timerStart;
-  QTimer *timerStart2;
+  //QTimer *timerStart;
+  //QTimer *timerStart2;
   dialogShowVars *showVars;
 
 
   void CalcFreqCorrection();
 
-  void StartSweep();
   void CommandThisStep();
-  void PostScan();
-  void IncrementOneStep();
+  int PostScan();
   void FinishSweeping();
   void ReverseSweepDirection();
 
@@ -110,7 +108,6 @@ private:
   void menuQuitMultiscan();
   void ConformMenusToMode();
   void menuExpandSweep();
-  void btnRedraw();
   void RestartSATGmode();
   void RestartPlainSAmode();
   void RestartSAmodes();
@@ -272,7 +269,6 @@ public slots:
   void RequireRestart();
   void CleanupAfterSweep();
   void ChangeMode();
-  void Restart();
   void SkipHardwareInitialization();
   void ResizeArrays(int);
   void delayedStart();
@@ -282,7 +278,13 @@ public slots:
 
   void Showvar();
   void updatevar(int);
+
+  void Restart();
   void Halted();
+  //void IncrementOneStep();
+  void StartSweep();
+
+
 
 
 };

@@ -17,6 +17,7 @@
 #include "msautilities.h"
 #include <QMessageBox>
 #include <QFileDialog>
+#include <math.h>
 //==========================UTILITIES MODULE===========================================
 
 msaUtilities::msaUtilities()
@@ -24,8 +25,8 @@ msaUtilities::msaUtilities()
   uKRadsPerDegree=0.0174532925199433;
   uKDegreesPerRad=57.2957795130823;
   uKPi=3.14159265358979;
-  uKNatLog10=log(10);
-  uKE=exp(1);
+  uKNatLog10=log(double(10));
+  uKE=exp(double(1));
 }
 
 QString msaUtilities::uGetLine(QString inStr, int &startPos)
@@ -629,7 +630,7 @@ void msaUtilities::uScaleWithMultiplier(double  &v, QString &mult)
     else if (absV<1000000000) {mult="M"; v=v/1000000;}// : exit sub
     else if (absV<Q_UINT64_C(1000000000000)) {mult="G"; v=v/1000000000;}// : exit sub   //ver115-1e
     else if (absV< Q_UINT64_C(1000000000000000)) {mult="T"; v=v/Q_UINT64_C(1000000000000);}// : exit sub   //ver115-1e
-    else { mult="P"; v=v/pow(100000,3);}
+    else { mult="P"; v=v/pow((double)100000,3);}
 
   }
   else
@@ -638,7 +639,7 @@ void msaUtilities::uScaleWithMultiplier(double  &v, QString &mult)
     else if (absV>=0.000001) { mult="u";  v=v*1000000;}// : exit sub
     else if (absV>=0.000000001) { mult="n"; v=(v*1000000)*1000;}// : exit sub
     else if (absV>=0.000000000001) {mult="p"; v=(v*1000000)*1000000;}// : exit sub
-    else {mult="f"; v=v*pow(100000,3);}// : exit sub
+    else {mult="f"; v=v*pow((double)100000,3);}// : exit sub
   }
 }
 
@@ -885,7 +886,7 @@ float msaUtilities::uPower(float x, float fpow)
   if (fpow>=0) absPow=fpow; else absPow=0-fpow; //ver114-6k
   if (absPow<5) return pow(x,fpow); //this covers most cases
   if ((int)(fpow)!=fpow) return pow(x,fpow);
-  return pow(x,(fpow-0.1))*pow(x,0.1);
+  return pow(x,(fpow-(float)0.1))*pow(x,(float)0.1);
 }
 float msaUtilities::uATan2(float r, float i)
 {

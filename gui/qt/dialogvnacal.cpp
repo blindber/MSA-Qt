@@ -17,6 +17,8 @@
 #include "dialogvnacal.h"
 #include "ui_dialogvnacal.h"
 #include <QMessageBox>
+#include "constants.h"
+
 dialogVNACal::dialogVNACal(QWidget *parent) :
   QDialog(parent),
   ui(new Ui::dialogVNACal)
@@ -99,7 +101,7 @@ void dialogVNACal::RunVNACal()
         #VNAcal.Delay, lineCalThroughDelay  'Delay in ns 'ver115-5a
     end if
         'Display info about last band and base cals
-    if msaMode$="ScalarTrans" or msaMode$="VectorTrans" then 'ver115-1b
+    if msaMode$=modeScalarTrans or msaMode$="VectorTrans" then 'ver115-1b
         #VNAcal.LastBandCal, "Band: ";CalInfo$(bandLinePath$, bandLineTimeStamp$, bandLineLinear, _
                                 bandLineNumSteps, bandLineStartFreq, bandLineEndFreq)
         #VNAcal.LastBaseCal, "Base: ";CalInfo$(baseLinePath$, baseLineTimeStamp$, baseLineLinear, _
@@ -130,7 +132,7 @@ void dialogVNACal::VNACalFinished()
   /*
 [VNACalFinished]
     if calInProgress=1 then goto [PostScan] 'Don't allow quit in middle of cal
-    if msaMode$="ScalarTrans" or msaMode$="VectorTrans" then    'ver115-4e
+    if msaMode$=modeScalarTrans or msaMode$="VectorTrans" then    'ver115-4e
         if msaMode$="VectorTrans" then   'ver115-4e
             #VNAcal.Delay, "!contents? s$"
             lineCalThroughDelay=val(uCompact$(s$))      'Store in ns; used to initialize if we open dialog again ver115-5a
@@ -283,7 +285,7 @@ void dialogVNACal::SaveBaseCal()
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
 [SaveBaseCal]    'Save current cal as base cal
-    if msaMode$="ScalarTrans" or msaMode$="VectorTrans" then
+    if msaMode$=modeScalarTrans or msaMode$="VectorTrans" then
         call TransferBandToBaseLineCal  'ver115-5c
         call SaveBaseLineCalFile    'Save base line in a file
         #VNAcal.LastBaseCal, "Base: ";CalInfo$(baseLinePath$, baseLineTimeStamp$, baseLineLinear, _
@@ -442,6 +444,7 @@ int dialogVNACal::BandLineCalIsCurrent()
     retVal = 0; //ver115-1b
   return retVal;
   */
+  return 0;
 }
 
 int dialogVNACal::BaseLineCalIsCurrent()
@@ -480,6 +483,7 @@ int dialogVNACal::BaseLineCalIsInstalled()
                         retVal=1; else retVal=0;      //ver115-1b
   return retVal;
   */
+  return 0;
 }
 int dialogVNACal::BandLineCalContextAsTextArray()
 {
@@ -849,7 +853,7 @@ void dialogVNACal::InstallSelectedLineCal(Q2DfloatVector &GraphVal, int MaxPoint
 
     int doPhase, doParams;
     //ver114-5p changed interpolation to use the new Interpolation Module
-    if (vars->msaMode=="SA" || vars->msaMode=="ScalarTrans")
+    if (vars->msaMode==modeSA || vars->msaMode==modeScalarTrans)
     {
       doPhase=0; doParams=1;   //do mag only
     }
