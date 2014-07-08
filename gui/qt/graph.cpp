@@ -128,6 +128,7 @@ msagraph::msagraph(QWidget *parent)
   interpolateMarkerClicks = 0;
   componConst = 0;
 
+  haltMarker = NULL;
 
 
 //****************************
@@ -157,7 +158,7 @@ msagraph::msagraph(QWidget *parent)
   markerIDs[4] = "5"; markerIDs[5] = "6"; markerIDs[6] = "L"; markerIDs[7] = "R";
   markerIDs[8] = "P+"; markerIDs[9] = "P-";
 
-  refreshOnHalt=1;     //We normally redraw the graph when we halt.
+  refreshOnHalt=0;     //We normally redraw the graph when we halt.
   refreshEachScan=1;
   smithLastWindowHeight=430 ;
   smithLastWindowWidth=400;
@@ -515,9 +516,9 @@ float msagraph::gGetPointYVal(int N, int yNum)
   }
   return y;
 }
-int msagraph::gGetPointXVal(float N)
+float msagraph::gGetPointXVal(float N)
 {
-  int x;
+  float x;
   //Return x for specified point (1...)
   //We don't verify that N is in bounds, because its value may have been created with gGenerateXValues
   //and the actual point data may not have been added yet.
@@ -620,7 +621,7 @@ void msagraph::gGenerateXValues(int numValidPoints)
   //Does not affect y values or y pixel coords.
   //ver116-4k: Log sweeps may now be for negative X values. The X values are not allowed to contain or cross zero.
   //If user specifies a zero endpoint, it gets changed to a small value.
-  int numPoints=gDynamicSteps+1;    //ver114-1f
+  int numPoints=gDynamicSteps+1;
   //X axis starts at gXAxisMin and ends at gXAxisMax
   float pixStart=gMarginLeft;
   float pixEnd=gMarginLeft+gGridWidth;
@@ -643,16 +644,20 @@ void msagraph::gGenerateXValues(int numValidPoints)
     if (i==numPoints)
     {
       gGraphVal[i][0]=gXAxisMax;
-      gGraphPix[i][0]=pixEnd;  //to get it exact; ver114-4m
+      gGraphPix[i][0]=pixEnd;  //to get it exact
     }
-    else    //ver114-4k
+    else
     {
       if (x>0)
-        gGraphVal[i][0]=((int)(1000000*x+0.5))/1000000 ;
+      {
+        gGraphVal[i][0]=(double)( (int)(1000000*x+0.5) )/1000000 ;
+      }
       else
-        gGraphVal[i][0]=0-((int)(1000000*(0-x)+0.5))/1000000;    //Round to nearest Hz ver114-4k
+      {
+        gGraphVal[i][0]=0-(double)( (int)(1000000*(0-x)+0.5) )/1000000;    //Round to nearest Hz
+      }
       //We round pixels to the nearest tenth
-      gGraphPix[i][0]=((int)(10*xPix+0.5))/10;
+      gGraphPix[i][0]=(double)( (int)(10*xPix+0.5) )/10;
     }
     xPix=xPix+pixInterval;
     if (gXIsLinear)
@@ -918,6 +923,13 @@ void msagraph::gUpdateGraphObject(int winWidth, int winHt, int marLeft, int marR
 
   //set the size of the area we are going to be drawing in
   graphScene->clear();
+
+  for (int i = 0; i < gErase2.count(); i++)
+  {
+    gErase2[i] = 0;
+  }
+  haltMarker = NULL;
+
   graphScene->addRect(0, 0, winWidth, winHt, QPen(QColor(Qt::magenta)));
   //graphScene->addRect(0, 0, ui->graphicsView->width(), ui->graphicsView->height(), QPen(QColor(Qt::magenta)));
   graphScene->setSceneRect(graphScene->itemsBoundingRect());
@@ -1120,7 +1132,7 @@ void msagraph::gPrintGridLabels()
       thisLabel = gXGridLabels[i];
       if (thisLabel!="")
       {
-        gPrintTextCentered(thisLabel, gMarginLeft+gXGridLines[i], gOriginY+18, gridappearance->gXTextColor);
+        gPrintTextCentered(thisLabel, gMarginLeft+gXGridLines[i], gOriginY+26, gridappearance->gXTextColor);
       }
     }
   }
@@ -1149,7 +1161,7 @@ void msagraph::gPrintGridLabels()
       thisLabel=gY2GridLabels[i];
       if (thisLabel!="")
       {
-        gPrintText(thisLabel, gMarginLeft+gGridWidth+6, gOriginY-gY2GridLines[i]-10, gridappearance->gY2TextColor);
+        gPrintText(thisLabel, gMarginLeft+gGridWidth+6, gOriginY-gY2GridLines[i]-10, QColor(gridappearance->gY2TextColor));
       }
     }
   }
@@ -2179,15 +2191,12 @@ end sub*/
 
 void msagraph::gStartNextDynamicScan()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
- 'Prepare for next pass of dynamic draw
-    #gGraphHandle$, "discard"   'Discard last scan info stored in Liberty Basic
-    gIsFirstDynamicScan=0
-    gPrevPointNum=0
-    call gInitDraw  'implements current color and width in case they were changed at end of prior scan ver116-4s
-    call gInitErase 'Erase first group of segments if required
-end sub*/
+ //Prepare for next pass of dynamic draw
+    //#gGraphHandle$, "discard"   'Discard last scan info stored in Liberty Basic
+    gIsFirstDynamicScan=0;
+    gPrevPointNum=0;
+    gInitDraw();  //implements current color and width in case they were changed at end of prior scan ver116-4s
+    gInitErase(); //Erase first group of segments if required
 }
 
 void msagraph::gDynamicDrawPoint(float y1, float y2)
@@ -2419,8 +2428,15 @@ void msagraph::gDrawSingleTrace()
     }
     if (doErase)
     {
-      graphScene->removeItem(gErase2[thisErasePoint]);
-      delete gErase2[thisErasePoint];
+      if (gErase2[thisErasePoint] != 0)
+      {
+        QGraphicsItem *temp = gErase2[thisErasePoint];
+        graphScene->removeItem(temp);
+        delete temp;
+        //delete gErase2[thisErasePoint];
+        gErase2[thisErasePoint] = 0;
+      }
+
     }  //End Erase
   }
 
@@ -2727,27 +2743,27 @@ void msagraph::gInitErase()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
-  'Initialize Erase.
-      'Erases from point gPrevPointNum to point gPrevPointNum+gEraseLead
-      'When a scan is restarted, gPrevPointNum is 0. If the scan is resumed in the middle,
-      'gPrevPointNum is the last point that was drawn.
+  //Initialize Erase.
+      //Erases from point gPrevPointNum to point gPrevPointNum+gEraseLead
+      //When a scan is restarted, gPrevPointNum is 0. If the scan is resumed in the middle,
+      //gPrevPointNum is the last point that was drawn.
       if (gDoErase1=0 and gDoErase2=0) then exit sub
       saveNum=gPrevPointNum
-      if gPrevPointNum=0 then gPrevPointNum=gSweepStart-gSweepDir 'The point before the starting point ver114-5e
-      if gPrevPointNum=gSweepStart-gSweepDir then extra=1 else extra=0    'ver114-5e
+      if gPrevPointNum=0 then gPrevPointNum=gSweepStart-gSweepDir //The point before the starting point ver114-5e
+      if gPrevPointNum=gSweepStart-gSweepDir then extra=1 else extra=0
       if gEraseLead>0 then
-          nErase=extra+gEraseLead 'ver114-5c
-      else    'reverse sweep
-          nErase=extra-gEraseLead 'gEraseLead is negative 'ver114-5c
-          if gPrevPointNum=0 then gPrevPointNum=gNumPoints+1  'zero signals start at beginning
+          nErase=extra+gEraseLead
+      else    //reverse sweep
+          nErase=extra-gEraseLead //gEraseLead is negative
+          if gPrevPointNum=0 then gPrevPointNum=gNumPoints+1  //zero signals start at beginning
       end if
-      gPrevPointNum=gPrevPointNum-gEraseLead   'gEraseNextPoint will use this
+      gPrevPointNum=gPrevPointNum-gEraseLead   //gEraseNextPoint will use this
       for i=1 to nErase
-              'Note gEraseNextPoint does nothing if the point number gets out of bounds
-          call gEraseNextPoint    'Erase gPrevPointNum+gEraseLead to gPrevPointNum+gEraseLead+1
-          gPrevPointNum=gPrevPointNum+gSweepDir   'ver114-4k
+              //Note gEraseNextPoint does nothing if the point number gets out of bounds
+          call gEraseNextPoint    //Erase gPrevPointNum+gEraseLead to gPrevPointNum+gEraseLead+1
+          gPrevPointNum=gPrevPointNum+gSweepDir
       next
-      gPrevPointNum=saveNum   'Restore
+      gPrevPointNum=saveNum   //Restore
   end sub*/
 }
 void msagraph::gClearMarkers()
@@ -2849,49 +2865,173 @@ void msagraph::gRecalcPix(int calcXPix)
 void msagraph::gDrawMarkerInfo()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub gDrawMarkerInfo 'Draw marker info in specified area
-    '(gMarkerInfoLeft, gMarkerInfoTop) is the upper left for the actual marker info, which will be printed
-    'one line per marker. The heading for the marker info will be printed at the top.
-    'The total display area is 280 pixels wide. markerX will be updated to the rightmost
-    'pixel that is drawn (which will be the bounding box of the marker info.)
-    'Markers whose point number in gMarkerPoints is <=0 will be skipped
-    'The marker info will be in columns, labeled Mark, Freq, Mag and Phase
-    'They will all be right aligned at specific points. If printed in a monotype font, the
-    'decimals, where applicable, will also align. We print each column separately, rather than
-    'using spaces for alignment, because some monotype fonts do not have spaces of the same
-    'width as their characters.
-    nMarkers=gValidMarkerCount()  'Don't count those with negative value for point num
-          'ver115-1b made various changes to be sure marker area is cleared no matter what.
-          'Set drawing color
-    #gGraphHandle$, "font Tahoma 8 bold";       'Set drawing font
-    #gGraphHandle$, "backcolor ";gBackColor$
-    #gGraphHandle$, "size 1"
-    headWidth=120 : headHeight=14
-    if gDoY1 then headWidth=headWidth+55
-    if gDoY2 then headWidth=headWidth+60
-    markerX=gMarkerInfoLeft
-    markerY=gMarkerInfoTop
-    a=gWindowHeight: b=gMarkerInfoTop
-    markPerCol=int((gWindowHeight-5-gMarkerInfoTop-headHeight)/13)
-    maxBoxWidth=2*headWidth+14  'widest possible box area 'ver115-1b
-    if nMarkers>markPerCol then _
-            boxWidth=maxBoxWidth else boxWidth=headWidth+4      'ver115-1b
-    boxHt= 4+ headHeight + (markPerCol)*13
-        'First clear entire marker area
-    #gGraphHandle$, "color ";gBackColor$
-    #gGraphHandle$, "place ";markerX;" "; markerY 'locate pen at upper left
-    #gGraphHandle$, "boxfilled "; maxBoxWidth+boxWidth; " "; markerY+boxHt   'This is lower right corner of max area
-    #gGraphHandle$, "color ";gGridTextColor$
-    if nMarkers<1 then exit sub   'None to display
 
-    call gPrivateDrawMarkerInfo 1, markPerCol, markerX, markerY, firstEnd
-    if nMarkers>markPerCol then call gPrivateDrawMarkerInfo firstEnd+1, markPerCol, markerX+headWidth+10, markerY, firstEnd
-    gMarkerInfoRight=markerX+boxWidth    'Rightmost pixel drawn, so area to right is still available
-end sub
-*/
+//sub gDrawMarkerInfo //Draw marker info in specified area
+  //(gMarkerInfoLeft, gMarkerInfoTop) is the upper left for the actual marker info, which will be printed
+  //one line per marker. The heading for the marker info will be printed at the top.
+  //The total display area is 280 pixels wide. markerX will be updated to the rightmost
+  //pixel that is drawn (which will be the bounding box of the marker info.)
+  //Markers whose point number in gMarkerPoints is <=0 will be skipped
+  //The marker info will be in columns, labeled Mark, Freq, Mag and Phase
+  //They will all be right aligned at specific points. If printed in a monotype font, the
+  //decimals, where applicable, will also align. We print each column separately, rather than
+  //using spaces for alignment, because some monotype fonts do not have spaces of the same
+  //width as their characters.
+  int nMarkers = gValidMarkerCount();  //Don't count those with negative value for point num
+        //ver115-1b made various changes to be sure marker area is cleared no matter what.
+        //Set drawing color
+  //#gGraphHandle$, "font Tahoma 8 bold";       //Set drawing font
+  //#gGraphHandle$, "backcolor ";gBackColor$
+  ///#gGraphHandle$, "size 1"
+  int headWidth=120;
+  int headHeight=14;
+  if (gDoY1)
+    headWidth=headWidth+55;
+  if (gDoY2)
+    headWidth=headWidth+60;
+  markerX=gMarkerInfoLeft;
+  markerY=gMarkerInfoTop;
+  int a=gWindowHeight;
+  int b=gMarkerInfoTop;
+  int markPerCol=int((gWindowHeight-5-gMarkerInfoTop-headHeight)/13);
+  int maxBoxWidth=2*headWidth+14;  //widest possible box area
+  int boxWidth;
+  if (nMarkers>markPerCol)
+  {
+    boxWidth=maxBoxWidth;
+  }
+  else
+  {
+    boxWidth=headWidth+4;
+  }
+  int boxHt= 4+ headHeight + (markPerCol)*13;
+      //First clear entire marker area
+  //#gGraphHandle$, "color ";gBackColor$
+  //#gGraphHandle$, "place ";markerX;" "; markerY //locate pen at upper left
+  //#gGraphHandle$, "boxfilled "; maxBoxWidth+boxWidth; " "; markerY+boxHt   //This is lower right corner of max area
+  //#gGraphHandle$, "color ";gGridTextColor$
+  if (nMarkers<1)
+  {
+    return;
+    //then exit sub   //None to display
+  }
+  int firstEnd;
+  gPrivateDrawMarkerInfo(1, markPerCol, markerX, markerY, firstEnd);
+  if (nMarkers>markPerCol)
+    gPrivateDrawMarkerInfo(firstEnd+1, markPerCol, markerX+headWidth+10, markerY, firstEnd);
+  gMarkerInfoRight=markerX+boxWidth;    //Rightmost pixel drawn, so area to right is still available
+
 }
+void msagraph::gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, int markerY, int &endNum)
+{
+//sub gPrivateDrawMarkerInfo startNum, maxLines, markerX, markerY, byref endNum
+    //This is an internal helper routine to draw up to maxLines lines of markers
+    //in an area whose upper left is (markerX, markerY), except that the heading
+    //goes above that area. We start with entry number startNum. We put the final
+    //one we examined into endNum, so further processing can start at endNum+1.
+    //The drawn area extends from markerX to markerX+240. We assume the color and
+    //text have been set.
+    //We also update the marker list to reflect current frequencies.
 
+    int markX=markerX+40;
+    int freqX=markerX+120;
+    int primX;
+    int secX;
+    int magX = 0;
+    if (gPrimaryAxis==1)    //Print primary axis first ver115-3b
+    {
+        if (gDoY1)
+          primX=markerX+180;
+        else
+          primX=freqX;
+
+        if (gDoY2)
+          secX=primX+55;
+        else
+          secX=magX;  //column positions
+    }
+    else
+    {
+        if (gDoY2)
+          primX=markerX+180;
+        else
+          primX=freqX;
+        if (gDoY1)
+          secX=primX+55;
+        else
+          secX=magX;  //column positions
+    }
+    int drawCount=0;
+    int headY=markerY+12;    //ver115-1b reduced by 2
+    markerY=headY+13;
+    QString markY1;
+    QString markY2;
+    for (int i=startNum; i < gNumMarkers; i++)
+    {
+        endNum=i;
+        int markPointNum=gMarkerPoints[i][0];
+        if (markPointNum>0)
+        {
+            QString markID =gMarkers[i][0];
+
+            //markF=gGetPointXVal(markPointNum);
+            QString markF=util.usingF("####.######",gGetPointXVal(markPointNum));
+               //ver114-6f use axis label formats to format the marker values
+            gPrintTextRightJust(markID, markX-5, markerY, QColor(Qt::white));
+            gPrintTextRightJust(markF, freqX, markerY, QColor(Qt::white));
+            if (gDoY1==0)
+              markY1="";
+            else
+              markY1=util.uCompact(util.uFormatted(gGetPointYVal(markPointNum,1), gY1AxisForm)); //Y1
+            if (gDoY2==0)
+              markY2="";
+            else
+              markY2=util.uCompact(util.uFormatted(gGetPointYVal(markPointNum,2), gY2AxisForm)); //Y2
+            if (gPrimaryAxis==1)
+            {
+                if (gDoY1==1)
+                  gPrintTextRightJust(markY1, primX, markerY, QColor(Qt::white));  //Print primary axis first ver115-3b
+                if (gDoY2)
+                  gPrintTextRightJust(markY2, secX, markerY, QColor(Qt::white));
+            }
+            else
+            {
+                if (gDoY2)
+                  gPrintTextRightJust(markY2, primX, markerY, QColor(Qt::white));
+                if (gDoY1==1)
+                  gPrintTextRightJust(markY1, secX, markerY, QColor(Qt::white));
+            }
+            markerY=markerY+13;  //To next line
+            drawCount=drawCount+1;
+            if (drawCount==maxLines)
+              break;
+        }
+    }  //To next marker
+        //Draw heading last, because we don//t need it if we
+        //didn//t draw any markers
+    if (drawCount==0)
+    {
+      return;
+      //then exit sub
+    }
+    gPrintTextRightJust("Mark", markX, headY, QColor(Qt::white));
+    gPrintTextRightJust("Freq (MHz)", freqX-5, headY, QColor(Qt::white));
+    if (gPrimaryAxis==1)
+    {
+        if (gDoY1)
+          gPrintTextRightJust(gY1DataLabel, primX-2, headY, QColor(Qt::white));
+        if (gDoY2)
+          gPrintTextRightJust(gY2DataLabel, secX-2, headY, QColor(Qt::white));
+    }
+    else
+    {
+        if (gDoY2)
+          gPrintTextRightJust(gY2DataLabel, primX-2, headY, QColor(Qt::white));
+        if (gDoY1)
+          gPrintTextRightJust(gY1DataLabel, secX-2, headY, QColor(Qt::white));
+    }
+
+}
 void msagraph::RefreshGraph(int restoreErase)
 {
 
@@ -3105,20 +3245,20 @@ void msagraph::DrawSetupInfo()
   if (vars->msaMode==modeSA) //ver115-1b rewrote this if... block
   {
     //SA mode, either with or without TG
-    if (vars->gentrk==0) //ver115-4f
+    if (vars->gentrk==0)
     {
-      gPrintText("Spect. Analyzer", InfoX-10,16,textColor);
+      gPrintText("Spect. Analyzer", InfoX-10,0,textColor);
     }
     else
     {
-      gPrintText("Spect. Analyzer with TG", InfoX-40,16,textColor);
+      gPrintText("Spect. Analyzer with TG", InfoX-40,0,textColor);
     }
   }
   else
   {
     if (vars->msaMode==modeScalarTrans)
     {
-      gPrintText("SNA Transmission", InfoX-10,16,textColor);   //ver115-4e
+      gPrintText("SNA Transmission", InfoX-10,16,textColor);
     }
     if (vars->msaMode==modeVectorTrans)
     {
@@ -3148,7 +3288,7 @@ void msagraph::DrawSetupInfo()
         }
         else
         {
-          vnaCal->calLevel="Band";  //ver115-1d
+          vnaCal->calLevel="Band";
         }
     }
     gPrintText("Cal=" + vnaCal->calLevel,InfoX, InfoY, col);
@@ -3158,7 +3298,7 @@ void msagraph::DrawSetupInfo()
 
   if (vars->freqBand!=0)
   {
-    gPrintText(QString::number(vars->freqBand) + "G", InfoX, 30,textColor);
+    gPrintText(QString::number(vars->freqBand) + "G", InfoX, 16,textColor);
   }
   if (vars->suppressHardware)
   {
@@ -3190,7 +3330,7 @@ void msagraph::DrawSetupInfo()
     //Print stepfreq as Hz, KHz, etc. with up to 3 whole places, max 4 decimals
     //and max 5 total significant digits. We don't do this for log sweeps because
     //the freq/step is not constant
-    float stepfreq=(vars->endfreq - vars->startfreq)/vars->globalSteps;    //stepfreq is only calculated for printing ver115-1b
+    float stepfreq=(vars->endfreq - vars->startfreq)/vars->globalSteps;    //stepfreq is only calculated for printing
     QString stepSize = util.uFormatted(1000000*stepfreq,"3,4,5//UseMultiplier//suffix=Hz");
     gPrintText(util.uCompact(stepSize)+"/Step", InfoX, InfoY,textColor); InfoY=InfoY+16;
         //Print Freq/div. also done only for linear sweep
@@ -3199,18 +3339,18 @@ void msagraph::DrawSetupInfo()
     stepSize=util.uFormatted(1000000*vars->sweepwidth/nHorDiv,"3,4,5//UseMultiplier//suffix=Hz");
     gPrintText(util.uCompact(stepSize)+"/Div", InfoX, InfoY,textColor); InfoY=InfoY+16;
   }
-  if (vars->msaMode==modeSA && activeConfig->TGtop>0)   //ver115-4f
+  if (vars->msaMode==modeSA && activeConfig->TGtop>0)
   {
     if (vars->gentrk==0)
     {
         QString freq=QString::number(vars->sgout);
-        if (freq.length()<7)  //ver116-4d
+        if (freq.length()<7)
         {
             gPrintText("SG="+freq, InfoX, InfoY,textColor); InfoY=InfoY+16;
         }
         else
         {
-          gPrintText("SG=", InfoX, InfoY,textColor); InfoY=InfoY+14;  //ver116-4d
+          gPrintText("SG=", InfoX, InfoY,textColor); InfoY=InfoY+14;
           gPrintText("  "+freq, InfoX, InfoY,textColor); InfoY=InfoY+16;
         }
     }
@@ -3220,7 +3360,7 @@ void msagraph::DrawSetupInfo()
       if (vars->normrev==0) nr="TG=Normal"; else nr="TG=Reverse";
       gPrintText(nr, InfoX, InfoY,textColor); InfoY=InfoY+16;
       QString freq = QString::number(vars->offset);
-      if (freq.length()<2)  //ver115-4g
+      if (freq.length()<2)
       {
         gPrintText("Offset="+freq, InfoX, InfoY,textColor); InfoY=InfoY+16;
       }
@@ -3234,9 +3374,9 @@ void msagraph::DrawSetupInfo()
   if (vars->msaMode!=modeSA && vars->msaMode!=modeScalarTrans)
   {
     gPrintText("Exten="+QString::number(vars->planeadj)+" ns", InfoX, InfoY,textColor);
-    InfoY=InfoY+16;  //ver114-5f
+    InfoY=InfoY+16;
   }
-  if (vars->msaMode==modeReflection) //ver116-4k
+  if (vars->msaMode==modeReflection)
   {
     //gPrintText("Z0=";uFormatted$(S11GraphR0, "3,4,5//UseMultiplier//DoCompact//SuppressMilli"), InfoX, InfoY); InfoY=InfoY+16;
   }
@@ -3539,7 +3679,7 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
 void msagraph::mUpdateMarkerLocations()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
+/*
   //Find point numbers for peak markers and for L and R if relative to the peaks
       //We are called from mDrawMarkerInfo, which also has the ability to move markers.
       saveSel$=selMarkerID$   //We want to save and restore the current selected marker
@@ -3600,12 +3740,107 @@ void msagraph::mDrawMarkerInfo()
   //Draw marker info at bottom of graph
   //gGetGraphicsSize(graphwide, graphigh);
   mUpdateMarkerLocations();  //Determines locations of peak markers and L,R if they are relative to the peaks
+  /*
+    'We will draw marker info in a rectangular area below the labels of the x axis.
+    'This is the frequency and graph values
+    call gDrawMarkerInfo
+
+    'Set InfoX and InfoY where additional info can be printed.
+    InfoX=gGetMarkerInfoRight()+5
+    InfoY=gGetMarkerInfoTop()
+    if selMarkerID$<>"" then call mDisplaySelectedMarker 'info may have changed
+        'We may have to print some additional info from an analysis
+    if doFilterAnalysis then
+        peakPoint=gMarkerPointNum(mMarkerNum(filterPeakMarkID$)) 'Get point number of marker that is the peak reference
+        'Note we know peakPoint is a valid point because mUpdateMarkerLocations set doFilterAnalysis=0 if it was not.
+        peakFreq=gGetPointXVal(peakPoint)   'Frequency of peak
+        'gPeakAnalysis has found the points that are down the required number of db. It is possible the points
+        'don't exist on the graph, in which case their point numbers will end up as -1.
+
+        call gGetPeakAnalysisPoints db3LowPoint, db3HighPoint, x1LowPoint, x1HighPoint, x2LowPoint, x2HighPoint
+        call gGetPeakAnalysisRipple ripLowFreq, ripHighFreq, ripMinVal, ripMaxVal
+            'Get frequencies at each of the points
+        db3HighFreq=gGetPointXVal(db3HighPoint)
+        db3LowFreq=gGetPointXVal(db3LowPoint)
+        x1HighFreq=gGetPointXVal(x1HighPoint)
+        x1LowFreq=gGetPointXVal(x1LowPoint)
+        x2HighFreq=gGetPointXVal(x2HighPoint)
+        x2LowFreq=gGetPointXVal(x2LowPoint)
+        db3BW=db3HighFreq-db3LowFreq
+
+        'If any of the required db values does not have both its points, we set a flag to zero.
+        if db3LowPoint>0 and db3HighPoint>0 then hasDB3=1 else hasDB3=0
+        if x1LowPoint>0 and x1HighPoint>0 then hasX1=1 else hasX1=0
+        if x2LowPoint>0 and x2HighPoint>0 then hasX2=1 else hasX2=0
+
+        call gGetInfoColors textColor$, backColor$
+        if twoPortWinHndl$="" then gBox$="#handle.g" else gBox$="#twoPortGraphBox" 'main win or two port win 'ver116-4e
+        #gBox$, "color ";textColor$      'Set drawing color
+        #gBox$, "font Tahoma 8 bold";       'Set drawing font
+        #gBox$, "backcolor ";backColor$     'Set background color
+        #gBox$, "size 1"
+        'We draw a filled box to get an outline and to clear any existing data
+        boxHt= 5 + 7*13     'Assume 7 lines of height 13 each
+        boxWidth=150
+        #gBox$, "place ";InfoX;" "; InfoY 'locate pen at upper left
+        #gBox$, "boxfilled "; InfoX+boxWidth; " "; InfoY+boxHt   'This is lower right corner
+        InfoX=InfoX+7
+        InfoY=InfoY+15  'Set to bottom of first line (matches marker heading)
+        'Now print the filter information on screen
+        if x1DBDown<>3 and x2DBDown<>3 and hasDB3 then
+            'If neither x1 nor x2 is 3 db down, then print the 3db bandwidth if we have it
+            bw$=uFormatted$(db3BW*1000000,"3,3,4//UseMultiplier//suffix=Hz")
+            call gPrintText "BW(3dB)=";bw$, InfoX, InfoY :InfoY=InfoY+13   'e.g. BW(3dB)=123 KHz
+        end if
+        if hasX1 then
+            x1BW=x1HighFreq-x1LowFreq
+            bw$=uFormatted$(x1BW*1000000,"3,3,4//UseMultiplier//suffix=Hz")
+            call gPrintText "BW(";str$(x1DBDown);"dB)=";bw$, InfoX, InfoY :InfoY=InfoY+13   'e.g. BW(3dB)=123 KHz
+        end if
+        if hasX2<>0 then
+            x2BW=x2HighFreq-x2LowFreq
+            bw$=uFormatted$(x2BW*1000000,"3,3,4//UseMultiplier//suffix=Hz")
+            call gPrintText "BW("; str$(x2DBDown);"dB)=";bw$, InfoX, InfoY :InfoY=InfoY+13   'e.g. BW(3dB)=123 KHz
+        end if
+
+        'Print Q if we have the necessary data
+        if hasDB3 and db3BW>0 then
+            Q$=Trim$(using("#####.#", peakFreq/db3BW))
+            call gPrintText "Q=";Q$, InfoX, InfoY :InfoY=InfoY+13  'e.g. Q=345.1
+        end if
+
+        if hasX1 and hasX2 and x1BW>0 then  'Print shape factor if we have needed data
+            shape$=Trim$(using("###.##", x2BW/x1BW))
+            call gPrintText "SF(";x2DBDown; "dB/";x1DBDown;"dB)=";shape$, InfoX, InfoY :InfoY=InfoY+13  'e.g. Shape=2.6 ver115-1a
+        end if
+        if msaMode$="ScalarTrans" or msaMode$="VectorTrans" then    'ver114-5n
+            IL=0-gGetPointYVal(peakPoint,primaryAxisNum)  'ver116-4s allowed IL to be negative
+            'Note TO DO: we could also do this if in TG mode
+            IL$=Trim$(using("###.###", IL))       'Insertion loss, which we only do if in transmission 'ver115-1e
+            call gPrintText "IL=";IL$, InfoX, InfoY : InfoY=InfoY+13
+        end if
+            'Print ripple. Ideally we would print the ripple search bounds, but we don't have room
+            'Maybe we should delete insertion loss, because it is apparent from the peak value
+        if hasDB3 then
+            rip$=Trim$(using("####.###", ripMaxVal-ripMinVal))  'ver115-1e
+            call gPrintText "Ripple=";rip$;" dB", InfoX, InfoY : InfoY=InfoY+13
+            InfoX=InfoX+boxWidth    'End by setting InfoX to the far right of what we just drew
+        end if
+    end if
+
+   */
 }
 void msagraph::gDrawGrid()
 {
-  QString startTime = util.time("ms");
+//  QString startTime = util.time("ms");
   QString stopTime;
   graphScene->clear();
+
+  for (int i = 0; i < gErase2.count(); i++)
+  {
+    gErase2[i] = 0;
+  }
+  haltMarker = NULL;
 
 
   //Clears screen and draws background grid
@@ -3632,9 +3867,6 @@ void msagraph::gDrawGrid()
     }
   }
 
-  //#gGraphHandle$, cmd$       //draw horizontal grid lines
-  //gGridString$=cmd$   //ver115-1b
-  //cmd$=""
   for (int i=2; i <= gHorDiv; i++)  //draw vertical lines; skip those under the boundary
   {
       //Pixel locations are in gXGridLines
@@ -3642,9 +3874,6 @@ void msagraph::gDrawGrid()
       //cmd$=cmd$+"line "; x; " ";gOriginY; " "; x; " ";gOriginY-gGridHeight ;";"
       graphScene->addLine(x, gOriginY, x, gOriginY-gGridHeight, QPen(util.fixColor(gridappearance->gGridLineColor)));
   }
-
-  //#gGraphHandle$, cmd$    //Draw vertical grid lines
-  //gGridString$=gGridString$+cmd$  //ver115-1b
 
   int gridRight=gMarginLeft+gGridWidth;
   QPen pen(QColor(util.fixColor(gridappearance->gGridBoundsColor)), 3);
@@ -4298,18 +4527,18 @@ void msagraph::SetStartStopFreq(float startF, float stopF)
 void msagraph::gDrawMarkers()        //Draw all listed markers
 {
 qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-/*
 
-    'For the moment, use the grid color and font
-   #gGraphHandle$, "color "; gGridTextColor$; ";font "; gGridFont$
-   #gGraphHandle$, "size 1"
-   gMarkerString$=""  : join$=""   'ver116-4b added gMarkerString$ to cumulate info on markers that are drawn
-   for i=1 to gNumMarkers   'Send each marker to the draw routines
-        cmd$=gDrawMarkerAtPointNum$(gMarkerPoints(i,0), _
-                        gMarkers$(i,1), gMarkers$(i,2), gMarkers$(i,0))
-        if cmd$<>"" then gMarkerString$=gMarkerString$+join$+cmd$ : join$=";"
-   next i
-   */
+
+  //For the moment, use the grid color and font
+//  #gGraphHandle$, "color "; gGridTextColor$; ";font "; gGridFont$
+//  #gGraphHandle$, "size 1"
+  gMarkerString="";
+  QString join="";   //ver116-4b added gMarkerString$ to cumulate info on markers that are drawn
+  for (int i=1; i < gNumMarkers; i++)   //Send each marker to the draw routines
+  {
+    QString cmd=gDrawMarkerAtPointNum(gMarkerPoints[i][0], gMarkers[i][1], gMarkers[i][2], gMarkers[i][0]);
+      //if cmd$<>"" then gMarkerString$=gMarkerString$+join$+cmd$ : join$=";"
+  }
 }
 void msagraph::gEraseMarkers()        //Erase all listed markers ver116-4b
 {
@@ -4328,6 +4557,144 @@ void msagraph::gEraseMarkers()        //Erase all listed markers ver116-4b
    next i
 end sub
 */
+}
+
+QString msagraph::gDrawMarkerAtPointNum(float N,QString trace, QString style, QString markLabel)   //Draw marker at point N; return string of info
+{
+    //trace$ specifies which trace to mark. See the select block
+    //markLabel$ is the label to be drawing with the marker, if the style provides for a label.
+    //See gDrawMarkerPix for meaning of style$. N is the point number and may be fractional, indicating
+    //that we are part way between two points
+    //We return a string that can be later used for erasing the markers, containing one or two groups of four
+    //items: style$, markLabel$, x pixel location, and y pixel location, separated by semicolons.
+    if (N<1 || N>gDynamicSteps+1)
+    {
+      return "";    //Don't draw if out of bounds
+    }
+    trace=trace.trimmed().toUpper();
+    int whole=int(N);
+    float fract=N-whole;
+    float xPix=gGetPointXPix(N);
+    //ver114-7d moved all interpolation before the select statement, and used intLinearInterpolateDegrees
+    //to handle phase wrap-around
+    //First find the Y pixel values for each trace being graphed
+    float y1 = 0;
+    float y2 = 0;
+    int y;
+    if (gGraphY1==1)
+    {
+        float y1=gGraphPix[whole][1];
+        if (fract>0)
+        {
+            float thisY=gGraphVal[whole][1];
+            float nextY= gGraphVal[whole+1][1];
+            //Note that angles in the main program are kept in the range -180 to +180, but
+            //in gGraphVal they have been adjusted to fit graph range
+            if (gY1IsPhase) //Special rule for phase
+            {
+                y1=inter.intLinearInterpolateDegrees(fract, thisY, nextY, gY1AxisMin, gY1AxisMax); //interpolate, dealing with wrap-around ver116-4k
+                y1=(y1-gY1AxisMin)*gY1Scale+gOriginY;    //Convert to pixels
+                if (y1<gMarginTop)
+                  y1=gMarginTop;
+                if (y1>gOriginY)
+                  y1=gOriginY;
+            }
+            else
+            {
+                y1=y1+fract*(gGraphPix[whole+1][1]-y1);   //Interpolate non-phase between two pixel values
+            }
+        }
+    }
+    /*
+    if gGraphY2=1 then
+        y2=gGraphPix(whole,2)
+        if fract>0 then
+            thisY=gGraphVal(whole,2)
+            nextY= gGraphVal(whole+1,2)
+            if gY2IsPhase then //Special rule for phase
+                //Note that angles in the main program are kept in the range -180 to +180, but
+                //in gGraphVal they have been adjusted to fit graph range
+                y2=intLinearInterpolateDegrees(fract, thisY, nextY, gY1AxisMin, gY1AxisMax) //interpolate, dealing with wrap-around ver116-4k
+                y2=(y2-gY2AxisMin)*gY2Scale+gOriginY    //Convert to pixels
+                if y2<gMarginTop then y2=gMarginTop
+                if y2>gOriginY then y2=gOriginY
+            else
+                y2=y2+fract*(gGraphPix(whole+1,2)-y2)   //Interpolate non-phase between two pixel values
+            end if
+        end if
+    end if
+        */
+    xPix=int(10*xPix+0.5)/10;
+    y1=int(10*y1+0.5)/10;
+    y2=int(10*y2+0.5)/10;
+        //xPix, y1 and y2 now have the pixel values for the specified point
+        //Use trace$ to determine the pixel location of the marker
+
+        if (trace == "1")   //Marker on trace 1 (phase, if used)
+        {
+            if (gGraphY1==0)
+              return "";
+            y=y1;
+        }
+        else if (trace == "2")   //marker on trace 2 (dbm or db; right axis)
+        {
+            if (gGraphY2==0)
+              return "";
+            y=y2;
+        }
+        else if (trace == "HIGHPIX")   //mark the highest graph pixel at this point
+        {
+            y=gOriginY;
+            //Note minimum pixel value is highest on the graph
+            if (gGraphY1==1)
+                y=y1;
+            if (gGraphY2==1)
+            {
+                if (y2<y)
+                  y=y2;
+            }
+        }
+        else if (trace == "LOWPIX")   //mark the lowest graph pixel at this point
+        {
+            y=gMarginTop;
+            //Note max pixel value is lowest on the graph
+            if (gGraphY1==1)
+                y=y1;
+
+            if (gGraphY2==1)
+            {
+                if (y2>y)
+                  y=y2;
+            }
+
+        }
+        else if (trace == "XAXIS")  //Mark on x-axis   //ver114-4d
+        {
+            y=gOriginY;
+        }
+        else if (trace == "ALL")  //Mark on all traces   //ver114-5n
+        {
+            QString m="";
+            //QString join="";
+            if (gGraphY1)
+            {
+              gDrawMarkerPix(style, markLabel, xPix, y1 );
+              m=style+";"+markLabel+";"+xPix+";"+y1;
+             // join=";";
+            }
+//            if gGraphY2 then call gDrawMarkerPix style$, markLabel$, xPix, y2 _
+//                        : m$=m$;join$;style$;";";markLabel$;";";xPix;";";y2
+//            gDrawMarkerAtPointNum$=m$
+            return "";
+        }
+        else if (trace == "NONE")  //invisible
+            return "";
+        else
+            return "";    //invalid trace$
+
+    gDrawMarkerPix(style, markLabel, xPix, y);    //Finally draw the marker
+    //gDrawMarkerAtPointNum$=style$;";";markLabel$;";";xPix;";";y
+    return style + ";" + markLabel + ";" + xPix +";" + y;
 }
 void msagraph::gDrawMarkerPix(QString style, QString markLabel, float x, float y)    //Draw marker at pix coord (x,y)
 {
@@ -4372,7 +4739,7 @@ void msagraph::gDrawMarkerPix(QString style, QString markLabel, float x, float y
   }
   else if (style == "HALTPOINTER")
   {
-    gDrawHaltPointerPix(x, y+1);
+    gDrawHaltPointerPix(x, y+5);
   }
   else if (style == "XOR")  //Draw black box in XOR mode to invert colors; Do it twice to restore to original ver116-4h
   {
@@ -4428,18 +4795,33 @@ void msagraph::gDrawSmallInvertedWedgePix(float x, float y)   //Draw small wedge
 }
 void msagraph::gDrawHaltPointerPix(float x, float y)    //Draw pointer at pixel coord (x,y) pointing in sweep direction
 {
-  QPainterPath mark;
-  QPen pen;
 
-  int a = 4 * gSweepDir;
-  mark.moveTo(x,y);
-  mark.lineTo(x+a,y+4);
-  mark.lineTo(x,y+8);
-  mark.lineTo(x,y);
+  if (haltMarker == NULL)
+  {
+    haltMarker = new marker((qreal)x, (qreal)y, marker::haltMarker);
+    if (gSweepDir == -1)
+    {
+      haltMarker->setReverseHaltMarker(true);
+    }
+    else
+    {
+      haltMarker->setReverseHaltMarker(false);
+    }
 
-  pen.setBrush(QColor(Qt::magenta));
-  pen.setWidth(1);
-  graphScene->addPath(mark, pen);
+    graphicsView->scene()->addItem(haltMarker);
+  }
+  else
+  {
+    if (gSweepDir == -1)
+    {
+      haltMarker->setReverseHaltMarker(true);
+    }
+    else
+    {
+      haltMarker->setReverseHaltMarker(false);
+    }
+    haltMarker->setPos(x,y);
+  }
 }
 void msagraph::gRefreshTraces()  //Redraw traces from gTrace1$() and gTrace2$()
 {
@@ -4481,7 +4863,7 @@ void msagraph::gRefreshTraces()  //Redraw traces from gTrace1$() and gTrace2$()
     pen.setBrush(QColor(util.fixColor(gridappearance->gTrace2Color)));
     pen.setWidth(gTrace2Width);
 
-    graphScene->addPath(trace2,pen);
+    //graphScene->addPath(trace2,pen);
    }
 
 }
@@ -5359,7 +5741,11 @@ void msagraph::UpdateGraphParams()
 {
   //added UpdateGraphParams; ver114-4n made it a gosub to allow use of non-globals
   //Set up graphs for drawing, but don't draw anything
-  if (vars->alternateSweep) {vars->sweepDir=1; gSetSweepDir(1);}      //Start out forward if alternating ver114-5a
+  if (vars->alternateSweep)
+  {
+    vars->sweepDir=1;
+    gSetSweepDir(1);
+  }      //Start out forward if alternating ver114-5a
   int sweepDir=gGetSweepDir();  //ver114-4k
   if (sweepDir==1)   //ver114-4k added this if... block
   {
@@ -6070,12 +6456,18 @@ void msagraph::gSetMarkerNum(int markNum, int pointNum, QString ID, QString trac
 {
   //set marker by position in the list
   //Enter marker data and update gNumMarkers to have the max entryNum of any entered marker
-  if (markNum<1 || markNum>20) { QMessageBox::about(0,"", "Invalid marker number"); return; } //for debugging
+  if (markNum<1 || markNum>20)
+  {
+    QMessageBox::about(0,"", "Invalid marker number");
+    return;
+  } //for debugging
   gMarkerPoints[markNum][0]=pointNum;
   gMarkerPoints[markNum][1]=gGetPointXVal(pointNum); //Copy current x value (freq)
   gMarkers[markNum][0]=ID;
-  gMarkers[markNum][1]=trace; gMarkers[markNum][2]=style;
-  if (markNum>gNumMarkers) gNumMarkers=markNum;
+  gMarkers[markNum][1]=trace;
+  gMarkers[markNum][2]=style;
+  if (markNum>gNumMarkers)
+    gNumMarkers=markNum;
 }
 void msagraph::ResizeGraphHandler()
 {
@@ -6305,6 +6697,37 @@ int msagraph::mMarkerNum(QString markID)
 }
 void msagraph::mDeleteMarker(QString markID)
 {
+  if (markID == "L")
+  {
+
+  }
+  else if (markID == "R")
+  {
+
+  }
+  else if (markID == "P+")
+  {
+
+  }
+  else if (markID == "P-")
+  {
+
+  }
+  else if (markID == "1" || markID == "2" || markID == "3" ||
+           markID == "4" || markID == "5" || markID == "6")
+  {
+
+  }
+  else if (markID == "Halt")
+  {
+    graphScene->removeItem(haltMarker);
+    delete haltMarker;
+    haltMarker = NULL;
+  }
+  else
+  {
+    return;
+  }
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
   markNum=mMarkerNum(markID$) :
@@ -6342,7 +6765,11 @@ void msagraph::mAddMarker(QString markID, int pointNum, QString trace)
   {
     QMessageBox::warning(0,"Error", "Invalid Marker Number"); return;
   }
-  if (pointNum<0) { mDeleteMarker(markID); return; }    //Adding with point num <0 is deleting
+  if (pointNum<0)
+  {
+    mDeleteMarker(markID);
+    return;
+  }    //Adding with point num <0 is deleting
   if (markID == "L")
   {
     hasMarkL=1;
@@ -6362,10 +6789,10 @@ void msagraph::mAddMarker(QString markID, int pointNum, QString trace)
     markTrace=QString::number(vars->primaryAxisNum);   //Always do peak markers on primary trace
     markStyle="LabeledInvertedWedge";
   }
-  else if (markID == "Halt")   //ver114-4c
+  else if (markID == "Halt")
   {
-        markTrace="Xaxis";  //ver114-6d
-        markStyle="HaltPointer";    //ver114-5m
+        markTrace="Xaxis";
+        markStyle="HaltPointer";
   }
   else if (markID == "1" || markID == "2" || markID == "3" || markID == "4" || markID == "5" || markID == "6")
   {

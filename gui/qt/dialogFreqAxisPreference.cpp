@@ -891,7 +891,7 @@ void dialogFreqAxisPreference::axisXFinished()
   cfg->videoFilter = ui->VideoFilt->currentText();
   //Note DetectChanges will take care of actually selecting the video filter
 
-  if (ui->spurbox)
+  if (ui->spurbox->isChecked())
   {
     cfg->spurcheck=1;
   }

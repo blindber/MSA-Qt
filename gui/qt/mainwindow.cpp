@@ -42,6 +42,19 @@ MainWindow::MainWindow(QWidget *parent) :
   vars = NULL;
   showVars = NULL;
   ui->setupUi(this);
+  qApp->installEventFilter(this);
+
+  QDesktopWidget *desktop = QApplication::desktop();
+  if ( 1==desktop->screenCount()  )
+  {
+      // single monitor - use built in
+  //    showFullScreen();
+  } else
+  {
+      QRect rect = desktop->screenGeometry(0);
+      move(rect.topLeft());
+     // setWindowState(Qt::WindowFullScreen);
+  }
 
   DefaultDir = QApplication::applicationDirPath();
 
@@ -82,7 +95,7 @@ MainWindow::MainWindow(QWidget *parent) :
   hwdIf->scanResumed = 0;
   hwdIf->suppressSweepTime=0;
 
-  ui->statusBar->setVisible(false);
+  //ui->statusBar->setVisible(false);
   ui->mainToolBar->setVisible(false);
 
   special = 0;
@@ -207,12 +220,12 @@ void MainWindow::delayedStart()
     vars->suppressHardware = 0;
   }
   vars->freqBand = 1;
-  hwdIf->SelectLatchedSwitches(1);   //ver116-4h ver116-4s
+  hwdIf->SelectLatchedSwitches(1);
   util.uSleep(1000);               //Wait 1 second for capacitor recharge. There will be additional software delays before PS is used.
   hwdIf->calMan->calInitFirstUse(201, 1001, activeConfig.hasVNA);    //Initialize Mag/Freq Calibration Module--201 max mag cal points; 1001 max freq cal points ver114-4b
   //ResizeArrays needs TGtop, so we do it after loading config file
 
-  ResizeArrays(2001);   //Make all arrays big enough for 2001 points; also loads BaseLineCal file   'ver114-5m
+  ResizeArrays(2001);   //Make all arrays big enough for 2001 points; also loads BaseLineCal file
 
   //---------Load path and freq calibration info------
   hwdIf->calMan->calInstallFile(0);   //Loads frequency calibration file; creates one if necessary
@@ -239,7 +252,7 @@ void MainWindow::delayedStart()
   //The below are not actually the desired states. See step 3 (initialization) for explanation.
   //The latched filter addresses will be asserted by SelectVideoFilter because the video filter
   //shares the same latch. But the PS bit will not be toggled, so this will not actually affect
-  //latched switches that rely on PS, and won//t drain capacitors. But this will help initialize
+  //latched switches that rely on PS, and won't drain capacitors. But this will help initialize
   //latched switches that generate the latching pulse from a change of address.
   //This is done after loading config file so capacitor info is available, and after
   //loading cal files so auto wait info is available.
@@ -247,7 +260,7 @@ void MainWindow::delayedStart()
   vars->freqBand=2;
   vars->switchTR=1;
   vars->switchFR=1;
-  hwdIf->SelectVideoFilter(); //ver116-4s
+  hwdIf->SelectVideoFilter();
 
   //---------Create OperatingCal Folder-------------
   /*if (activeConfig.TGtop>0)
@@ -316,7 +329,7 @@ void MainWindow::delayedStart()
   //ver114-3f moved the call to gInitFirstUse here from [CreateGraphWindow]
   graph->InitGraphParams();   //Initialize parameters to set up the graphing module ver114-3f moved
 
-  ChangeMode(); //create Graph Window in mode of msaMode$
+  //ChangeMode(); //create Graph Window in mode of msaMode$
   vnaCal.desiredCalLevel=0;   //Desire no cal
   vnaCal.SignalNoCalInstalled();
   vnaCal.bandLineNumSteps=-1;   //Indicate cal does not exist ver114-5f; baseLine cal was handled above ver114-5mb
@@ -331,6 +344,8 @@ void MainWindow::delayedStart()
   //possibly old preferences file to the current format.
 
   LoadPreferenceFile(DefaultDir + "/MSA_Info/MSA_Prefs/Prefs.txt");
+
+  ChangeMode(); //create Graph Window in mode of msaMode$
 
   //call uSleep 500     //Loading Preferences may re-latch switches; allow some recharge time ver116-1b delver116-4d
   if (graph->gGetXIsLinear())
@@ -402,7 +417,9 @@ void MainWindow::DisplayButtonsForRunning()
 {
   //Display buttons for sweep in progress
   if (vars->doingInitialization)
+  {
     return;    //Buttons don't exist yet
+  }
   ui->btnOneStep->setEnabled(true);
   ui->btnContinue->setEnabled(true);
   ui->btnRestart->setText("Running");
@@ -411,12 +428,16 @@ void MainWindow::DisplayButtonsForRunning()
   //Continue becomes Halt when scan is in progress
   ui->btnContinue->setText("Halt");
   ui->btnRedraw->setVisible(false);
+  //QApplication::processEvents();
 }
 
 void MainWindow::DisplayButtonsForHalted()
 {
   //Display buttons for sweep halted, to enable resuming or restarting
-  if (vars->doingInitialization) return;    //Buttons don't exist yet    ver114-3f
+  if (vars->doingInitialization)
+  {
+    return;    //Buttons don't exist yet
+  }
   ui->btnOneStep->setEnabled(true);
   ui->btnContinue->setEnabled(true);
   ui->btnRestart->setText("Restart");
@@ -425,6 +446,8 @@ void MainWindow::DisplayButtonsForHalted()
       //Continue becomes Halt when scan is in progress
   ui->btnContinue->setText("Continue");
   ui->btnRedraw->setVisible(true); //hide during scan
+  //QApplication::processEvents();
+
 }
 
 void MainWindow::GetDialogPlacement()
@@ -1258,7 +1281,8 @@ void MainWindow::Continue()
   // The Continue button shows Halt during a scan
   if (graph->haltsweep == 1)
   {
-    Halted();
+    graph->continueCode=1;
+    //Halted();
     return;
   }
   hwdIf->onestep = 0;
@@ -2285,6 +2309,17 @@ void MainWindow::showEvent(QShowEvent *event)
   QWidget::showEvent(event);
 }
 
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+  if (event->type() == QEvent::MouseMove)
+  {
+    QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
+    QString global = QString("Mouse move (%1,%2)").arg(mouseEvent->pos().x()).arg(mouseEvent->pos().y());
+    QString local = QString("%1,%2").arg(ui->graphicsView->mapFromGlobal(mouseEvent->pos()).x()).arg(ui->graphicsView->mapFromGlobal(mouseEvent->pos()).y());
+    statusBar()->showMessage(global + " " + local);
+  }
+  return false;
+}
 void MainWindow::on_actionMultiscan_Help_triggered()
 {
   QString Text = "Multiscan opens four sweep windows that will be swept in order. Originally they match the main graph window,"
@@ -2481,7 +2516,8 @@ void MainWindow::on_btnRestart_clicked()
 {
   if (graph->haltsweep == 1)
   {
-    Halted();
+    //Halted();
+    graph->continueCode=1;
     return;
   }
   QTimer::singleShot(0, this, SLOT(Restart()));
@@ -2590,6 +2626,8 @@ void MainWindow::CreateGraphWindow()
   graph->gCalcGraphParams();   //Calculate new scaling. May change min or max.
   float xMin, xMax;
   graph->gGetXAxisRange(xMin, xMax);
+  xMin = 1;
+  xMax = 2;
   if (vars->startfreq != xMin || vars->endfreq != xMax)
   {
     graph->SetStartStopFreq(xMin, xMax);
@@ -2605,11 +2643,11 @@ void MainWindow::StartSweep()
   //automatically stops at the end of a single sweep.
   //[StartSweep]//enters from above, or [IncrementOneStep]or[FocusKeyBox]([OneStep][Continue])
 
-  bool dostart = true;
+  //bool dostart = true;
 
-  while(true)
-  {
-    if (dostart)
+  //while(true)
+//  {
+//    if (dostart)
     {
       if (vars->specialOneSweep)
       {
@@ -2626,7 +2664,7 @@ void MainWindow::StartSweep()
         //repeat the last point as the first point of the new sweep. But in the case where we are continuing
         //after a halt resulting from partial restart, we returned before the first step was taken and need to
         //start with that step.
-        graph->mDeleteMarker("Halt");    //ver114-4h moved the -4d version
+        graph->mDeleteMarker("Halt");
         if (vars->thisstep == vars->sweepStartStep && hwdIf->syncsweep == 1)
         {
           hwdIf->SyncSweep();
@@ -2657,18 +2695,21 @@ void MainWindow::StartSweep()
       vars->haltedAfterPartialRestart=0; //Reset. Will stay zero until next partial restart. 116-1b
       hwdIf->scanResumed=0;   //Reset flag
 
-      dostart = false;
+      //dostart = false;
     }
+    QTimer::singleShot(0, this, SLOT(CommandThisStep()));
+}
+void MainWindow::CommandThisStep()
+{
     //15.[CommandThisStep]. command relevant Control Board and modules
     //SEW CommandThisStep begins the inner loop that moves from step to step to complete a single
     //SEW scan.This branch label is accessed only from the end of the loop.
-    //[CommandThisStep]//needs:thisstep ; commands PLL1,DDS1,PLL3,DDS3,PDM //ver111-7
+    //[CommandThisStep]//needs:thisstep ; commands PLL1,DDS1,PLL3,DDS3,PDM
     //a. first, check to see if any or all the 5 module commands are necessary [DetermineModule]
     //b. calculate how much delay is needed for each module[DetermineModule], but use only the largest one[WaitStatement].
     //c. send individual data, clocks, and latch commands that are necessary for[CommandOrigCB]
-    //or for SLIM, use [CommandAllSlims] for commanding concurrently //ver111-31c
-    hwdIf->CommandCurrentStep(vars->thisstep);  //ver116-4j made this a separate routine
-
+    //or for SLIM, use [CommandAllSlims] for commanding concurrently
+    hwdIf->CommandCurrentStep(vars->thisstep);
     //16.Determine sequence of operations after commanding the modules
     if (hwdIf->onestep == 1)   //in the One Step mode
     {
@@ -2677,14 +2718,17 @@ void MainWindow::StartSweep()
       ProcessAndPrint(); //process and print this step
       DisplayButtonsForHalted();
 
-      graph->mAddMarker("Halt", vars->thisstep+1, "1");   //ver114-4d
+      graph->mAddMarker("Halt", vars->thisstep+1, "1");
       //If marker is shown on graph, we need to redraw the whole graph
       //Otherwise just redraw the marker info
       if (graph->doGraphMarkers)
+      {
         graph->RefreshGraph(0);
+      }
       else
+      {
         graph->mDrawMarkerInfo();  //No erasure gap in redraw ver114-5m
-
+      }
       if (vars->thisstep == vars->sweepEndStep)
       {
         //Note reversal is after graph is redrawn
@@ -2726,7 +2770,11 @@ void MainWindow::StartSweep()
     }
     int action = PostScan();
     if (action == doHalt)
-      break;
+    {
+      Halted();
+      return;
+      //break;
+    }
     else if (action == doWait)
     {
       return;
@@ -2753,19 +2801,23 @@ void MainWindow::StartSweep()
     //ver114-5a modified the following
     if (vars->sweepDir==1)   //ver114-4k added this block to handle possible reverse sweeps
     {
-      if (vars->thisstep<vars->sweepEndStep)
+      if (vars->thisstep < vars->sweepEndStep)
       {
         vars->thisstep = vars->thisstep + 1;
-        continue;
+        QTimer::singleShot(0, this, SLOT(CommandThisStep()));
+        return;
+        //continue;
         //goto CommandThisStep();
       }
     }
     else
     {
-      if (vars->thisstep>vars->sweepEndStep)
+      if (vars->thisstep > vars->sweepEndStep)
       {
         vars->thisstep = vars->thisstep - 1;
-        continue;
+        QTimer::singleShot(0, this, SLOT(CommandThisStep()));
+        return;
+        //continue;
         // goto CommandThisStep();
       }
     }
@@ -2784,9 +2836,11 @@ void MainWindow::StartSweep()
         ReverseSweepDirection();
         graph->haltsweep=0;
       }
-      dostart = true;
+      QTimer::singleShot(0, this, SLOT(StartSweep()));
+      return;
+      //dostart = true;
     }
-  }
+  //}
   Halted();
 }
 int MainWindow::PostScan()
@@ -2968,34 +3022,34 @@ void MainWindow::updatevar(int step)
 
   QStringList values;
   values << QString("this step = %1").arg(step);
-  values << QString("dds1output = %1 MHz").arg(hwdIf->dds_1[step].freq);
-  values << QString("LO 1 = %1 MHz").arg(hwdIf->pll_1[step].freq);  // PLL1array[step][43]);
-  values << QString("pdf1 = %1 MHz").arg(hwdIf->pll_1[step].pdf);  // vars->PLL1array[step][40]);
+  values << QString("dds1output = %1 MHz").arg(hwdIf->dds_1[step].freq, 5,'f',8,'0');
+  values << QString("LO 1 = %1 MHz").arg(hwdIf->pll_1[step].freq, 5,'f',8,'0');  // PLL1array[step][43]);
+  values << QString("pdf1 = %1 MHz").arg(hwdIf->pll_1[step].pdf, 5,'f',8,'0');  // vars->PLL1array[step][40]);
   values << QString("ncounter1 = %1").arg(hwdIf->pll_1[step].ncounter);  // vars->PLL1array[step][45]);
   values << QString("Bcounter1 = %1").arg(hwdIf->pll_1[step].Bcounter );  // vars->PLL1array[step][48]);
   values << QString("Acounter1 = %1").arg(hwdIf->pll_1[step].Acounter);  // vars->PLL1array[step][47]);
   values << QString("fcounter1 = %1").arg(hwdIf->pll_1[step].fcounter);  // vars->PLL1array[step][46]);
   values << QString("rcounter1 = %1").arg(hwdIf->rcounter1);
-  values << QString("LO2 = %1 MHz").arg(vars->LO2);
-  values << QString("pdf2 = %1 MHz").arg(hwdIf->pdf2);
+  values << QString("LO2 = %1 MHz").arg(hwdIf->LO2, 5,'f',8,'0');
+  values << QString("pdf2 = %1 MHz").arg(hwdIf->pdf2, 5,'f',8,'0');
   values << QString("ncounter2 = %1").arg(hwdIf->ncounter2);
   values << QString("Bcounter2 = %1").arg(hwdIf->Bcounter2);
   values << QString("Acounter2 = %1").arg(hwdIf->Acounter2);
   values << QString("rcounter2 = %1").arg(hwdIf->rcounter2);
-  values << QString("LO3 = %1 MHz").arg(hwdIf->pll_3[step].freq);// vars->PLL3array[step][43]);
-  values << QString("pdf3 = %1 MHz").arg(hwdIf->pll_3[step].pdf);
+  values << QString("LO3 = %1 MHz").arg(hwdIf->pll_3[step].freq, 5,'f',8,'0');// vars->PLL3array[step][43]);
+  values << QString("pdf3 = %1 MHz").arg(hwdIf->pll_3[step].pdf, 5,'f',8,'0');
   values << QString("ncounter3 = %1").arg(hwdIf->pll_3[step].ncounter);
   values << QString("Bcounter3 = %1").arg(hwdIf->pll_3[step].Bcounter);
   values << QString("Acounter3 = %1").arg(hwdIf->pll_3[step].Acounter);
   values << QString("fcounter3 = %1").arg(hwdIf->pll_3[step].fcounter);
   values << QString("rcounter3 = %1").arg(hwdIf->rcounter3);
-  values << QString("dds3output = %1").arg(hwdIf->dds_3[step].freq);
+  values << QString("dds3output = %1").arg(hwdIf->dds_3[step].freq, 5,'f',8,'0');
   values << QString("Magdata= %1").arg(vars->magarray[step][3]);
   values << QString("magpower=%1").arg(vars->datatable[step][2]);  //raw magdata bits, MSA input power(massaged)
   values << QString("Phadata = %1").arg(vars->phaarray[step][3]);
   values << QString("PDM = %1").arg(vars->phaarray[step][4]);
   values << QString("Real Final I.F. = %1")
-            .arg(vars->LO2 - (hwdIf->pll_1[step].fcounter * hwdIf->dds_1[step].freq / hwdIf->rcounter1) + vars->datatable[step][1]);
+            .arg(hwdIf->LO2 - (hwdIf->pll_1[step].fcounter * hwdIf->dds_1[step].freq / hwdIf->rcounter1) + vars->datatable[step][1], 5,'f',5,'0');
   values << QString("glitchtime = %1").arg(vars->glitchtime);
 
 
@@ -3011,18 +3065,24 @@ void MainWindow::Restart()
   //Auxiliary graph data is computed, and does not survive the generation of new data.
   //So if aux data is currently graphed, we turn it off.
   if (vars->Y1DataType>=constAux0 && vars->Y1DataType<=constAux5)
+  {
     vars->Y1DataType=constNoGraph;
+  }
   if (vars->Y2DataType>=constAux0 && vars->Y2DataType<=constAux5)
+  {
     vars->Y2DataType=constNoGraph;
+  }
   if (vars->Y1DataType==constNoGraph && vars->Y2DataType==constNoGraph)
+  {
     graph->SetDefaultGraphData();    //So we have something to graph
+  }
   hwdIf->ClearAuxData(); //Indicate aux data not valid by clearing graph names
   hwdIf->onestep = 0;
 
   DisplayButtonsForRunning();   //SEW8 replaced print #main.restart, "Running"
 
   //1 Start new sweep series.
-  //Ver114-2b  Reinitialize hardware every time
+  //Reinitialize hardware every time
   if (vars->suppressHardwareInitOnRestart) //ver115-8c
   {
     vars->suppressHardwareInitOnRestart=0; //Clear flag; we only skip initialization for one restart after flag is set.
@@ -3040,7 +3100,7 @@ void MainWindow::Restart()
     return;
   }
 }
-void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no hardware (suppressHardware=1) ver115-6c
+void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no hardware (suppressHardware=1)
 {
   //11.[BeginScanSeries] get info from windows and update variables
   //[BeginScanSeries]   //Start a new series of scans, which requires some initialization
@@ -3064,11 +3124,11 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
       vnaCal.InstallSelectedLineCal(graph->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());  //ver115-8c
   }
   vars->cycleNumber=1;
-  gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[0],gridappearance->cycleColorsAxis2[0]);  //ver116-4s
+  gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[0],gridappearance->cycleColorsAxis2[0]);
   QString xText, dum1, dum2, gridText;
 
   gridappearance->gGetTextColors(xText, dum1, dum2, gridText);  //ver116-4s
-  gridappearance->gSetTextColors(xText, gridappearance->cycleColorsAxis1[0],gridappearance->cycleColorsAxis2[0], gridText);    //match text to trace ver116-4s
+  gridappearance->gSetTextColors(xText, gridappearance->cycleColorsAxis1[1],gridappearance->cycleColorsAxis2[1], gridText);    //match text to trace ver116-4s
   vars->doCycleTraceColors=0;    //start with cycling off. No preference file item for this. ver116-4s
 
   graph->gInitDynamicDraw();   //Set up for first scan of dynamic draw/erase/redraw...
@@ -3132,11 +3192,11 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   //fix me
   //useExpeditedDraw=gCanUseExpeditedDraw();   ; For normal SA use, [gDrawSingleTrace] will be used.
   //ver115-1a deleted printing of glitchtime
-  vars->doingInitialization=0;   //We are done with initialization on startup //ver114-4g moved
+  vars->doingInitialization=0;   //We are done with initialization on startup
 
   if (vars->calInProgress==1)
   {
-    vars->message="Calibration in progress."; graph->PrintMessage(); //ver114-4g
+    vars->message="Calibration in progress."; graph->PrintMessage();
   }
   else
   {
@@ -3157,8 +3217,8 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   //ver116-4s changed this so datatable  and phaarray are set up here whether or not suppresshardware=1.
   for (int i=0; i < vars->steps;i++)
   {
-    int thisfreq=graph->gGetPointXVal(i+1);    //Point number is 1 greater than step number SEWgraph
-    if (vars->msaMode!=modeSA)   //Store actual signal freq in VNA arrays ver116-1b
+    float thisfreq=graph->gGetPointXVal(i+1);    //Point number is 1 greater than step number SEWgraph
+    if (vars->msaMode!=modeSA)   //Store actual signal freq in VNA arrays
     {
       if (vars->msaMode!=modeReflection)
         vars->ReflectArray[vars->thisstep][0]=thisfreq;
@@ -3166,7 +3226,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
         vars->S21DataArray[vars->thisstep][0]=thisfreq;
     }
     int thisBand;
-    if (vars->freqBand==0)    //ver116-4s
+    if (vars->freqBand==0)
     {
       thisBand=1;
       if (thisfreq > vars->bandEnd2G)
@@ -3178,18 +3238,21 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
     {
       thisBand=vars->freqBand;
     }
-    if (thisBand!=1) thisfreq=hwdIf->Equiv1GFreq(thisfreq, thisBand);  //Convert from actual freq to equivalent 1G frequency ver116-4s
+    if (thisBand!=1)
+    {
+      thisfreq=hwdIf->Equiv1GFreq(thisfreq, thisBand);  //Convert from actual freq to equivalent 1G frequency ver116-4s
+    }
     vars->datatable[i][0] = vars->thisstep;    //put current step number into the array, row value= thisstep //moved ver111-18
     vars->datatable[i][1] = thisfreq;
-    vars->datatable[i][4] = thisBand; //ver116-4s
+    vars->datatable[i][4] = thisBand;
     vars->phaarray[i][0] = 0;   //pdm state
   }
-  if (vars->suppressHardware==0)    //Do these only if we are using the hardware //ver115-6c ver116-4s
+  if (vars->suppressHardware==0)    //Do these only if we are using the hardware
   {
-    hwdIf->CalculateAllStepsForLO1Synth(); //ver111-18
+    hwdIf->CalculateAllStepsForLO1Synth();
     if (activeConfig.TGtop > 0)
-      hwdIf->CalculateAllStepsForLO3Synth(); //ver111-18
-    hwdIf->CreateCmdAllArray(); //ver111-31b
+      hwdIf->CalculateAllStepsForLO3Synth();
+    hwdIf->CreateCmdAllArray();
   }
   CalcFreqCorrection();     //Calculate power correction at each frequency SEWgraph1
   if (vars->msaMode==modeSA && vars->frontEndActiveFilePath!="")
@@ -3255,7 +3318,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   {
     vars->thisstep=vars->sweepStartStep;
     vars->returnBeforeFirstStep=0;
-    vars->haltedAfterPartialRestart=1; //ver116-1b
+    vars->haltedAfterPartialRestart=1;
     CleanupAfterSweep();
     return;
   }
@@ -3270,7 +3333,7 @@ void MainWindow::LoadDataFileWithContext(QString dataFileName)
   //The data may be preceded by preference info, so we read and react to that first ver115-8c
   //Want baseFrequency=0 unless explicitly changed by loading a context.
   vars->baseFrequency=0;
-  //RememberState();  //So we can see what changed //ver115-8c
+  //RememberState();  //So we can see what changed
   LoadBasicContextsFromFile();   //Load preferences from restoreFileHndl$
   if (vars->restoreErr!="")
   {
@@ -3337,9 +3400,9 @@ void MainWindow::LoadDataFileWithContext(QString dataFileName)
   if (contextLoaded==0)
   {
     vars->planeadj=0;
-    vnaCal.S21JigR0=hwdIf->touch.touchRef;  //ver116-4j
+    vnaCal.S21JigR0=hwdIf->touch.touchRef;
     if (vars->msaMode==modeReflection)
-      vnaCal.S11BridgeR0=hwdIf->touch.touchRef; //ver116-4j
+      vnaCal.S11BridgeR0=hwdIf->touch.touchRef;
   }
 
   //The data is now in uWorkArray(1,x) to uWorkArray(uWorkNumPoints, x)
@@ -3429,6 +3492,8 @@ void MainWindow::ResizeArrays(int nPoints)
 
     //vars->cmdallarray.mresize(maxPoints,40);
     //hwdIf->usb->resizeMemory(maxPoints);
+
+    vars->resizeArrays(maxPoints);
 
     vars->freqCorrection.resize(maxPoints);
     vars->frontEndCorrection.resize(maxPoints);
@@ -3650,11 +3715,11 @@ QString MainWindow::SweepContext()
   QString aSpace=" ";
   //First include variables used outside the graph module
   QString s1= "Version=B";    //This item was added in ver114-7n and changed to B in ver115-1b
-  s1= s1+newLine+"msaMode="+vars->msaMode;    //ver114-6f ver115-1b
-  s1= s1+newLine+"FreqMode="+QString::number(vars->freqBand);    //ver115-1c  ver116-4s
+  s1= s1+newLine+"msaMode="+vars->msaMode;
+  s1= s1+newLine+"FreqMode="+QString::number(vars->freqBand);
   s1= s1+newLine+"BaseFreq="+QString::number(vars->baseFrequency);
   s1= s1+newLine+"SpecialGraph="+QString::number(vars->doSpecialGraph);
-  s1=s1+newLine+ "RLCSpec="+vars->doSpecialRLCSpec+";;"+vars->doSpecialCoaxName; //ver115-4b
+  s1=s1+newLine+ "RLCSpec="+vars->doSpecialRLCSpec+";;"+vars->doSpecialCoaxName;
   if (vars->useAutoWait)
   {
     s1=s1+newLine+"Wait="+vars->autoWaitPrecision;
@@ -4457,6 +4522,7 @@ void MainWindow::on_actionSweep_triggered()
 
   if (graph->haltsweep)
   {
+    graph->continueCode=1;
     FinishSweeping();
   }
 
@@ -4507,7 +4573,7 @@ void MainWindow::on_actionSweep_triggered()
   config.planeadj = vars->planeadj;
   config.prevPlaneAdj = vars->prevPlaneAdj;
   config.freqBand = vars->freqBand;
-  config.LO2 = vars->LO2;
+  config.LO2 = hwdIf->LO2;
   config.autoWaitPrecision = vars->autoWaitPrecision;
 
 
@@ -4628,3 +4694,5 @@ void MainWindow::on_actionSweep_triggered()
     }*/
   }
 }
+//-----------------------------------------------------------------------------
+

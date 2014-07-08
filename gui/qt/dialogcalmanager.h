@@ -153,7 +153,7 @@ public:
   int calfigModuleVersion;
   //Each entry of calMagCoeffTable() will have 8 numbers. 0-3 are the A,B,C,D
   //coefficients for interpolating the real part; 4-7 are for the imag part.
-  Q2DintVector calMagCoeffTable;    //SEWcal Cubic coefficients for interpolating in calMagTable moved here by ver115-1d
+  Q2DfloatVector calMagCoeffTable;    //SEWcal Cubic coefficients for interpolating in calMagTable moved here by ver115-1d
    //calFreqCoeffTable has the A,B,C,D coefficients for interpolating in the calFreqTable()
   Q2DintVector calFreqCoeffTable;    //SEWcal Cubic interpolation coefficients for calFreqTable()  moved here by ver115-1d
   QString DefaultDir;

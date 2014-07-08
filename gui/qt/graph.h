@@ -27,6 +27,7 @@
 #include "uwork.h"
 #include "twoport.h"
 #include "hwdinterface.h"
+#include "marker.h"
 
 
 
@@ -105,7 +106,7 @@ public:
   void gGetActiveGraphs(int &graphY1, int &graphY2);
   void gGetPointVal(int N, int &x, int &y1, int &y2);
   float gGetPointYVal(int N,int yNum);
-  int gGetPointXVal(float N);
+  float gGetPointXVal(float N);
   float gGetPointXPix(float N);
   void gSetNumPoints(int nPts);
   void gClearYValues();
@@ -367,6 +368,11 @@ private:
   twoPortModule twoPort;
   hwdInterface *hwdIf;
 
+  int markerX;
+  int markerY;
+
+  marker * haltMarker;
+
   void CalcTransmitGraphData(int currStep, float &y1, float &y2, int useWorkArray);
   QString gRestoreTraceContext(QString &s, int &startPos, int isValidation);
   QString gGridContext();
@@ -452,7 +458,7 @@ private:
   int gLastPointBeforePause;     //number of last point drawn (1...) in dynamic draw at time of pause
   int gWasFirstScanAtPause;  //whether we were in the first scan at time of pause
   int gLastQueryPointNum;    //Last point number at which mouse-move query was done, or -1 if none ver116-4h
-  int gLastQueryTraceNum;   //Trace num (1 or 2) closest to point of last mouse query ver116-4h
+  int gLastQueryTraceNum;   //Tdarace num (1 or 2) closest to point of last mouse query ver116-4h
 
 
   QString gMarkerString;   //for each drawn marker, contains four parameters for gDrawMarkerPix
@@ -463,6 +469,8 @@ private:
 
 
 
+  void gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, int markerY, int &endNum);
+  QString gDrawMarkerAtPointNum(float N, QString trace, QString style, QString markLabel);
 signals:
   void ChangeMode();
   void RequireRestart();

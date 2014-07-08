@@ -116,7 +116,7 @@ public:
   void FillPLL1array(int step);
   void FillPLL3array(int step);
   void FillDDS1array(int step);
-  void FillDDS3array(int);
+  void FillDDS3array(int step);
   void CreateCmdAllArray();
   void CommandPLL(int step);
 
@@ -200,7 +200,7 @@ public:
   int Acounter2;
   int fcounter2;
   int rcounter2;
-  float appxLO2;
+  //float appxLO2;
 
 
 
@@ -303,13 +303,15 @@ private:
   QString DefaultDir;
   float enterPLL2phasefreq;
   float difPhase;
-  Int64N cmdForUsb;
+  //Int64N
+  unsigned long cmdForUsb[2];
   float ddsoutput;
   float ddsclock;
   int PLL;
   quint32 base;
   float power;
 
+  UsbAllSlimsAndLoadData data;
 
 
   nValues n;
@@ -379,6 +381,9 @@ private:
   quint32 w2;
   quint32 w3;
   quint32 w4;
+
+  int le1, le2,le3,fqud1,fqud3;
+
 
 public slots:
 

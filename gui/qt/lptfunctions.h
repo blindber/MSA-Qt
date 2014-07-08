@@ -18,7 +18,9 @@
 #define LPTFUNCTIONS_H
 #include <QtCore>
 #include "constants.h"
-
+#ifdef __WIN32__
+#include <windows.h>
+#endif
 //cmdallarray;//(2020,40) //(0-15)DDS1+DDS3, (16-39)PLL1+DDS1+PLL3+DDS3
 class ccmdAllArray
 {
@@ -28,6 +30,7 @@ public:
 
 enum lptLibType
 {
+  none = -1,
   ntPortLin = 0,
   userPortLib = 1,
   inpoutLib = 2

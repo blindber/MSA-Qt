@@ -52,7 +52,7 @@ public:
 
   int dds1parser;
   int appxLO2;
-  int masterclock;
+  double masterclock;
 
   int switchHasRBW;
   int switchHasVideo;
@@ -64,7 +64,7 @@ public:
   QString configDisplayedFilters[41];
 
   int maxpdmout;
-  int invdeg;
+  float invdeg;
 
   int adconv;
   int TGtop;

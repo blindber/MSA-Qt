@@ -215,7 +215,7 @@ void dialogConfigMan::configGetDisplayData()
   tempConfig.masterclock = ui->mast->text().toFloat();
 
   tempConfig.maxpdmout = ui->PDM->text().toInt();
-  tempConfig.invdeg = ui->Inv->text().toInt();
+  tempConfig.invdeg = ui->Inv->text().toFloat();
 
   tempConfig.switchHasRBW = ui->switchRBW->isChecked() ? 1 : 0;
   tempConfig.switchHasVideo = ui->switchVideo->isChecked() ? 1 : 0;
@@ -1038,11 +1038,11 @@ QString dialogConfigMan::configHardwareContext(const msaConfig tConfig)
   for (int i=1; i <= tConfig.MSANumFilters; i++)
   {
     //for each filter, print a line with frequency and bandwidth
-    list.append(QString("Filter=%1 %2").arg(tConfig.MSAFilters[i][0]).arg(tConfig.MSAFilters[i][1]));
+    list.append(QString("Filter=%1 %2").arg(tConfig.MSAFilters[i][0], 5,'f',6,'0').arg(tConfig.MSAFilters[i][1], 5,'f',5,' '));
   }
 
   list.append(QString("LPT=&H%1").arg(tConfig.globalPort,0,16));    //save port as hexidecimal
-  list.append(QString("masterclock=%1").arg(tConfig.masterclock));
+  list.append(QString("masterclock=%1").arg(tConfig.masterclock, 5,'f',5,'0'));
   list.append(QString("adconv=%1").arg(tConfig.adconv));
   list.append(QString("cb=%1").arg(tConfig.cb));
   list.append(QString("dds1parser=%1").arg(tConfig.dds1parser));
@@ -1516,7 +1516,7 @@ msaConfig::msaConfig()
   PLL3mode = 0;
 
   appxdds1 = 0;
-  dds1filbw = 0;
+  dds1filbw = 0.015;
 
   appxdds3 = 0;
   dds3filbw = 0;

@@ -57,6 +57,7 @@ public:
   globalVars();
   int DataTypeIsAngle(int dataType);
   void zeroVars();
+  void resizeArrays(int newSize);
 
 
 
@@ -70,7 +71,7 @@ public:
                     //You can start with default configuration and change after calibration.
       float centfreq;     //Sweep center frequency, in MHz. For initial set-up use "0"
       float sweepwidth;   //Sweep width in MHz. For initial set-up use 10 times the BW of Final Xtal Filter
-      int glitchtime;
+      float glitchtime;
       int Y1Top, Y1Bot;     //Top and bottom of Y1 (right) axis
       int Y2Top, Y2Bot;      //Top and bottom of Y2 (right) axis
       int PLL;
@@ -93,7 +94,7 @@ public:
       QString doSpecialRLCSpec;//$ //RLC spec for doSpecialGraph
       QString doSpecialCoaxName;//$ //Name of coax last used in RLC spec ver115-4b
 
-      float LO2;          //actual LO2 frequency ver115-1c
+      //double LO2;          //actual LO2 frequency ver115-1c
       int suppressPhase;    //=1 to force phase to zero without measuring it ver116-1b
 
       //int hFileMenu, hOptionsMenu,hDataMenu,hFunctionsMenu,hOperatingCalMenu, hMultiscanMenu;  //Windows handles to some graph window submenus ver115-5d
@@ -463,7 +464,7 @@ public:
       float pdmstate;
       float dds1output;
       float dds2output;
-      float reference;
+      double reference;
 
       int bUseUsb;
       QString refHeadingColor1,refHeadingColor2;

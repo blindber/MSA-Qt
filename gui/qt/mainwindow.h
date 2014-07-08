@@ -78,7 +78,6 @@ private:
 
   void CalcFreqCorrection();
 
-  void CommandThisStep();
   int PostScan();
   void FinishSweeping();
   void ReverseSweepDirection();
@@ -195,7 +194,7 @@ private:
 protected:
   void resizeEvent(QResizeEvent *event);
   virtual void showEvent ( QShowEvent * event );
-
+  virtual bool eventFilter(QObject *obj, QEvent *event);
 private slots:
 
   void on_actionMultiscan_Help_triggered();
@@ -283,9 +282,7 @@ public slots:
   void Halted();
   //void IncrementOneStep();
   void StartSweep();
-
-
-
+  void CommandThisStep();
 
 };
 

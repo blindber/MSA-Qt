@@ -130,7 +130,7 @@ void globalVars::zeroVars()
   datawindow = 0;
   doSpecialGraph = 0;
   doSpecialRandom = 0;
-  LO2 = 0;
+  //LO2 = 0;
   suppressPhase = 0;
   menuOperatingCalShowing = 0;
   menuMultiscanShowing = 0;
@@ -327,4 +327,12 @@ void globalVars::zeroVars()
   multiscanHaltAtEnd = 0;
   multiscanSaveRefreshEachScan = 0;
 
+}
+
+void globalVars::resizeArrays(int newSize)
+{
+  datatable.mresize(newSize,5);    //added element for band ver116-4s
+  magarray.mresize(newSize,4);
+  phaarray.mresize(newSize,5);
+  lineCalArray.mresize(newSize,3);
 }

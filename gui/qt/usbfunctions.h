@@ -187,6 +187,10 @@ public:
   void * hSPLL3Array; //USB:05/12/2010
   void * ptrSPLL3Array; //USB:05/12/2010
 
+  //Int64SW int64SW;
+  //Int64N int64N;
+  unsigned long int64SW[2];
+  unsigned long int64N[2];
 
 private:
   QLibrary *usbLib;

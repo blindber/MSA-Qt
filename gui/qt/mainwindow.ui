@@ -87,7 +87,7 @@
           </size>
          </property>
          <property name="text">
-          <string>Restart</string>
+          <string>Running</string>
          </property>
         </widget>
        </item>
@@ -100,7 +100,7 @@
           </size>
          </property>
          <property name="text">
-          <string>Continue</string>
+          <string>Halt</string>
          </property>
         </widget>
        </item>
@@ -197,7 +197,7 @@
           </size>
          </property>
          <property name="text">
-          <string>One Step</string>
+          <string>HaltAtEnd</string>
          </property>
         </widget>
        </item>
@@ -317,7 +317,7 @@ Setups</string>
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>18</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

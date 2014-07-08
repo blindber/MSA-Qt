@@ -69,7 +69,8 @@ SOURCES += main.cpp\
     dialogFreqAxisPreference.cpp \
     dialogshowvars.cpp \
     smithdialog.cpp \
-    scanthread.cpp
+    scanthread.cpp \
+    marker.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -97,7 +98,8 @@ HEADERS  += mainwindow.h \
     dialogFreqAxisPreference.h \
     dialogshowvars.h \
     smithdialog.h \
-    scanthread.h
+    scanthread.h \
+    marker.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \

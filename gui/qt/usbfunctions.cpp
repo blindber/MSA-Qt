@@ -78,23 +78,23 @@ bool usbFunctions::usbInterfaceOpen(QString fileName)
   UsbMSADeviceAllSlimsAndLoadStruct = (_UsbMSADeviceAllSlimsAndLoadStruct) usbLib->resolve("UsbMSADeviceAllSlimsAndLoadStruct");
 
 #ifdef __WIN32__
-  HGLOBAL hDevMode = 0;
-  hDevMode = GlobalAlloc(10, 2002 * 40);
+ // HGLOBAL hDevMode = 0;
+  //hDevMode = GlobalAlloc(10, 2002 * 40);
   //needs to be more complex - this flag uses USB if it is available
   //do not set it if bUsbAvailable is not set
   //create a memory block for holding dds data (akin to cmdallarray[][] but accessible within dll)
   AllArrayBlockSize = 2002*40; //USB:01-08-2010
   DeviceArrayBlockSize = 2002 * 8; //USB:06-08-2010
-  hSAllArray = GlobalAlloc( AllArrayBlockSize, GMEM_MOVEABLE ); //USB:01-08-2010
-  ptrSAllArray = GlobalLock( hSAllArray ); //USB:01-08-2010
-  hSDDS1Array = GlobalAlloc( DeviceArrayBlockSize, GMEM_MOVEABLE  ); //USB:06-08-2010
-  ptrSDDS1Array = GlobalLock( hSDDS1Array ); //USB:06-08-2010
-  hSDDS3Array = GlobalAlloc( DeviceArrayBlockSize, GMEM_MOVEABLE  ); //USB:06-08-2010
-  ptrSDDS3Array = GlobalLock( hSDDS3Array ); //USB:06-08-2010
-  hSPLL1Array = GlobalAlloc( DeviceArrayBlockSize, GMEM_MOVEABLE  ); //USB:06-08-2010
-  ptrSPLL1Array = GlobalLock( hSPLL1Array ); //USB:06-08-2010
-  hSPLL3Array = GlobalAlloc( DeviceArrayBlockSize, GMEM_MOVEABLE  ); //USB:06-08-2010
-  ptrSPLL3Array = GlobalLock( hSPLL3Array ); //USB:06-08-2010
+  hSAllArray = GlobalAlloc(GMEM_MOVEABLE, AllArrayBlockSize );
+  ptrSAllArray = GlobalLock(hSAllArray );
+  hSDDS1Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+  ptrSDDS1Array = GlobalLock(hSDDS1Array );
+  hSDDS3Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+  ptrSDDS3Array = GlobalLock(hSDDS3Array );
+  hSPLL1Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+  ptrSPLL1Array = GlobalLock(hSPLL1Array );
+  hSPLL3Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+  ptrSPLL3Array = GlobalLock(hSPLL3Array );
 #endif
   unsigned long result = 0;
   usbMSADeviceSetAllArrayPtr(ptrSAllArray,2002,40, &result); //USB:01-08-2010
@@ -121,6 +121,7 @@ void *usbFunctions::getUSBDevice()
   return USBDevice;
 }
 
+
 void usbFunctions::usbMSARelease()
 {
   UsbMSARelease(USBDevice);
@@ -134,25 +135,25 @@ int usbFunctions::usbMSAInit()
 
 void usbFunctions::resizeMemory(int maxPoints)
 {
-  if (USBDevice)  //USB:01-08-2010
+  if (USBDevice)
   {
 #ifdef __WIN32__
-    GlobalFree(hSAllArray); //USB:01-08-2010
-    AllArrayBlockSize = maxPoints * 40; //USB:01-08-2010
-    hSAllArray = GlobalAlloc(AllArrayBlockSize, GMEM_MOVEABLE ); //USB:01-08-2010
-    ptrSAllArray = GlobalLock(hSAllArray); //USB:01-08-2010
-    DeviceArrayBlockSize = maxPoints * 8; //USB:06-08-2010
-    hSDDS1Array = GlobalAlloc(DeviceArrayBlockSize, GMEM_MOVEABLE ); //USB:06-08-2010
-    ptrSDDS1Array = GlobalLock(hSDDS1Array); //USB:06-08-2010
-    hSDDS3Array = GlobalAlloc(DeviceArrayBlockSize, GMEM_MOVEABLE ); //USB:06-08-2010
-    ptrSDDS3Array = GlobalLock(hSDDS3Array); //USB:06-08-2010
-    hSPLL1Array = GlobalAlloc(DeviceArrayBlockSize, GMEM_MOVEABLE ); //USB:06-08-2010
-    ptrSPLL1Array = GlobalLock(hSPLL1Array); //USB:06-08-2010
-    hSPLL3Array = GlobalAlloc(DeviceArrayBlockSize, GMEM_MOVEABLE ); //USB:06-08-2010
-    ptrSPLL3Array = GlobalLock(hSPLL3Array); //USB:06-08-2010
+    GlobalFree(hSAllArray);
+    AllArrayBlockSize = maxPoints * 40;
+    hSAllArray = GlobalAlloc(GMEM_MOVEABLE, AllArrayBlockSize );
+    ptrSAllArray = GlobalLock(hSAllArray);
+    DeviceArrayBlockSize = maxPoints * 8;
+    hSDDS1Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+    ptrSDDS1Array = GlobalLock(hSDDS1Array);
+    hSDDS3Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+    ptrSDDS3Array = GlobalLock(hSDDS3Array);
+    hSPLL1Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+    ptrSPLL1Array = GlobalLock(hSPLL1Array);
+    hSPLL3Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
+    ptrSPLL3Array = GlobalLock(hSPLL3Array);
 #endif
     unsigned long result = 0;
-    usbMSADeviceSetAllArrayPtr(ptrSAllArray,maxPoints,40, &result); //USB:01-08-2010
+    usbMSADeviceSetAllArrayPtr(ptrSAllArray,maxPoints,40, &result);
   }
 }
 
@@ -163,12 +164,14 @@ int usbFunctions::usbMSADeviceSetAllArrayPtr(void *pAllArray, short nArrayRows, 
 
 int usbFunctions::usbMSADeviceWriteString(QString data, int message_size)
 {
+  int retVal;
   QByteArray byteArray = data.toUtf8();
   char* cString = (char*)byteArray.constData();
 
   if (!USBDevice) return 0;
 
-  return UsbMSADeviceWriteString(USBDevice, cString, message_size);
+  retVal =  UsbMSADeviceWriteString(USBDevice, cString, message_size);
+  return retVal;
 }
 
 int usbFunctions::usbMSADeviceReadAdcs(char *data, int message_size, unsigned long *pResults)
@@ -183,19 +186,21 @@ int usbFunctions::usbMSADeviceReadAdcsStruct(unsigned short *pData, unsigned lon
   return UsbMSADeviceReadAdcsStruct(USBDevice, pData, pResults);
 }
 
-int usbFunctions::usbMSADevicePopulateDDSArrayBitReverse(long long *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults)
+int usbFunctions::usbMSADevicePopulateDDSArrayBitReverse(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults)
 {
+  int retVal;
   if (!USBDevice) return 0;
-  return UsbMSADevicePopulateDDSArrayBitReverse(USBDevice, pArray, pData, step, bits, pResults);
+  retVal = UsbMSADevicePopulateDDSArrayBitReverse(USBDevice, pArray, pData, step, bits, pResults);
+  return retVal;
 }
 
-int usbFunctions::usbMSADevicePopulateDDSArray(long long *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults)
+int usbFunctions::usbMSADevicePopulateDDSArray(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults)
 {
   if (!USBDevice) return 0;
   return UsbMSADevicePopulateDDSArray(USBDevice, pArray, pData, step, pResults);
 }
 
-int usbFunctions::usbMSADevicePopulateAllArray(unsigned short Steps, unsigned short bits, long long *pBit0Array, long long *pBit1Array, long long *pBit2Array, long long *pBit3Array, long long *pBit4Array, long long *pBit5Array, long long *pBit6Array, long long *pBit7Array, unsigned long *pResults)
+int usbFunctions::usbMSADevicePopulateAllArray(unsigned short Steps, unsigned short bits, __int64 *pBit0Array, __int64 *pBit1Array, __int64 *pBit2Array, __int64 *pBit3Array, __int64 *pBit4Array, __int64 *pBit5Array, __int64 *pBit6Array, __int64 *pBit7Array, unsigned long *pResults)
 {
   if (!USBDevice) return 0;
   return UsbMSADevicePopulateAllArray(USBDevice, Steps, bits, pBit0Array, pBit1Array, pBit2Array, pBit3Array, pBit4Array, pBit5Array, pBit6Array, pBit7Array, pResults);

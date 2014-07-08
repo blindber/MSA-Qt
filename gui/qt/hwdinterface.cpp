@@ -61,7 +61,7 @@ hwdInterface::hwdInterface(QWidget *parent)
   levalue = 0;
   pdf2 = 0;
   appxVCO = 0;
-  appxLO2 = 0;
+  //appxLO2 = 0;
   ncounter2 = 0;
   fcounter1 = 0;
   lastfcounter1 = 0;
@@ -88,8 +88,8 @@ hwdInterface::hwdInterface(QWidget *parent)
   //private vars
   enterPLL2phasefreq = 0;
   difPhase = 0;
-  cmdForUsb.lsLong = 0;
-  cmdForUsb.msLong = 0;
+  cmdForUsb[0] = 0;
+  cmdForUsb[1] = 0;
   ddsoutput = 0;
   ddsclock = 0;
 
@@ -145,6 +145,7 @@ void hwdInterface::resizeArrays(int newSize)
   pll_3.resize(newSize);
   usb->resizeMemory(newSize);
   lpt.cmdAllArray.resize(newSize);
+
 }
 
 void hwdInterface::initVars()
@@ -154,7 +155,6 @@ void hwdInterface::initVars()
   globalSELT=SELT;
   globalContClear=contclear;
 
-  int le1, le2,le3,fqud1,fqud3;
   if (activeConfig->cb==0)
   {
     le1=4;
@@ -163,7 +163,7 @@ void hwdInterface::initVars()
     fqud1=STRB;
     fqud3=2;
   }
-  if (activeConfig->cb==1)
+  else if (activeConfig->cb==1)
   {
     le1=1;
     le2=1;
@@ -171,7 +171,7 @@ void hwdInterface::initVars()
     fqud1=2;
     fqud3=8;
   }
-  if (activeConfig->cb==2)
+  else if (activeConfig->cb==2)
   {
     le1=1;
     le2=16;
@@ -179,7 +179,7 @@ void hwdInterface::initVars()
     fqud1=2;
     fqud3=8;
   }
-  if (activeConfig->cb==3)
+  else if (activeConfig->cb==3)
   {
     le1=1;
     le2=16;
@@ -215,11 +215,14 @@ void hwdInterface::initVars()
 
 void hwdInterface::CreateRcounter()
 {
-  //needed:reference,appxpdf ; creates:rcounter,pdf //ver111-4
-  rcounter = (int)(vars->reference/appxpdf); //ver111-4
-  if ((vars->reference/appxpdf) - rcounter >= .5) rcounter = rcounter + 1;   //rounds off rcounter //ver111-4
-  pdf = vars->reference/rcounter; //ver111-4
-  //to (Initialize PLL 3),[InitializePLL2],or[InitializePLL1]with rcounter,pdf //ver111-4
+  //needed:reference,appxpdf ; creates:rcounter,pdf
+  rcounter = (int)(vars->reference/appxpdf);      //16
+  if ((vars->reference/appxpdf) - rcounter >= .5)
+  {
+    rcounter = rcounter + 1;   //rounds off rcounter
+  }
+  pdf = vars->reference/rcounter;   //4.0000175
+  //to (Initialize PLL 3),[InitializePLL2],or[InitializePLL1]with rcounter,pdf
 }
 void hwdInterface::CommandPLL1R()
 {
@@ -250,7 +253,7 @@ void hwdInterface::CommandPLL2R()
 {
   //needed:reference,appxpdf,PLL2phasepolarity,SELT,PLL2
   preselector = 32;
-  phasepolarity = activeConfig->PLL2phasepolarity;    //inverting op amp is 0, non-inverting loop is 1
+  phasepolarity = activeConfig->PLL2phasepolarity;  //1  //inverting op amp is 0, non-inverting loop is 1
   fractional = 0;    //0 for Integer-N; PLL 2 should not be fractional due to increased noise
   Jcontrol = SELT;   //for PLL 2, on Control Board J2, the value is "3"
   LEPLL = 8;          //for PLL 2, on Control Board J2, the value is "8"
@@ -293,13 +296,13 @@ void hwdInterface::CommandRBuffer()
   //needed:rcounter,preselector,phasepolarity,fractional,Jcontrol,LEPLL,PLL
   if (vars->PLL == 2325)
     Command2325R();//needs:rcounter,preselector,Jcontrol,port,LEPLL,contclear ; commands LMX2325 rcounter and registers
-  if (vars->PLL == 2326)
+  else if (vars->PLL == 2326)
     Command2326R();//needs:rcounter,phasepolarity,Jcontrol,port,LEPLL,contclear ; commands LMX2326 rcounter and registers
-  if (vars->PLL == 2350)
+  else if (vars->PLL == 2350)
     Command2350R();//needs:rcounter,phasepolarity,Jcontrol,port,LEPLL,contclear,fractional ; commands LMX2350 rcounter
-  if (vars->PLL == 2353)
+  else if (vars->PLL == 2353)
     Command2353R();//needs:rcounter,phasepolarity,Jcontrol,port,LEPLL,contclear,fractional ; commands LMX2353 rcounter
-  if (vars->PLL == 4112)
+  else if (vars->PLL == 4112)
     Command4112R();//needs:rcounter,preselector,phasepolarity,Jcontrol,port,LEPLL,contclear ; commands AD4112 rcounter
   return;
 }
@@ -307,9 +310,9 @@ void hwdInterface::CreateIntegerNcounter()
 {
 
   //needed:appxVCO,reference,rcounter ; creates:ncount,ncounter,fcounter(0),pdf
-  int ncount = appxVCO/(vars->reference/rcounter);  //approximates the Ncounter for PLL
-  ncounter = int(ncount);     //approximates the ncounter for PLL
-  if (ncount - ncounter >= .5) ncounter = ncounter + 1;   //rounds off ncounter
+  double ncount = appxVCO/(vars->reference/rcounter);  //approximates the Ncounter for PLL
+  ncounter = int(ncount + 0.5);     //approximates the ncounter for PLL
+  //if (ncount - ncounter >= .5) ncounter = ncounter + 1;   //rounds off ncounter
   fcounter = 0;
   pdf = appxVCO/ncounter;        //actual phase freq of PLL
   return;  //to //CreatePLL2N,//[CalculateThisStepPLL1],or //[CalculateThisStepPLL3] with ncount, ncounter and fcounter(=0)
@@ -395,6 +398,8 @@ void hwdInterface::CreatePLL1N()
     RequireRestart();
     return;
   }
+  pll_1[vars->thisstep].Bcounter = Bcounter;
+  pll_1[vars->thisstep].Acounter = Acounter;
   //Bcounter1=Bcounter;
   //Acounter1=Acounter;
   return; //returns with Bcounter1,Acounter1,N0thruNx
@@ -434,6 +439,8 @@ void hwdInterface::CreatePLL3N()
     RequireRestart();
     return;
   }
+  pll_3[vars->thisstep].Bcounter = Bcounter;
+  pll_3[vars->thisstep].Acounter = Acounter;
   //    Bcounter3=Bcounter: Acounter3=Acounter
   return; //returns with Bcounter3,Acounter3,N0thruNx
 }
@@ -442,11 +449,16 @@ void hwdInterface::CreatePLL3N()
 void hwdInterface::CreateNBuffer()
 {
   //needed:PLL,ncounter,fcounter,preselector
-  if (vars->PLL == 2325) Create2325N();//needs:ncounter,preselector; creates LMX2325 N Buffer ver111
-  if (vars->PLL == 2326) Create2326N();//needs:ncounter ; creates LMX2326 N Buffer ver111
-  if (vars->PLL == 2350) Create2350N();//needs:ncounter,preselector,fcounter; creates LMX2350 RFN Buffer ver111
-  if (vars->PLL == 2353) Create2353N();//needs: ncounter,preselector,fcounter; creates LMX2353 N Buffer ver111
-  if (vars->PLL == 4112) Create4112N();//needs:ncounter,preselector; creates AD4112 N Buffer ver111
+  if (vars->PLL == 2325)
+    Create2325N();//needs:ncounter,preselector; creates LMX2325 N Buffer ver111
+  else if (vars->PLL == 2326)
+    Create2326N();//needs:ncounter ; creates LMX2326 N Buffer ver111
+  else if (vars->PLL == 2350)
+    Create2350N();//needs:ncounter,preselector,fcounter; creates LMX2350 RFN Buffer ver111
+  else if (vars->PLL == 2353)
+    Create2353N();//needs: ncounter,preselector,fcounter; creates LMX2353 N Buffer ver111
+  else if (vars->PLL == 4112)
+    Create4112N();//needs:ncounter,preselector; creates AD4112 N Buffer ver111
   return; //with Bcounter,Acounter, and N Bits N0-N23
 }
 
@@ -551,14 +563,23 @@ void hwdInterface::Create2326N()
   nb12 = int(nb11/2);
   n.N19 = nb11 - 2*nb12;          //Bcounter bit 12 MSB
   n.N20 = 1;    //Phase Det Current, 1= 1 ma, 0= 250 ua
+  n.N21 = 0;
+  n.N22 = 0;
+  n.N23 = 0;
   if (activeConfig->cb == 3)
   {
+    //usb->int64N.lsLong
+        usb->int64N[1] = (1<<23)*n.N23+ (1<<22)*n.N22+ (1<< 21)*n.N21+ (1<< 20)*n.N20+ (1<< 19)*n.N19+ (1<< 18)*n.N18+ (1<< 17)*n.N17+ (1<< 16)*n.N16+ (1<< 15)*n.N15+
+                (1<< 14)*n.N14+ (1<< 13)*n.N13+ (1<< 12)*n.N12+ (1<< 11)*n.N11+ (1<< 10)*n.N10+ (1<< 9)*n.N9+ (1<< 8)*n.N8+
+                (1<< 7)*n.N7+ (1<< 6)*n.N6+ (1<< 5)*n.N5+ (1<< 4)*n.N4+ (1<< 3)*n.N3+ (1<< 2)*n.N2+ (1<< 1)*n.N1+ (1<< 0)*n.N0;
 //      then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
 //            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
 //            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
   }
     if (activeConfig->cb == 3)
   {
+      //usb->int64N.msLong = 0;
+      usb->int64N[0] = 0;
       //then Int64N.msLong.struct = 0 //ver116-4o per Lrev1
   }
 }
@@ -725,8 +746,11 @@ void hwdInterface::CreateBaseForDDSarray()
   w4= int(base-(w1*pow(2.0,24))-(w2*pow(2.0,16))-(w3*pow(2.0,8)));
   if (activeConfig->cb == 3)
   {
-    //   Int64SW.msLong.struct = 0 //USB:05/12/2010
-    //        Int64SW.lsLong.struct = int( base ) //USB:05/12/2010
+//       usb->int64SW.msLong = 0;
+//       usb->int64SW.lsLong = int( base );
+       usb->int64SW[0] = 0;
+       usb->int64SW[1] = int( base );
+
   }
   else
   {
@@ -809,9 +833,7 @@ void hwdInterface::CreateBaseForDDSarray()
 }
 void hwdInterface::ResetDDS1serUSB()
 {
-
-  //USB:01-08-2010
-  int pdmcmd = vars->phaarray[vars->thisstep][0]; //ver111-39d
+  int pdmcmd = vars->phaarray[vars->thisstep][0];
 
   //(reset DDS3 to parallel)WCLK up,WCLK up and FQUD up,WCLK up and FQUD down,WCLK down
   QString USBwrbuf = "A10100" + util.ToHex(filtbank + 1);
@@ -819,7 +841,6 @@ void hwdInterface::ResetDDS1serUSB()
   bool result = usb->usbMSADeviceWriteString(USBwrbuf,4);
   if (!result)
   {
-    //if USBdevice <> 0 then CALLDLL #USB, "UsbMSAInit", USBdevice as long, result as boolean
     usb->usbMSAInit();
     usb->usbMSADeviceWriteString(USBwrbuf,4);
   }
@@ -850,7 +871,7 @@ void hwdInterface::ResetDDS3serUSB()
   //reset serial DDS3 without disturbing Filter Bank or PDM. usb v1.0
   //must have DDS (AD9850/9851) hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don't care.
   //this will reset DDS into parallel, involk serial mode, then command to 0 Hz.
-  int pdmcmd = vars->phaarray[vars->thisstep][0]; //ver111-39d
+  int pdmcmd = vars->phaarray[vars->thisstep][0];
 
   //(reset DDS3 to parallel)WCLK up,WCLK up and FQUD up,WCLK up and FQUD down,WCLK down
   QString USBwrbuf = "A10100"+util.ToHex(filtbank + 1);
@@ -879,38 +900,38 @@ void hwdInterface::CommandDDS1()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
-[CommandDDS1]'ver111-36b. ver113-4a
-    'this will recalculate DDS1, using the values in the Command DDS 1 Box, and "with DDS Clock at" Box.
-    'it will insert the new DDS 1 frequency into the command arrays for all steps, leaving others alone
-    'it will initiate a re-command at thisstep (where the sweep was halted)
-      'if Original Control Board is used, only the DDS 1 is re-commanded. ver113-4a
-      'if SLIM Control Board is used, all 4 modules will be re-commanded. ver113-4a
-    'using One Step or Continue will retain the new DDS1 frequency.
-    'PLO1 will be non-functional until [Restart] button is clicked. PLL1 will break lock and "slam" to extreme.
-    '[Restart] will reset arrays and begin sweeping at step 0. Special Tests Window will not be updated.
-    'Signal Generator or Tracking Generator output will not be effected.
-    'caution, do not enter a frequency that is higher than 1/2 the masterclock frequency (ddsclock)
-    print #special.dds1out, "!contents? dds1out$";   'grab contents of Command DDS 1 Box
-    ddsoutput = val(dds1out$) 'intended output frequency of DDS 1
-    print #special.masclkf, "!contents? msclk$";   'grab contents of "with DDS Clock at" box
-    msclk = val(msclk$) 'if "with DDS Clock at" box was not changed, this is the real MasterClock frequency
+[CommandDDS1]//ver111-36b. ver113-4a
+    //this will recalculate DDS1, using the values in the Command DDS 1 Box, and "with DDS Clock at" Box.
+    //it will insert the new DDS 1 frequency into the command arrays for all steps, leaving others alone
+    //it will initiate a re-command at thisstep (where the sweep was halted)
+      //if Original Control Board is used, only the DDS 1 is re-commanded. ver113-4a
+      //if SLIM Control Board is used, all 4 modules will be re-commanded. ver113-4a
+    //using One Step or Continue will retain the new DDS1 frequency.
+    //PLO1 will be non-functional until [Restart] button is clicked. PLL1 will break lock and "slam" to extreme.
+    //[Restart] will reset arrays and begin sweeping at step 0. Special Tests Window will not be updated.
+    //Signal Generator or Tracking Generator output will not be effected.
+    //caution, do not enter a frequency that is higher than 1/2 the masterclock frequency (ddsclock)
+    print #special.dds1out, "!contents? dds1out$";   //grab contents of Command DDS 1 Box
+    ddsoutput = val(dds1out$) //intended output frequency of DDS 1
+    print #special.masclkf, "!contents? msclk$";   //grab contents of "with DDS Clock at" box
+    msclk = val(msclk$) //if "with DDS Clock at" box was not changed, this is the real MasterClock frequency
     ddsclock = msclk
-    'caution: if ddsoutput >= to .5 ddsclock, the program will error out
-    gosub [CreateBaseForDDSarray]'needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
-    remember = thisstep 'remember where we were when entering this subroutine
-    for thisstep = 0 to steps 'ver112-2a
-    gosub [FillDDS1array]'need thisstep,sw0-sw39,w0-w4,base,ddsclock
-    next thisstep 'ver112-2a
-    thisstep = remember 'ver112-2a
-    gosub [CreateCmdAllArray] 'ver112-2a
-    if cb = 0 then gosub [CommandDDS1OrigCB]'will command DDS 1, only
-'delver113-4a    if cb = 2 then gosub [CommandDDS1SlimCB]'will command DDS 1, only
+    //caution: if ddsoutput >= to .5 ddsclock, the program will error out
+    gosub [CreateBaseForDDSarray]//needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
+    remember = thisstep //remember where we were when entering this subroutine
+    for thisstep = 0 to steps //ver112-2a
+    gosub [FillDDS1array]//need thisstep,sw0-sw39,w0-w4,base,ddsclock
+    next thisstep //ver112-2a
+    thisstep = remember //ver112-2a
+    gosub [CreateCmdAllArray] //ver112-2a
+    if cb = 0 then gosub [CommandDDS1OrigCB]//will command DDS 1, only
+//delver113-4a    if cb = 2 then gosub [CommandDDS1SlimCB]//will command DDS 1, only
     if cb = 2
 {
   CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
   lastpdmstate=phaarray(thisstep,0);
   }
-    if cb = 3 then gosub [CommandAllSlimsUSB]'will command all 4 modules. ver113-4a 'USB:01-08-2010
+    if cb = 3 then gosub [CommandAllSlimsUSB]//will command all 4 modules. ver113-4a //USB:01-08-2010
     wait
 
 */
@@ -919,38 +940,38 @@ void hwdInterface::CommandDDS1()
 void hwdInterface::CommandDDS3()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[CommandDDS3]'ver111-38a
-    'this will recalculate DDS3, using the values in the Command DDS 3 Box, and "with DDS Clock at" Box.
-    'it will insert the new DDS 3 frequency into the command arrays for all steps, leaving others alone
-    'it will initiate a re-command at thisstep (where the sweep was halted)
-      'only the DDS 3 is re-commanded
-    'using One Step or Continue will retain the new DDS3 frequency.
-    'PLO3 will be non-functional until [Restart] button is clicked. PLL3 will break lock and "slam" to extreme.
-    '[Restart] will reset arrays and begin sweeping at step 0. Special Tests Window will not be updated.
-    'Signal Generator or Tracking Generator output will be non functional.
-    'Spectrum Analyzer function is not effected
-    'caution, do not enter a frequency that is higher than 1/2 the masterclock frequency (ddsclock)
-    print #special.dds3out, "!contents? dds3out$";   'grab contents of Command DDS 3 Box
-    ddsoutput = val(dds3out$) 'intended output frequency of DDS 3
-    print #special.masclkf, "!contents? msclk$";   'grab contents of "with DDS Clock at" box
-    msclk = val(msclk$) 'if "with DDS Clock at" box was not changed, this is the real MasterClock frequency
+ /*
+//[CommandDDS3]//ver111-38a
+    //this will recalculate DDS3, using the values in the Command DDS 3 Box, and "with DDS Clock at" Box.
+    //it will insert the new DDS 3 frequency into the command arrays for all steps, leaving others alone
+    //it will initiate a re-command at thisstep (where the sweep was halted)
+      //only the DDS 3 is re-commanded
+    //using One Step or Continue will retain the new DDS3 frequency.
+    //PLO3 will be non-functional until [Restart] button is clicked. PLL3 will break lock and "slam" to extreme.
+    //[Restart] will reset arrays and begin sweeping at step 0. Special Tests Window will not be updated.
+    //Signal Generator or Tracking Generator output will be non functional.
+    //Spectrum Analyzer function is not effected
+    //caution, do not enter a frequency that is higher than 1/2 the masterclock frequency (ddsclock)
+    print #special.dds3out, "!contents? dds3out$";   //grab contents of Command DDS 3 Box
+    ddsoutput = val(dds3out$) //intended output frequency of DDS 3
+    print #special.masclkf, "!contents? msclk$";   //grab contents of "with DDS Clock at" box
+    msclk = val(msclk$) //if "with DDS Clock at" box was not changed, this is the real MasterClock frequency
     ddsclock = msclk
-    'caution: if ddsoutput >= to .5 ddsclock, the program will error out
-    gosub [CreateBaseForDDSarray]'needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
-    remember = thisstep 'remember where we were when entering this subroutine
+    //caution: if ddsoutput >= to .5 ddsclock, the program will error out
+    gosub [CreateBaseForDDSarray]//needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
+    remember = thisstep //remember where we were when entering this subroutine
     for thisstep = 0 to steps
-    gosub [FillDDS3array]'need thisstep,sw0-sw39,w0-w4,base,ddsclock
+    gosub [FillDDS3array]//need thisstep,sw0-sw39,w0-w4,base,ddsclock
     next thisstep
     thisstep = remember
     gosub [CreateCmdAllArray]
-    if cb = 0 then gosub [CommandDDS3OrigCB]'will command DDS 3, only
-'delver113-4a    if cb = 2 then gosub [CommandDDS3SlimCB]'will command DDS 3, only
+    if cb = 0 then gosub [CommandDDS3OrigCB]//will command DDS 3, only
+//delver113-4a    if cb = 2 then gosub [CommandDDS3SlimCB]//will command DDS 3, only
     if cb = 2
 {CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]); //will command all 4 modules. ver113-4a
 lastpdmstate=phaarray(thisstep,0);
 }
-    if cb = 3 then gosub [CommandAllSlimsUSB]'will command all 4 modules. ver113-4a 'USB:01-08-2010
+    if cb = 3 then gosub [CommandAllSlimsUSB]//will command all 4 modules. ver113-4a //USB:01-08-2010
     wait
 */
 }
@@ -997,39 +1018,44 @@ lastpdmstate=phaarray(thisstep,0);
 void hwdInterface::DDS1Sweep()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-/*
-[DDS1Sweep]'ver112-2c
-    'This forces the DDS 1 to the values in Working Window: Center Frequency and Sweep Width (already in the command arrays)
-    'DDS1 spare output is rich in harmonics and aliases.
-    'PLO1, and thus, the Spectrum Analyzer will be non-functional in this mode.
-    'Signal Generator or Tracking Generator output will not be affected.
-    'Operation:
-    'In Working Window, enter Center Frequency to be within 0 to 32 (MHz), or less than 1/2 the MasterClock
-    'In Working Window, enter Sweep Width (in MHz). But, do not allow sweep to go below 0 or abov 1/2 MasterClock
-    'Click [Restart], then halt.
-    'In Special Tests Window, click [DDS 1 Sweep].  DDS 1 will, immediately, re-command to new frequency.
-    'Click [Continue]. Sweep will resume, but with DDS 1 sweeping.
-    '[One Step] and [Continue] and halting operates normally until [Restart] button is pressed.
-    '[Restart] will reset arrays, and will leave the DDS 1 Sweep Mode. ie, normal sweeping.
-    ddsclock = masterclock
-    remember = thisstep
-    for thisstep = 0 to steps
-    ddsoutput = datatable(thisstep,1)
-    'caution: if ddsoutput >= to .5 ddsclock, the program will error out
-    gosub [CreateBaseForDDSarray]'needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
-    gosub [FillDDS1array]'need thisstep,sw0-sw39,w0-w4,base,ddsclock
-    next thisstep
-    thisstep = remember
-    gosub [CreateCmdAllArray]
-    if cb = 0 then gosub [CommandDDS1OrigCB]'will command DDS 1, only
-    if cb = 2
-{
-CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
-lastpdmstate=phaarray(thisstep,0);
-}
-    if cb = 3 then gosub [CommandAllSlimsUSB]'will command all 4 modules.  'USB:01-08-2010 moved ver116-4f
-    wait
-*/
+  /*
+    //This forces the DDS 1 to the values in Working Window: Center Frequency and Sweep Width (already in the command arrays)
+    //DDS1 spare output is rich in harmonics and aliases.
+    //PLO1, and thus, the Spectrum Analyzer will be non-functional in this mode.
+    //Signal Generator or Tracking Generator output will not be affected.
+    //Operation:
+    //In Working Window, enter Center Frequency to be within 0 to 32 (MHz), or less than 1/2 the MasterClock
+    //In Working Window, enter Sweep Width (in MHz). But, do not allow sweep to go below 0 or abov 1/2 MasterClock
+    //Click [Restart], then halt.
+    //In Special Tests Window, click [DDS 1 Sweep].  DDS 1 will, immediately, re-command to new frequency.
+    //Click [Continue]. Sweep will resume, but with DDS 1 sweeping.
+    //[One Step] and [Continue] and halting operates normally until [Restart] button is pressed.
+    //[Restart] will reset arrays, and will leave the DDS 1 Sweep Mode. ie, normal sweeping.
+    ddsclock = activeConfig->masterclock;
+    //int remember = thisstep
+    for (int thisstep = 0; thisstep < vars->steps; thisstep++)
+    {
+      ddsoutput = vars->datatable[thisstep][1];
+      //caution: if ddsoutput >= to .5 ddsclock, the program will error out
+      CreateBaseForDDSarray();  //needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
+      FillDDS1array(thisstep);//need thisstep,sw0-sw39,w0-w4,base,ddsclock
+    }
+    //thisstep = remember
+    CreateCmdAllArray();
+    if (activeConfig->cb == 0)
+    {
+//      CommandDDS1OrigCB();  //will command DDS 1, only
+    }
+    else if (activeConfig->cb == 2)
+    {
+//      CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
+//      lastpdmstate=phaarray(thisstep,0);
+    }
+    else if (activeConfig->cb == 3)
+    {
+      CommandAllSlimsUSB();//will command all 4 modules.  //USB:01-08-2010 moved ver116-4f
+    }
+    */
 }
 
 void hwdInterface::ChangePDM()
@@ -1310,11 +1336,13 @@ void hwdInterface::Command2326R()
 {
   if (activeConfig->cb == 3)
   {
-    cmdForUsb.lsLong = 0x00000003 | (phasepolarity << 7);
-    cmdForUsb.msLong = 0;
+    cmdForUsb[1] = 0x00000003 | (phasepolarity << 7);
+    cmdForUsb[0] = 0;
+    usb->int64N[1] = 0x00000003 | (phasepolarity << 7);
+    usb->int64N[0] = 0;
   }
 
-
+/*
   //needed:rcounter,phasepolarity,control,Jcontrol,port,LEPLL,contclear ; commands LMX2326 rcounter and registers
   //[Create2326InitBuffer]//need phasepolarity
   //ver116-4o deleted "if" block, per Lrev1
@@ -1349,6 +1377,7 @@ void hwdInterface::Command2326R()
   {
     //    Int64N.msLong.struct = 0; //ver116-4o per Lrev1
   }
+  */
   //[Command2326InitBuffer]//need Jcontrol,LEPLL,contclear
   CommandPLL(vars->thisstep);//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
   //[Create2326Rbuffer]//need rcounter
@@ -1403,8 +1432,10 @@ void hwdInterface::Command2326R()
 
   if (activeConfig->cb == 3)
   {
-    cmdForUsb.lsLong = rcounter << 2;
-    cmdForUsb.msLong = 0;
+    //cmdForUsb[1] = rcounter << 2;
+    //cmdForUsb[0] = 0;
+    usb->int64N[1] = rcounter << 2;
+    usb->int64N[0] = 0;
     /*if cb = 3 then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
             2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
             2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
@@ -1739,7 +1770,7 @@ void hwdInterface::InitializeHardware()
       {
         lpt.ResetDDS3serSLIM(vars->phaarray[vars->thisstep][0], filtbank);
       }
-      if (activeConfig->cb == 3)
+      else if (activeConfig->cb == 3)
       {
         ResetDDS3serUSB();
       }
@@ -1750,9 +1781,9 @@ void hwdInterface::InitializeHardware()
         vars->reference=activeConfig->masterclock; //ver111-4
       if (activeConfig->TGtop == 2)
         vars->reference=activeConfig->appxdds3; //ver111-4
-      CreateRcounter();//needs:reference,appxpdf ; creates:rcounter //ver111-14
+      CreateRcounter();//needs:reference,appxpdf ; creates:rcounter
       rcounter3=rcounter;
-      pdf3=pdf; //ver111-7
+      pdf3=pdf;
       //CommandPLL3R and Init Buffers
       datavalue = 8;
       levalue = 4; //PLL3 data and le bit values ver111-28
@@ -1764,17 +1795,18 @@ void hwdInterface::InitializeHardware()
 
     //8.initialize and command PLO2 to proper frequency
     //CreatePLL2R
-    appxpdf=activeConfig->PLL2phasefreq; //ver111-4
-    vars->reference=activeConfig->masterclock; //ver111-4
-    CreateRcounter();//needed:reference,appxpdf ; creates:rcounter,pdf //ver111-14
-    rcounter2 = rcounter; //ver111-7
-    pdf2 = pdf;    //actual phase detector frequency of PLL 2 //ver111-7
+    appxpdf = activeConfig->PLL2phasefreq;    //4
+    vars->reference = activeConfig->masterclock;    //64.0028
+    CreateRcounter();//needed:reference,appxpdf ; creates:rcounter,pdf
+    rcounter2 = rcounter;   //16
+    pdf2 = pdf;    //actual phase detector frequency of PLL 2   //4.0000175
     //CommandPLL2R and Init Buffers
     datavalue = 16;
-    levalue = 16; //PLL2 data and le bit values ver111-28
+    levalue = 16; //PLL2 data and le bit values
     CommandPLL2R();//needs:PLL2phasepolarity,SELT,PLL2 ; Initializes and commands PLL2 R Buffer(s)
     //CreatePLL2N
-    appxVCO = appxLO2;
+
+    appxVCO = activeConfig->appxLO2;
     vars->reference = activeConfig->masterclock;
     CreateIntegerNcounter();//needs:appxVCO,reference,rcounter ; creates:ncounter,fcounter(0)
     ncounter2 = ncounter;
@@ -1798,9 +1830,9 @@ void hwdInterface::InitializeHardware()
     //Create rcounter1 ver114-2e
     rcounter1=(int)(activeConfig->appxdds1/activeConfig->PLL1phasefreq);
     if ((activeConfig->appxdds1/activeConfig->PLL1phasefreq) - rcounter1 >= 0.5)
-      rcounter1 = rcounter1 + 1;   //rounds off rcounter  ver114-2e
+      rcounter1 = rcounter1 + 1;   //rounds off rcounter
     if (vars->spurcheck==1 && activeConfig->PLL1mode==0)
-      rcounter1 = rcounter1 +1; //only do this for IntegerN PLL  ver114-2e
+      rcounter1 = rcounter1 +1; //only do this for IntegerN PLL
 
     //CommandPLL1R and Init Buffers
     datavalue = 2;
@@ -1919,7 +1951,7 @@ void hwdInterface::ReadStep()
         if (magdata>=vars->validPhaseThreshold)
         {
           readStepDidInvert=1;
-          InvertPDmodule(); //ver116-1b
+          InvertPDmodule();
         }
       }
     }
@@ -2110,12 +2142,12 @@ void hwdInterface::WaitStatement()
       //For short wait times we use our own timing loop
       //Also for initialization, when we are measuring glitchtime
       waittime=waittime*vars->glitchtime;
-      int timecounter = 0; //ver111-27
-      //[TimeLoop] //ver111-27
+      int timecounter = 0;
+      //[TimeLoop]
       while (timecounter < waittime)
       {
         timecounter = timecounter + 1;
-      }//;goto [TimeLoop] //ver111-27
+      }//;goto [TimeLoop]
     }
     else
     {
@@ -2141,14 +2173,23 @@ void hwdInterface::AutoGlitchtime()
   whatiswate = vars->wate;
   vars->wate = 1;
   a = util.time("ms"); //time of day, in milliseconds. This uses the computer//s internal clock
-  WaitStatement();
+  int count = 100;
+  while (count > 0)
+  {
+    WaitStatement();
+    count--;
+  }
   b = util.time("ms");
   int lasped = b.toInt()-a.toInt();
   if (lasped == 0)
     lasped = 1;
-  vars->glitchtime = vars->glitchtime/lasped; //glitchtime is the value required for a 1 ms wait time
+  vars->glitchtime = vars->glitchtime/lasped * 100; //glitchtime is the value required for a 1 ms wait time
   vars->wate = whatiswate; //change wate back to it//s original global value
-
+  /*vars->wate = 10;
+  a = util.time("ms");
+  WaitStatement();
+  b = util.time("ms");
+  lasped = b.toInt()-a.toInt();*/
 }
 void hwdInterface::ReadMagnitude()
 {
@@ -2163,8 +2204,10 @@ void hwdInterface::ReadMagnitude()
   if (activeConfig->adconv == 12)
     lpt.Read12Bitmag(); //and return here with magdata
   if (activeConfig->cb == 3)
+  {
     ReadADCviaUSB(); // and return here with magdata and phadata //ver116-4r
-  if (activeConfig->cb != 3 && activeConfig->adconv == 16)
+  }
+  else if (activeConfig->cb != 3 && activeConfig->adconv == 16)
   {
     if (activeConfig->cb == 2)
     {
@@ -2177,11 +2220,11 @@ void hwdInterface::ReadMagnitude()
     lpt.Process16Mag(magdata);
   }
     //and return here with just magdata //ver111-33b
-    if (activeConfig->cb != 3 && activeConfig->adconv == 22)
-    {
-      lpt.ReadAD22Status();
-      lpt.Process22Mag();
-    }
+  else if (activeConfig->cb != 3 && activeConfig->adconv == 22)
+  {
+    lpt.ReadAD22Status();
+    lpt.Process22Mag();
+  }
     //and return here with just magdata //ver111-37a
 }
 void hwdInterface::ReadPhase()
@@ -2206,12 +2249,12 @@ void hwdInterface::ReadPhase()
       {
         ReadADCviaUSB();
       }
-      if (activeConfig->cb != 3 && activeConfig->adconv == 16)
+      else if (activeConfig->cb != 3 && activeConfig->adconv == 16)
       {
         lpt.ReadAD16Status();
         lpt.Process16MagPha(magdata, phadata);
       }
-      if (activeConfig->cb != 3 && activeConfig->adconv == 22)
+      else if (activeConfig->cb != 3 && activeConfig->adconv == 22)
       {
         lpt.ReadAD22Status();
         lpt.Process22MagPha();
@@ -2221,11 +2264,11 @@ void hwdInterface::ReadPhase()
   }
   if (vars->doSpecialGraph>0)
     phadata=activeConfig->maxpdmout/4 + vars->thisstep*30;    //Force to a value not requiring constant inversion
-  //and return here with phadata (and magdata, if serial AtoD) //ver111-33b
+  //and return here with phadata (and magdata, if serial AtoD)
   //if calibrating the PDM inversion, don't put raw data into arrays, used only in [CalPDMinvdeg]
   if (vars->doingPDMCal == 1)
-    return; //to [CalPDMinvdeg] //ver111-29 ver114-5L
-  vars->phaarray[vars->thisstep][3] = phadata; //put raw data into array //ver112-2a
+    return; //to [CalPDMinvdeg]
+  vars->phaarray[vars->thisstep][3] = phadata; //put raw data into array
   vars->phaarray[vars->thisstep][4] = vars->phaarray[vars->thisstep][0]; //PDM state at which this data is taken. ver112-2a
   //it is only used in Variables Windows to show state of PDM when data was collected.
   return; //to [ReadStep]
@@ -2269,7 +2312,7 @@ void hwdInterface::VideoGlitchPDM()
   if (vars->useAutoWait)
     glitchpdm=glitchpdm + (int)(20+vars->videoPhaseTC*5);
   else
-    glitchpdm=glitchpdm + (int)(20+vars->videoPhaseTC*12);  //in ms ver116-4j
+    glitchpdm=glitchpdm + (int)(20+vars->videoPhaseTC*12);
   if (glitchpdm>5000) glitchpdm=5000;   //5 sec max
   if (vars->useAutoWait==0 && glitchpdm < vars->wate)
     glitchpdm=vars->wate; //no less than the normal wate time
@@ -2358,8 +2401,21 @@ void hwdInterface::ReadADCviaUSB()
   magdata = 0;
   phadata = 0;
   unsigned long result;
+  //USBrBuf buf;
+  //char bufaaa[] = "B200021001";
+ // usb->usbMSADeviceReadAdcsStruct((unsigned short*)(&buf), &result);
+  //int nnnn = 5;
+  //usb->usbMSADeviceReadAdcs(bufaaa,nnnn,&result);
+
+  UsbAdcControl ctrl;
+  ctrl.Adcs = 3;
+  ctrl.Clocking = 1;
+  ctrl.Delay = 4;
+  ctrl.Bits = 16;
+  ctrl.Average = 1;
   USBrBuf buf;
-  usb->usbMSADeviceReadAdcsStruct((unsigned short*)(&buf), &result);
+  result = usb->usbMSADeviceReadAdcsStruct((unsigned short *)&ctrl,(unsigned long *)&buf);
+
 
   if( result )
   {
@@ -2375,6 +2431,11 @@ void hwdInterface::ReadADCviaUSB()
     {
       phadata = (int)(phadata/16);
     }
+  }
+  else
+  {
+    magdata = qrand() / 2;
+    phadata = qrand() / 2;
   }
   return; //to [ReadMagnitude]or[ReadPhase]with status words
 }
@@ -2546,7 +2607,14 @@ void hwdInterface::ConvertMagPhaseData()
     magdata = vars->magarray[vars->thisstep][3];
     //Apply mag calibration to get power and phase correction
 
-    if (vars->msaMode!=modeSA && vars->msaMode!=modeScalarTrans) doPhaseCor=1; else doPhaseCor=0; //ver115-1a
+    if (vars->msaMode!=modeSA && vars->msaMode!=modeScalarTrans)
+    {
+      doPhaseCor=1;
+    }
+    else
+    {
+      doPhaseCor=0;
+    }
     calMan->calConvertMagPhase(magdata, doPhaseCor, power, difPhase);    //ver114-5n
     //int thisfreq = vars->datatable[vars->thisstep][1];
     freqerror=vars->freqCorrection[vars->thisstep]; //find freq cal adjustment SEWgraph1
@@ -2589,11 +2657,11 @@ void hwdInterface::ConvertMagPhaseData()
       magpower = magpower - vars->lineCalArray[vars->thisstep][1];
   }  //ver116-4n  subtract reference.
   if (magpower>=0)
-    magpower=(int)(magpower*100000+0.5)/100000;
+    magpower=((int)(magpower*100000+0.5))/100000.0;
   else
-    magpower=(int)(magpower*100000-0.5)/100000; //round to five decimal places ver115-4d
+    magpower=((int)(magpower*100000-0.5))/100000.0; //round to five decimal places ver115-4d
 
-  magpower = -50 + 50 * sin((float)vars->thisstep);  ////fix me debugging
+  //magpower = -50 + 50 * sin((float)vars->thisstep);  ////fix me debugging
   vars->datatable[vars->thisstep][2] = magpower;    //put current power measurement into the array
   return; //to [ProcessAndPrint]
 
@@ -3235,7 +3303,7 @@ void hwdInterface::SelectLatchedSwitches(int desiredFreqBand)
         out globalPort, 0   //zeroes parallel port data bits
             */
             break;
-      case 3:  //USB ver116-4h
+      case 3:
         QString USBwrbuf = "A20100"+util.ToHex(switchData);
         QString USBwrbuf2 = "A20100"+util.ToHex(switchData-128);
 
@@ -3267,7 +3335,7 @@ int hwdInterface::switchLatchBits(int desiredFreqBand)
   //bit 7    PS    Pulse Start (a/k/a Latch Pulse), common to all latching   relays.
   //Normally high; pulsed low for roughly 2-200 us to trigger relay latching.
   //Note we make PS high, its normal state
-  return vars->videoFilterAddress + 4*desiredFreqBand + 16*vars->switchFR + 32*vars->switchTR + 128;   //ver116-4s
+  return vars->videoFilterAddress + 4*desiredFreqBand + 16*vars->switchFR + 32*vars->switchTR + 128;
 }
 void hwdInterface::SelectFilter(int &fbank)
 {
@@ -3333,16 +3401,16 @@ float hwdInterface::Equiv1GFreq(float f, int aBand)
     else if (f > vars->bandEnd1G)
       aBand=2;
   }
-  switch(aBand)    //ver116-4s
+  switch(aBand)
   {
     case 1:
         retVal=f;   //1G mode; no conversion necessary
         break;
     case 2:      //2G mode
-        retVal = f - vars->LO2;
+        retVal = f - LO2;
         break;
     default:   //3G mode
-        float IF1 = vars->LO2 - activeConfig->finalfreq;
+        float IF1 = LO2 - activeConfig->finalfreq;
         retVal=f-2*IF1;
   }
   return retVal;
@@ -3350,14 +3418,14 @@ float hwdInterface::Equiv1GFreq(float f, int aBand)
 float hwdInterface::ActualSignalFrequency(float f, int aBand)
 {
   //Return actual signal frequency for equiv 1G freq f, based on aBand (1,2 or 3) ver116-4s
-  switch(aBand)    //ver116-4s
+  switch(aBand)
   {
     case 1:
         return(f);   //1G mode; no conversion necessary
     case 2:      //2G mode
-        return (f+vars->LO2);
+        return (f+LO2);
     default:   //3G mode
-        float IF1 = vars->LO2 - activeConfig->finalfreq;
+        float IF1 = LO2 - activeConfig->finalfreq;
         return(f+2*IF1);
   }
 }
@@ -3434,7 +3502,7 @@ void hwdInterface::CalculateAllStepsForLO3Synth()
   //for hybrid, and orig (fixed freq) TG
   //if TGtop = 0 then skip all this (return), actually we should not have even entered this subroutine.
   int haltstep = vars->thisstep; //remember where we were in the sweep when halted
-  float LO3;
+  //float LO3;
   for (vars->thisstep = 0; vars->thisstep <= vars->steps; vars->thisstep++)
   {
     //Frequencies have been pre-calculated in the graphing module via gGenerateXValues
@@ -3567,11 +3635,14 @@ void hwdInterface::FillPLL1array(int step)
   //need thisstep,N0thruN23,pdf1(40),dds1output(41),samePLL1(42)see dim PLL1array for slot info 'ver111-1
   if (activeConfig->cb == 3)
   {
-    //          if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL1Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
+    unsigned long result;
+    //          if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL1Array as ulong
+    //                  , Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
+    usb->usbMSADevicePopulateDDSArrayBitReverse((__int64 *)usb->ptrSPLL1Array, usb->int64N, vars->thisstep, 40, &result);
   }
   else
   {
-    //reversed sequence for N23 to be first. ver111-31a
+    //reversed sequence for N23 to be first.
     pll_1[step].array[23] = n.N0;
     pll_1[step].array[22] = n.N1;
     pll_1[step].array[21] = n.N2;
@@ -3599,9 +3670,9 @@ void hwdInterface::FillPLL1array(int step)
   }
   pll_1[step].pdf = pdf;
   pll_1[step].freq = LO1;
-  pll_1[step].ncounter = ncounter;
+  pll_1[step].ncounter = 1040; //ncounter;
   pll_1[step].fcounter = fcounter;
-  pll_1[step].Acounter = Acounter;
+  pll_1[step].Acounter = 16;//Acounter;
   pll_1[step].Bcounter = Bcounter;
 
 }
@@ -3611,7 +3682,10 @@ void hwdInterface::FillPLL3array(int step)
 //need thisstep,N0thruN23,pdf3(40),dds3output(41),samePLL3(42)see dim PLL3array for slot info 'ver111-14
   if (activeConfig->cb == 3)
   {
-  //   if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL3Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
+    unsigned long result;
+  //   if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long
+    //, ptrSPLL3Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
+    usb->usbMSADevicePopulateDDSArrayBitReverse((__int64 *)usb->ptrSPLL3Array, usb->int64N, vars->thisstep, 40, &result);
   }
   else
   {
@@ -3655,7 +3729,10 @@ void hwdInterface::FillDDS1array(int step)
   //need thisstep,sw0-sw39,w0-w4,base,ddsclock //ver111-12
   if (activeConfig->cb == 3)
   {
+    unsigned long result;
     //  if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArray", USBdevice as long, ptrSDDS1Array as ulong, Int64SW as ptr, thisstep as short, result as boolean //USB:11-08-2010
+    usb->usbMSADevicePopulateDDSArray((__int64 *)usb->ptrSDDS1Array, usb->int64SW, vars->thisstep, &result);
+
   }
   else
   {
@@ -3709,13 +3786,16 @@ void hwdInterface::FillDDS1array(int step)
   dds_1[step].freq = base*ddsclock / pow(2.0,32); //actual dds 1 output freq
 }
 
-void hwdInterface::FillDDS3array(int )
+void hwdInterface::FillDDS3array(int step)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[FillDDS3array]'need thisstep,sw0-sw39,w0-w4,base,ddsclock 'ver111-15
-    if cb = 3 then'USB:11-08-2010
-        if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArray", USBdevice as long, ptrSDDS3Array as ulong, Int64SW as ptr, thisstep as short, result as boolean 'USB:11-08-2010
+  //qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+
+    if (activeConfig->cb == 3)
+    {
+      unsigned long result;
+      usb->usbMSADevicePopulateDDSArray((__int64 *)usb->ptrSDDS3Array, usb->int64SW, vars->thisstep, &result);
+    }
+/*
     else 'USB:05/12/2010
         DDS3array(thisstep,0) = sw0:DDS3array(thisstep,1) = sw1
         DDS3array(thisstep,2) = sw2:DDS3array(thisstep,3) = sw3
@@ -3749,6 +3829,13 @@ void hwdInterface::FillDDS3array(int )
     DDS3array(thisstep,46) = base*ddsclock/2^32 'actual dds 3 output freq
     return
 */
+    dds_3[step].array[40] = w0;
+    dds_3[step].array[41] = w1;
+    dds_3[step].array[42] = w2;
+    dds_3[step].array[43] = w3;
+    dds_3[step].array[44] = w4;
+    dds_3[step].base = base; //base is decimal command
+    dds_3[step].freq = base*ddsclock / pow(2.0,32); //actual dds 1 output freq
 }
 void hwdInterface::CreateCmdAllArray()
 {
@@ -3776,13 +3863,33 @@ void hwdInterface::CreateCmdAllArray()
   }
   else
   {
-    qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
     /*
-        if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateAllArray", USBdevice as long, steps as short, 40 as short, _
-                            0 as long, ptrSPLL1Array as long, ptrSDDS1Array as long, ptrSPLL3Array as long, _
-                            ptrSDDS3Array as long, 0 as long, 0 as long, 0 as long, _
-                            result as boolean //USB:11-08-2010
+        if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateAllArray",
+USBdevice as long,
+steps as short,
+40 as short, _
+0 as long,
+ptrSPLL1Array as long,
+ptrSDDS1Array as long,
+ptrSPLL3Array as long, _
+ptrSDDS3Array as long,
+0 as long,
+0 as long,
+0 as long, _
+result as boolean //USB:11-08-2010
             */
+    unsigned long result;
+    usb->usbMSADevicePopulateAllArray(vars->steps,
+                                      40,
+                                      0,
+                                      (__int64 *)usb->ptrSPLL1Array,
+                                      (__int64 *)usb->ptrSDDS1Array,
+                                      (__int64 *)usb->ptrSPLL3Array,
+                                      (__int64 *)usb->ptrSDDS3Array,
+                                      0,
+                                      0,
+                                      0,
+                                      &result);
   }
 }
 void hwdInterface::CommandPLL(int step)
@@ -3792,26 +3899,25 @@ void hwdInterface::CommandPLL(int step)
   {
     lpt.CommandPLLorig();
   }
-  if (activeConfig->cb == 2)
+  else if (activeConfig->cb == 2)
   {
     lpt.CommandPLLslim(filtbank, datavalue, vars->phaarray[step][0]*64, &n, levalue);
   }
-  if (activeConfig->cb == 3)
+  else if (activeConfig->cb == 3)
   {
     CommandPLLslimUSB();
   }
 }
 void hwdInterface::CommandPLLslimUSB()
 {
-  //USB:01-08-2010
   if (!usb->getUSBDevice())
-    return; //USB:05/12/2010
-  //CALLDLL #USB, "UsbMSADeviceWriteInt64MsbFirst", USBdevice as long,
-  //161 as short, Int64N as ptr, 24 as short, 1 as short, filtbank as short, datavalue as short, result as boolean  //USB:11-08-2010
+    return;
   unsigned long result;
-  usb->usbMSADeviceWriteInt64MsbFirst((short)161, (unsigned long *)(&cmdForUsb), (short)24, (short)1, filtbank, datavalue, &result);
+ // usb->usbMSADeviceWriteInt64MsbFirst((short)161, cmdForUsb, (short)24, (short)1, filtbank, datavalue, &result);
+  usb->usbMSADeviceWriteInt64MsbFirst((short)161, usb->int64N, (short)24, (short)1, filtbank, datavalue, &result);
   int pdmcommand = vars->phaarray[vars->thisstep][0]*64; //do not disturb PDM state, this may be used during Spur Test
 
+  //A302001000
   QString USBwrbuf = "A30200"+util.ToHex(pdmcommand + levalue)+util.ToHex(pdmcommand);
   usb->usbMSADeviceWriteString(USBwrbuf,5);
   return;
@@ -3825,7 +3931,7 @@ void hwdInterface::DetermineModule(int step)
   vars->dds1output = dds_1[step].freq;
   if (vars->dds1output != vars->lastdds1output)
   {
-    //dds 1 is same, don//t waste time commanding
+    //dds 1 is same, don't waste time commanding
 
     glitchd1 = 1;
     vars->lastdds1output = vars->dds1output;
@@ -3878,9 +3984,9 @@ void hwdInterface::CommandPDMonly()
   //ver111-28
   if (activeConfig->cb == 0)
     lpt.CommandPDMOrigCB(); //ver111-28
-  if (activeConfig->cb == 2)
+  else if (activeConfig->cb == 2)
     lpt.CommandPDMSlimCB(); //ver111-28
-  if (activeConfig->cb == 3)
+  else if (activeConfig->cb == 3)
     CommandPDMSlimUSB();  //USB:01-08-2010
   return; //to InvertPDmodule()
 }
@@ -3902,22 +4008,26 @@ void hwdInterface::CommandPDMSlimUSB()
 
 void hwdInterface::CommandAllSlimsUSB()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*// USB: 15/08/10
-    //(send data and clocks without changing Filter Bank)
-    if USBdevice = 0 then return //USB:05/12/2010
-    if thisstep = 0 then //USB:05/12/2010
-        UsbAllSlimsAndLoadData.filtbank.struct = filtbank //USB:05/12/2010
-        UsbAllSlimsAndLoadData.latches.struct = le1 + fqud1 + le3 + fqud3 //USB:05/12/2010
-        UsbAllSlimsAndLoadData.pdmcmdmult.struct = 64 //USB:05/12/2010
-        UsbAllSlimsAndLoadData.pdmcmdadd.struct = 32 //USB:05/12/2010
-    end if //USB:05/12/2010
-    UsbAllSlimsAndLoadData.pdmcommand.struct = phaarray(thisstep,0) //USB:05/12/2010
-    UsbAllSlimsAndLoadData.thisstep.struct = thisstep //USB:05/12/2010
-    CALLDLL #USB, "UsbMSADeviceAllSlimsAndLoadStruct", USBdevice as long, UsbAllSlimsAndLoadData as struct, result as boolean // USB: 15/08/10
-    lastpdmstate=phaarray(thisstep,0)   //ver114-6c
-    return
-*/
+  unsigned long result;
+  if (activeConfig->cb != 3)
+  {
+    return;
+  }
+  //(send data and clocks without changing Filter Bank)
+  if (vars->thisstep == 0)
+  {
+    data.filtbank = filtbank;
+    data.latches = le1 + fqud1 + le3 + fqud3;
+    //data.latches = le1 + fqud1;
+    data.pdmcmdmult = 64;
+    data.pdmcmdadd = 32;
+  }
+  data.pdmcommand = vars->phaarray[vars->thisstep][0];
+  data.thisstep = vars->thisstep;
+  usb->usbMSADeviceAllSlimsAndLoadStruct((unsigned short *)&data, &result);
+  //CALLDLL #USB, "UsbMSADeviceAllSlimsAndLoadStruct", USBdevice as long, data as struct, result as boolean // USB: 15/08/10
+  vars->lastpdmstate=vars->phaarray[vars->thisstep][0];
+
 }
 
 void hwdInterface::finished()

@@ -2202,6 +2202,7 @@ void msaUtilities::uSleep(int ms)
   dummy.lock();
   QWaitCondition waitCondition;
   waitCondition.wait(&dummy, ms);
+  dummy.unlock();
 }
 
 

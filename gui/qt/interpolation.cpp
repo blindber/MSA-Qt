@@ -217,8 +217,6 @@ void interpolation::intLinearInterpolation(int freq, int isPolar, int f1, int R1
 }
 void interpolation::intCreateCubicCoeffTable(int doPart1, int doPart2, int isAngle, int favorFlat, int doingPhaseCorrection)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-
  //Create table of cubic coefficients intSrc() in intCubicCoeff ver116-1b
     //We separately calculate for the specified parts of srcInt. If isAngle=1 then part2 is an angle.
     //We pass favorFlat on to intCalcCubicCoeff, except if part2 is an angle we pass on favorFlat=1 for that part.
@@ -230,228 +228,325 @@ void interpolation::intCreateCubicCoeffTable(int doPart1, int doPart2, int isAng
     //correction values are used to indicate that phase at that level is unreliable, so the table of
     //phase corrections may have values of 180 for all ADC readings at and below a certain level. ver116-1b
 
-  int A, B, C, D;
+  float A, B, C, D;
   int partNum;
   int partIsAngle;
   int forcedTo180;
   int checkPhase;
   int doFlat;
-    for (int i=1; i <= intSrcPoints; i++)
+  for (int i=1; i <= intSrcPoints; i++)
+  {
+    if (doPart1==0)
     {
-        if (doPart1==0)
-        {
-            A=0;
-            B=0;
-            C=0;
-            D=0;
-        }
-        else
-        {
-            partNum=1;
-            partIsAngle=0;
-            intCalcCubicCoeff(i,partNum,partIsAngle,favorFlat,A,B,C,D);
-        }
-        intSrcCoeff[i][0]=A;
-        intSrcCoeff[i][1]=B;
-        intSrcCoeff[i][2]=C;
-        intSrcCoeff[i][3]=D;
-        forcedTo180=0;
-        if (doingPhaseCorrection==1)
-        {
-            //If this point is 180, force calculation to 180
-            checkPhase=intSrc[i][2];
-            if (checkPhase>179 || checkPhase<-179)
-            {
-                //This point is 180; set coefficients so phase correction will calculate to 180
-                A=180;
-                B=0;
-                C=0;
-                D=0;
-                forcedTo180=1;   //Flag that we need no more calculation at this point
-            }
-            if (forcedTo180==0)
-            {
-                //this point is not 180 but one of prior two points is, then treat the 180 value
-                //as being the same as this point. Note we may alter intSrc, but that is just a temporary
-                //array used only for these interpolations.
-                if (i>1)
-                {
-                    checkPhase=intSrc[i-1][2];
-                    if (checkPhase>179 || checkPhase<-179)
-                    {
-                      intSrc[i-1][2]=intSrc[i][2];
-                    }
-                }
-                if (i>2)
-                {
-                    checkPhase=intSrc[i-2][2];
-                    if (checkPhase>179 || checkPhase<-179)
-                    {
-                      intSrc[i-2][2]=intSrc[i][2];
-                    }
-                }
-            }
-        }
-
-        if (doPart2==0)
-        {
-            A=0;
-            B=0;
-            C=0;
-            D=0;
-        }
-        else
-        {
-            if (forcedTo180==0)
-            {
-                partNum=2;
-                partIsAngle=isAngle;
-                //For an angle, specify to "favor flat", because
-                //we expect the phase not to approach vertical
-                if (isAngle)
-                {
-                  doFlat=1;
-                }
-                else
-                {
-                  doFlat=favorFlat;
-                }
-                intCalcCubicCoeff(i,partNum,partIsAngle,doFlat,A,B,C,D);
-            }
-        }
-        intSrcCoeff[i][4]=A;
-        intSrcCoeff[i][5]=B;
-        intSrcCoeff[i][6]=C;
-        intSrcCoeff[i][7]=D;
+      A=0;
+      B=0;
+      C=0;
+      D=0;
     }
+    else
+    {
+      partNum=1;
+      partIsAngle=0;
+      intCalcCubicCoeff(i,partNum,partIsAngle,favorFlat,A,B,C,D);
+    }
+    intSrcCoeff[i][0]=A;
+    intSrcCoeff[i][1]=B;
+    intSrcCoeff[i][2]=C;
+    intSrcCoeff[i][3]=D;
+    forcedTo180=0;
+    if (doingPhaseCorrection==1)
+    {
+      //If this point is 180, force calculation to 180
+      checkPhase=intSrc[i][2];
+      if (checkPhase>179 || checkPhase<-179)
+      {
+        //This point is 180; set coefficients so phase correction will calculate to 180
+        A=180;
+        B=0;
+        C=0;
+        D=0;
+        forcedTo180=1;   //Flag that we need no more calculation at this point
+      }
+      if (forcedTo180==0)
+      {
+        //this point is not 180 but one of prior two points is, then treat the 180 value
+        //as being the same as this point. Note we may alter intSrc, but that is just a temporary
+        //array used only for these interpolations.
+        if (i>1)
+        {
+          checkPhase=intSrc[i-1][2];
+          if (checkPhase>179 || checkPhase<-179)
+          {
+            intSrc[i-1][2]=intSrc[i][2];
+          }
+        }
+        if (i>2)
+        {
+          checkPhase=intSrc[i-2][2];
+          if (checkPhase>179 || checkPhase<-179)
+          {
+            intSrc[i-2][2]=intSrc[i][2];
+          }
+        }
+      }
+    }
+
+    if (doPart2==0)
+    {
+      A=0;
+      B=0;
+      C=0;
+      D=0;
+    }
+    else
+    {
+      if (forcedTo180==0)
+      {
+        partNum=2;
+        partIsAngle=isAngle;
+        //For an angle, specify to "favor flat", because
+        //we expect the phase not to approach vertical
+        if (isAngle)
+        {
+          doFlat=1;
+        }
+        else
+        {
+          doFlat=favorFlat;
+        }
+        intCalcCubicCoeff(i,partNum,partIsAngle,doFlat,A,B,C,D);
+      }
+    }
+    intSrcCoeff[i][4]=A;
+    intSrcCoeff[i][5]=B;
+    intSrcCoeff[i][6]=C;
+    intSrcCoeff[i][7]=D;
+  }
 }
-void interpolation::intCalcCubicCoeff(int pointNum, int partNum, int isAngle, int favorFlat, int &A, int &B, int &C, int &D)
+void interpolation::intCalcCubicCoeff(int pointNum, int partNum, int isAngle, int favorFlat, float &A, float &B, float &C, float &D)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-   'Calculate the cubic interpolation coefficients to apply to a point
-    'lying between (possibly including) points pointNum-1 and pointNum of intSrc().
-    'partNum=1 to process real part and =2 to process imag part.
-    'If isAngle=1 then we are interpolating an angle, otherwise not.
+   //Calculate the cubic interpolation coefficients to apply to a point
+    //lying between (possibly including) points pointNum-1 and pointNum of intSrc().
+    //partNum=1 to process real part and =2 to process imag part.
+    //If isAngle=1 then we are interpolating an angle, otherwise not.
 
-'The coefficients will approximate y values in the interval from pointNum-1 to pointNum
-'as a cubic equation, such that it passes through the endpoints with the desired slope.
-'To determine the desired slope, we use the points to the left and right of the interval.
-'This gives us four points, 0-3, of which pointNum is number 2. The interval in which data
-'will be interpolated with these coefficients is from point 1 to point 2. We determine what
-' slopes we want at the endpoints and then fit a cubic equation to the interval. In
-' general, at each point we want the curve on each side to have a common slope equal
-' to some sort of average of the interval slopes on each side. We do a straight
-' arithmetic average, except that if favorFlat=1 then we average the inverses of the
-' slopes and invert that average. The latter tends to make the averaged slope flatter,
-' which is useful to avoid overshoot/undershoot.
-' Assume the cubic function
-'       y=A + B(x-x2) + C(x-x2)^2 + D(x-x2)^3
-' passes through points (x1, y1) and (x2, y2), with f1<f2, and with slopes of
-' m1 and m2 respectively. Then
-'   Let K=x1-x2
-'   A=y2
-'   B=m2
-'   C=(m1-m2)/2 - (3/2)*D*K
-'   D=[K(m1+m2)+2(y2-y1)] / K^3
+//The coefficients will approximate y values in the interval from pointNum-1 to pointNum
+//as a cubic equation, such that it passes through the endpoints with the desired slope.
+//To determine the desired slope, we use the points to the left and right of the interval.
+//This gives us four points, 0-3, of which pointNum is number 2. The interval in which data
+//will be interpolated with these coefficients is from point 1 to point 2. We determine what
+// slopes we want at the endpoints and then fit a cubic equation to the interval. In
+// general, at each point we want the curve on each side to have a common slope equal
+// to some sort of average of the interval slopes on each side. We do a straight
+// arithmetic average, except that if favorFlat=1 then we average the inverses of the
+// slopes and invert that average. The latter tends to make the averaged slope flatter,
+// which is useful to avoid overshoot/undershoot.
+// Assume the cubic function
+//       y=A + B(x-x2) + C(x-x2)^2 + D(x-x2)^3
+// passes through points (x1, y1) and (x2, y2), with f1<f2, and with slopes of
+// m1 and m2 respectively. Then
+//   Let K=x1-x2
+//   A=y2
+//   B=m2
+//   C=(m1-m2)/2 - (3/2)*D*K
+//   D=[K(m1+m2)+2(y2-y1)] / K^3
 
-    '(0)If data is less than point 1, we are going to use the point 1 value
-    if pointNum=1 then
-        A=intSrc(1,partNum)
-        B=0 : C=0 :D=0
-        exit sub
-    end if
+    //(0)If data is less than point 1, we are going to use the point 1 value
+  if (pointNum==1)
+  {
+    A=intSrc[1][partNum];
+    B=0;
+    C=0;
+    D=0;
+    return;
+  }
 
-    '(1) Get data for four points, 0-3, to be used in interpolation. pointNum is
-    'point 2 of these four, so the data to be interpolated will lie between points
-    '1 and 2.If we are near one end, point 0 or point 3 will be missing.
-    x1=intSrc(pointNum-1,0) : y1=intSrc(pointNum-1,partNum)
-    x2=intSrc(pointNum,0) : y2=intSrc(pointNum,partNum)
-    if pointNum>2 then x0=intSrc(pointNum-2,0) : y0=intSrc(pointNum-2,partNum)
-    if pointNum<intSrcPoints then x3=intSrc(pointNum+1,0) : y3=intSrc(pointNum+1,partNum)
-    dif01=y1-y0     'y change from point 0 to point 1 (not used if there is no point 1)
-    dif12=y2-y1     'y change from point 1 to point 2
-    dif23=y3-y2     'y change from point 2 to point 3 (not used if there is no point 3)
+  //(1) Get data for four points, 0-3, to be used in interpolation. pointNum is
+  //point 2 of these four, so the data to be interpolated will lie between points
+  //1 and 2.If we are near one end, point 0 or point 3 will be missing.
+  float x0 = 0;
+  float x1 = intSrc[pointNum-1][0];
+  float y0 = 0;
+  float y1 = intSrc[pointNum-1][partNum];
+  float x2 = intSrc[pointNum][0];
+  float y2 = intSrc[pointNum][partNum];
+  float x3 = 0;
+  float y3 = 0;
 
-'(2) if points 1 and 2 are the same, then use Y1 value
-    if x1=x2 then A=y1 : B=0 : C=0 :D=0 : exit sub
+  if (pointNum>2)
+  {
+    x0 = intSrc[pointNum-2][0];
+    y0 = intSrc[pointNum-2][partNum];
+  }
+  if (pointNum<intSrcPoints)
+  {
+    x3 = intSrc[pointNum+1][0];
+    y3 = intSrc[pointNum+1][partNum];
+  }
+  float dif01=y1 - y0;     //y change from point 0 to point 1 (not used if there is no point 1)
+  float dif12=y2 - y1;     //y change from point 1 to point 2
+  float dif23=y3 - y2;     //y change from point 2 to point 3 (not used if there is no point 3)
 
-'(3) Deal with angles wrapping at +/-180
-    if isAngle=1 then    'deal with angles wrapping at +/-180
-        'For any pair of adjacent points, the absolute phase difference exceeds 180 degrees,
-        'we assume wrap-around occurred so that the real difference is no more than 180 degrees.
-        'If this occurs we reduce the magnitude of the difference by 360 degrees.
-        if dif12<0 then absDif12=0-dif12 else absDif12=dif12
-        if pointNum<intSrcPoints then   'true if we have point 3
-            if dif23<0 then absDif23=0-dif23 else absDif23=dif23
-            if absDif23>180 then   'large difference between points 2 and 3
-                if dif23>0 then dif23=dif23-360 else dif23=dif23+360  'reduce magnitude of difference by 360
-            end if
-        end if
-        if absDif12>180 then   'large difference between points 1 and 2
-            if dif12>0 then dif12=dif12-360 else dif12=dif12+360  'reduce magnitude of difference by 360
-        end if
-        if pointNum>2 then  'true if we have point 0
-            if dif01<0 then absDif01=0-dif01 else absDif01=dif01
-            if absDif01>180 then   'large difference between points 0 and 1
-                if dif01>0 then dif01=dif01-360 else dif01=dif01+360  'reduce magnitude of difference by 360
-            end if
-        end if
-    end if
-'(4) Find m1, the desired slope of the cubic at point 1
-    if pointNum>2 then
-        if x0=x1 then
-            inSlope=0      'should not happen
-        else
-            inSlope=dif01/(x1-x0)    'slope from point 0 to point 1
-        end if
+  //(2) if points 1 and 2 are the same, then use Y1 value
+  if (x1==x2)
+  {
+    A=y1;
+    B=0;
+    C=0;
+    D=0;
+    return;
+  }
+
+  //(3) Deal with angles wrapping at +/-180
+  if (isAngle==1)     //deal with angles wrapping at +/-180
+  {
+    float absDif01, absDif12, absDif23;
+    //For any pair of adjacent points, the absolute phase difference exceeds 180 degrees,
+    //we assume wrap-around occurred so that the real difference is no more than 180 degrees.
+    //If this occurs we reduce the magnitude of the difference by 360 degrees.
+    if (dif12<0)
+    {
+      absDif12=0-dif12;
+    }
     else
-        inSlope=dif12/(x2-x1)    'slope from point 1 to point 2
-    end if
-    outSlope=dif12/(x2-x1)  'slope from point 1 to point 2
-    prod=inSlope*outSlope
-    if prod <=0 then
-            'if slope on either side is zero, or is positive on one side
-            'and negative on the other, we want a zero slope
-            m1= 0
-    else
-        'Calculate an average slope for point 1 based on connecting lines
-        'We average the inverses of the slopes, then invert
-        m1= 2*prod/(inSlope+outSlope)
-    end if
-
-'(5) Find m2, the desired slope of the cubic at point 2
-    inSlope=outSlope    'slope from point 1 to point 2
-    if pointNum<intSrcPoints then
-        if x2=x3 then
-            outSlope=0      'should not happen
+    {
+      absDif12=dif12;
+    }
+    if (pointNum<intSrcPoints)   //true if we have point 3
+    {
+      if (dif23<0)
+      {
+        absDif23=0-dif23;
+      }
+      else
+      {
+        absDif23=dif23;
+      }
+      if (absDif23>180)   //large difference between points 2 and 3
+      {
+        if (dif23>0)
+        {
+          dif23=dif23-360;
+        }
         else
-            outSlope=dif23/(x3-x2)   'slope from point 2 to point 3
-        end if
-    end if
-    'if pointNum is the final point, outSlope will remain the slope from point 1 to point 2
-    prod=inSlope*outSlope
-    if prod <=0 then
-            'if slope on either side is zero, or is positive on one side
-            'and negative on the other, we want a zero slope
-            m2= 0
-    else
-        'Calculate an average slope for point 1 based on connecting lines
-        if favorFlat then
-            m2= 2*prod/(inSlope+outSlope) 'average the inverses of the slopes, then invert
+        {
+          dif23=dif23+360;  //reduce magnitude of difference by 360
+        }
+      }
+    }
+    if (absDif12>180)   //large difference between points 1 and 2
+    {
+      if (dif12>0)
+      {
+        dif12=dif12-360;
+      }
+      else
+      {
+        dif12=dif12+360;  //reduce magnitude of difference by 360
+      }
+    }
+    if (pointNum>2)  //true if we have point 0
+    {
+      if (dif01<0)
+      {
+        absDif01=0-dif01;
+      }
+      else
+      {
+        absDif01=dif01;
+      }
+      if (absDif01>180)    //large difference between points 0 and 1
+      {
+        if (dif01>0)
+        {
+          dif01=dif01-360;
+        }
         else
-            m2=(inSlope+outSlope)/2
-        end if
-    end if
+        {
+          dif01=dif01+360;  //reduce magnitude of difference by 360
+        }
+      }
+    }
+  }
 
-'(6) Calc constants for cubic. We are returning A,B,C and D.
-    K=x1-x2
-    A=y2
-    B=m2
-    D=(K*(m1+m2)+2*(dif12))/K^3
-    C=(m1-m2)/(2*K)-1.5*D*K
-end sub
+//(4) Find m1, the desired slope of the cubic at point 1
+  float inSlope = 0;
+  float outSlope = 0;
+  float prod = 0;
+  float m1, m2,K;
+  if (pointNum>2)
+  {
+    if (x0==x1)
+    {
+      inSlope=0;      //should not happen
+    }
+    else
+    {
+      inSlope=dif01/(x1-x0);    //slope from point 0 to point 1
+    }
+  }
+  else
+  {
+    inSlope=dif12/(x2-x1);    //slope from point 1 to point 2
+  }
+  outSlope=dif12/(x2-x1);  //slope from point 1 to point 2
+  prod=inSlope*outSlope;
+  if (prod <=0)
+  {
+    //if slope on either side is zero, or is positive on one side
+    //and negative on the other, we want a zero slope
+    m1= 0;
+  }
+  else
+  {
+    //Calculate an average slope for point 1 based on connecting lines
+    //We average the inverses of the slopes, then invert
+    m1= 2*prod/(inSlope+outSlope);
+  }
 
+  //(5) Find m2, the desired slope of the cubic at point 2
+  inSlope=outSlope;    //slope from point 1 to point 2
+  if (pointNum<intSrcPoints)
+  {
+    if (x2==x3)
+    {
+      outSlope=0;      //should not happen
+    }
+    else
+    {
+      outSlope=dif23/(x3-x2);   //slope from point 2 to point 3
+    }
+  }
+  //if pointNum is the final point, outSlope will remain the slope from point 1 to point 2
+  prod=inSlope*outSlope;
+  if (prod <=0)
+  {
+    //if slope on either side is zero, or is positive on one side
+    //and negative on the other, we want a zero slope
+    m2= 0;
+  }
+  else
+  {
+    //Calculate an average slope for point 1 based on connecting lines
+    if (favorFlat)
+    {
+      m2= 2*prod/(inSlope+outSlope); //average the inverses of the slopes, then invert
+    }
+    else
+    {
+      m2=(inSlope+outSlope)/2;
+    }
+  }
+
+  //(6) Calc constants for cubic. We are returning A,B,C and D.
+  K=x1-x2;
+  A=y2;
+  B=m2;
+  D=(K*(m1+m2)+2*(dif12))/pow(K,3);
+  C=(m1-m2)/(2*K)-1.5*D*K;
+
+}
+/*
 sub intCubicInterpolation targData, ceil, wantV2, byref v1, byref v2
     'This function returns the interpolated values v1 and v2 (but v2 only if wantV2=1),
     'based on the value targData and its position in intSrc(). ceil specifies the ceiling
@@ -491,8 +586,8 @@ sub intCubicInterpolation targData, ceil, wantV2, byref v1, byref v2
         'TO DO--caller must put phase in proper range
     end if
 
-*/
 }
+*/
 int interpolation::intBinarySearch(int searchVal)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;

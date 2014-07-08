@@ -49,7 +49,7 @@ public:
   float intLinearInterpolateDegrees(float fract, float v1, float v2, float angleMin, float angleMax);
   void intLinearInterpolation(int freq, int isPolar, int f1, int R1, int I1, int f2, int R2, int I2, int &p1, int &p2);
   void intCreateCubicCoeffTable(int doPart1, int doPart2, int isAngle, int favorFlat, int doingPhaseCorrection);
-  void intCalcCubicCoeff(int pointNum, int partNum, int isAngle, int favorFlat, int &A, int &B, int &C, int &D);
+  void intCalcCubicCoeff(int pointNum, int partNum, int isAngle, int favorFlat, float &A, float &B, float &C, float &D);
   int intBinarySearch(int searchVal);
   void intSrcToDest(int isPolar, int interpMode, int params);
 

@@ -45,8 +45,8 @@ dialogCalManager::dialogCalManager(QWidget *parent) :
 
   calMagTable.mresize(802,3);
   calFreqTable.mresize(802,2);
-  calMagCoeffTable.mresize(802,8);   //SEWcal
-  calFreqCoeffTable.mresize(802,4);   //SEWcal   //ver114-4b
+  calMagCoeffTable.mresize(802,8);
+  calFreqCoeffTable.mresize(802,4);
 
   calFileVersion = 0;
   calFreqPoints = 0;
@@ -638,9 +638,11 @@ void dialogCalManager::calClearMagPoints()
 {
   //Clear calMagTable() to zero points
   //It's not necessary to zero the points, but it keeps things clean
-  for (int i=1; i < calMaxMagPoints; i++)
+  for (int i=0; i < calMaxMagPoints+1; i++)
   {
-   calMagTable[i][0]=0; calMagTable[i][1]=0; calMagTable[i][2]=0;
+   calMagTable[i][0]=0;
+   calMagTable[i][1]=0;
+   calMagTable[i][2]=0;
   }
   calMagPoints=0;
 }
@@ -648,7 +650,7 @@ void dialogCalManager::calClearFreqPoints()
 {
   //Clear calFreqTable() to zero points
   //It's not necessary to zero the points, but it keeps things clean
-  for (int i=1; i < calMaxFreqPoints; i++)
+  for (int i=0; i < calMaxFreqPoints+1; i++)
   {
     calFreqTable[i][0]=0;
     calFreqTable[i][1]=0;
@@ -710,7 +712,10 @@ int dialogCalManager::calAddMagPoint(float  adc, float db, float phase)
 {
   //Add mag cal point; return 1 if error
   //if (calMagPoints>=calMaxMagPoints)  calAddFreqPoint=1: exit function
-  if (calMagPoints>=calMaxMagPoints)  return 1;
+  if (calMagPoints>=calMaxMagPoints)
+  {
+    return 1;
+  }
   calMagPoints=calMagPoints+1;
   calMagTable[calMagPoints][0]=adc;
   calMagTable[calMagPoints][1]=db;
@@ -752,7 +757,7 @@ void dialogCalManager::calCreateMagCubicCoeff()
   float leftADC=-1;
   float leftDB=-150;
   int centerSlopeFound=0;
-  int highPointNumOfCenterSlope;
+  int highPointNumOfCenterSlope = 0;
   for (int i=1; i <= calMagPoints; i++) //copy cal table to intSrc
   {
     //Phase corrections of 180 or -180 indicate phase is invalid at this ADC value for magnitude
@@ -791,10 +796,14 @@ void dialogCalManager::calCreateMagCubicCoeff()
   inter.intCreateCubicCoeffTable(1,doPhase,isAngle, favorFlat, 1);
   for (int i=1; i <= calMagPoints; i++)  //put the data where we want it
   {
-    calMagCoeffTable[i][0]=inter.intSrcCoeff[i][0]; calMagCoeffTable[i][1]=inter.intSrcCoeff[i][1];
-    calMagCoeffTable[i][2]=inter.intSrcCoeff[i][2]; calMagCoeffTable[i][3]=inter.intSrcCoeff[i][3];
-    calMagCoeffTable[i][4]=inter.intSrcCoeff[i][4]; calMagCoeffTable[i][5]=inter.intSrcCoeff[i][5];
-    calMagCoeffTable[i][6]=inter.intSrcCoeff[i][6]; calMagCoeffTable[i][7]=inter.intSrcCoeff[i][7];
+    calMagCoeffTable[i][0]=inter.intSrcCoeff[i][0];
+    calMagCoeffTable[i][1]=inter.intSrcCoeff[i][1];
+    calMagCoeffTable[i][2]=inter.intSrcCoeff[i][2];
+    calMagCoeffTable[i][3]=inter.intSrcCoeff[i][3];
+    calMagCoeffTable[i][4]=inter.intSrcCoeff[i][4];
+    calMagCoeffTable[i][5]=inter.intSrcCoeff[i][5];
+    calMagCoeffTable[i][6]=inter.intSrcCoeff[i][6];
+    calMagCoeffTable[i][7]=inter.intSrcCoeff[i][7];
   }
 
 
@@ -991,8 +1000,10 @@ void dialogCalManager::calCreateFreqCubicCoeff()
   inter.intCreateCubicCoeffTable(1,0,isAngle, favorFlat, 0); //Final 0 means we are not doing phase correction ver116-1b
   for (int i=1; i <= calFreqPoints; i++)  //put the data where we want it
   {
-    calFreqCoeffTable[i][0]=inter.intSrcCoeff[i][0]; calFreqCoeffTable[i][1]=inter.intSrcCoeff[i][1];
-    calFreqCoeffTable[i][2]=inter.intSrcCoeff[i][2]; calFreqCoeffTable[i][3]=inter.intSrcCoeff[i][3];
+    calFreqCoeffTable[i][0]=inter.intSrcCoeff[i][0];
+    calFreqCoeffTable[i][1]=inter.intSrcCoeff[i][1];
+    calFreqCoeffTable[i][2]=inter.intSrcCoeff[i][2];
+    calFreqCoeffTable[i][3]=inter.intSrcCoeff[i][3];
   }
 }
 int dialogCalManager::calBinarySearch(int dataType, float searchVal)
@@ -1039,10 +1050,10 @@ int dialogCalManager::calBinarySearch(int dataType, float searchVal)
     int halfSpan=span/2;
     int mid=bot+halfSpan;
     if (dataType==0)
-      calMagTable[mid][0];
+      thisVal = calMagTable[mid][0];
     else
-      thisVal=calFreqTable[mid][0];
-    if (thisVal==searchVal)
+      thisVal = calFreqTable[mid][0];
+    if (thisVal == searchVal)
       return mid;   //exact hit
     if (thisVal<searchVal)
       bot=mid+1;
@@ -1358,7 +1369,7 @@ void dialogCalManager::calInstallFile(int pathNum)
     return;
   }
       //We have the MSA_Info\MSA_CAL folder. See if it has proper file
-  if (!QFile::exists(fileName))
+  if (!QFile::exists(DefaultDir + "/MSA_Info/MSA_Cal/" + fileName))
   {
     calCreateDefaults(pathNum, "",1);  //No file. Create one.
   }

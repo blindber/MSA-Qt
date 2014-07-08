@@ -21,7 +21,7 @@
 
 lptFunctions::lptFunctions()
 {
-  libraryType = NULL;
+  libraryType = none;
 }
 
 int lptFunctions::init(int libraryType, int port)
@@ -71,10 +71,15 @@ int lptFunctions::init(int libraryType, int port)
   {
 
   }
+  else if (libraryType == none)
+  {
+    qDebug() << "No LPT library type selected";
+  }
   else
   {
-
+    qDebug() << "No invalid library type selected";
   }
+
   return 0;
 }
 
