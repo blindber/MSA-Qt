@@ -27,6 +27,9 @@
 #include <QGraphicsScene>
 #include <QCloseEvent>
 #include <QShowEvent>
+
+#include "msautilities.h"
+
 struct colors
 {
 
@@ -45,13 +48,13 @@ public:
   ~dialogGridappearance();
 
   void AppearanceShow(int currentAxis);
-  void gGetGridColors(QString &backCol, QString &lineCol, QString &boundsCol);
-  void gSetGridColors(QString backCol, QString lineCol, QString boundsCol);
+  void gGetGridColors(QColor &backCol, QColor &lineCol, QColor &boundsCol);
+  void gSetGridColors(QColor backCol, QColor lineCol, QColor boundsCol);
   void gSetFonts(QString xFont, QString y1Font, QString y2Font, QString gridFont);
   void gGetFonts(QString &xFont, QString &y1Font, QString &y2Font, QString &gridFont);
-  void gSetTextColors(QString xText, QString y1Text, QString y2Text, QString gridText);
-  void gGetTextColors(QString &xText, QString &y1Text, QString &y2Text, QString &gridText);
-  void gGetInfoColors(QString &fore, QString &back);
+  void gSetTextColors(QColor xText, QColor y1Text, QColor y2Text, QColor gridText);
+  void gGetTextColors(QColor &xText, QColor &y1Text, QColor &y2Text, QColor &gridText);
+  void gGetInfoColors(QColor &fore, QColor &back);
   void SetCycleColors();
   QString gGetLastPresetColors();
   void FillAppearancesArray(QStringList &list);
@@ -63,35 +66,36 @@ public:
 
 
 
-  QString gTrace1Color, gTrace2Color;  //Color of graph lines.
-  QString gTrace1AColor, gTrace2AColor;
-  QString gTrace1BColor, gTrace2BColor;    //color of supplemental traces 1A, 1B, 2A and 2B ver116-4b
+  QColor gTrace1Color, gTrace2Color;  //Color of graph lines.
+  QColor gTrace1AColor, gTrace2AColor;
+  QColor gTrace1BColor, gTrace2BColor;    //color of supplemental traces 1A, 1B, 2A and 2B ver116-4b
   QString gGraphColorPreset;  //Last selected graph color preset; may have been partially overridden since ver114-2a
   QString gGraphTextPreset;   //Last selected graph text preset; may have been partially overridden since ver114-2a
 
-  QString gBackColor;  //Grid background color.
+  QColor gBackColor;  //Grid background color.
   QString gXAxisFont, gY1AxisFont, gY2AxisFont, gGridFont;   //Text specs for 3 axes and grid interior
-  QString gXTextColor, gY1TextColor, gY2TextColor, gGridTextColor;   //Text color for 3 axes and grid interior
-  QString gGridLineColor, gGridBoundsColor;    //Color of grid interior lines and boundary; default gray and black
-  QString cycleColorsAxis1[3], cycleColorsAxis2[3];    //colors for cycling in Stick mode. Index 1 is standard trace color ver116-4s
+  QColor gXTextColor, gY1TextColor, gY2TextColor, gGridTextColor;   //Text color for 3 axes and grid interior
+  QColor gGridLineColor, gGridBoundsColor;    //Color of grid interior lines and boundary; default gray and black
+  QColor cycleColorsAxis1[3], cycleColorsAxis2[3];    //colors for cycling in Stick mode. Index 1 is standard trace color ver116-4s
 
-  QString gCustomColors[6][13];    //Custom colors(1-5); gGridLineColor$(0),gGridBoundsColor$(1),gBackColor$(2),
+  QColor gCustomColors[6][13];    //Custom colors(1-5); gGridLineColor$(0),gGridBoundsColor$(1),gBackColor$(2),
                               //gGridTextColor$(3),gXTextColor$(4),gY1TextColor$(5),gY2TextColor$(6),
                               //gTrace1Color$(7), gTrace2Color$(8),gTrace1AColor$(9), gTrace2AColor$(10),
-                              //gTrace1BColor$(11), gTrace2BColor$(12) //ver116-4b
-  void gSetTraceColors(QString &col1, QString &col2);
-  void gGetTraceColors(QString &col1, QString &col2);
-  void gGetSupplementalTraceColors(QString &col1A, QString &col2A, QString &col1B, QString &col2B);
-  void gSetSupplementalTraceColors(QString col1A, QString col2A, QString col1B, QString col2B);
+                              //gTrace1BColor$(11), gTrace2BColor$(12)
+
+  void gSetTraceColors(QColor &col1, QColor &col2);
+  void gGetTraceColors(QColor &col1, QColor &col2);
+  void gGetSupplementalTraceColors(QColor &col1A, QColor &col2A, QColor &col1B, QColor &col2B);
+  void gSetSupplementalTraceColors(QColor col1A, QColor col2A, QColor col1B, QColor col2B);
 
   void gUsePresetColors(QString btn, int primaryAxis);
   void gUseCustomPresetColors(int N);
-  void gSetCustomPresetColors(int N, QString grid, QString bounds, QString back, QString gridText
-                              ,QString XText, QString Y1Text, QString Y2Text, QString trace1
-                              ,QString trace2,QString trace1A, QString trace2A, QString trace1B, QString trace2B);
-  void gGetCustomPresetColors(int N, QString &grid,QString &bounds,QString &back,QString &gridText,QString &XText
-                              ,QString &Y1Text,QString &Y2Text, QString &trace1, QString &trace2
-                              , QString &trace1A, QString &trace2A, QString &trace1B, QString &trace2B);
+  void gSetCustomPresetColors(int N, QColor grid, QColor bounds, QColor back, QColor gridText
+                              , QColor XText, QColor Y1Text, QColor Y2Text, QColor trace1
+                              , QColor trace2, QColor trace1A, QColor trace2A, QColor trace1B, QColor trace2B);
+  void gGetCustomPresetColors(int N, QColor &grid,QColor &bounds,QColor &back,QColor &gridText,QColor &XText
+                              ,QColor &Y1Text,QColor &Y2Text, QColor &trace1, QColor &trace2
+                              , QColor &trace1A, QColor &trace2A, QColor &trace1B, QColor &trace2B);
   void gInitCustomColors();
 
 
@@ -131,6 +135,7 @@ private:
   Ui::dialogGridappearance *ui;
   QGraphicsScene *scene;
   bool allowClose;
+  msaUtilities util;
 
   void AppearanceDrawSample();
   void PresetClosebox();
@@ -141,20 +146,20 @@ private:
 
   void addText(qreal x,qreal y, QString text, QColor color);
 
-  QString Y1Col;
-  QString Y1ACol;
-  QString Y1BCol;
+  QColor Y1Col;
+  QColor Y1ACol;
+  QColor Y1BCol;
 
-  QString Y2Col;
-  QString Y2ACol;
-  QString Y2BCol;
+  QColor Y2Col;
+  QColor Y2ACol;
+  QColor Y2BCol;
 
-  QString BackCol;
-  QString LineCol;
-  QString BoundsCol;
+  QColor BackCol;
+  QColor LineCol;
+  QColor BoundsCol;
 
-  QString XCol;
-  QString TextCol;
+  QColor XCol;
+  QColor TextCol;
 
   //QString Appearances[11];    //Names of Appearances
 

@@ -20,36 +20,10 @@
 globalVars::globalVars()
 {
   zeroVars();
+
   VNAData.mresize(2,3);
-  datatable.mresize(802,5);    //added element for band ver116-4s
-  magarray.mresize(802,4);
-  phaarray.mresize(802,5);
-  lineCalArray.mresize(802,3);
-//  PLL1array.mresize(802,49);
-  //PLL3array.mresize(802,49);
-  //DDS1array.mresize(802,49);
-  //DDS3array.mresize(802,49);
-  //cmdallarray.mresize(802,40);
 
-
-  freqCorrection.resize(802);    //SEWgraph1
-  frontEndCorrection.resize(802); //ver115-9c
-  ReflectArray.mresize(802,17);   //ver115-2d
-  S21DataArray.mresize(802, 4);  //ver116-1b
-  bandLineCal.mresize(802, 3);  //ver114-5f
-  OSLa.mresize(802, 2);  //ver115-1b
-  OSLb.mresize(802, 2);  //ver115-1b
-  OSLc.mresize(802, 2);  //ver115-1b
-  OSLstdOpen.mresize(802,2);  //ver115-1b
-  OSLstdLoad.mresize(802,2);  //ver115-1b
-  OSLcalOpen.mresize(802,2);  //ver115-1b
-  OSLcalLoad.mresize(802,2);  //ver115-1b
-  OSLcalShort.mresize(802,2);  //ver115-1b
-  OSLBandA.mresize(802,2); OSLBandB.mresize(800,1); OSLBandC.mresize(800,1);       //ver115-4a
-  OSLBandRef.mresize(802,3);        //ver115-4a
-  auxGraphData.mresize(802, 6);    //ver115-4a
-
-  frontEndCorrection.reserve(802);
+  resizeArrays(802);
 
   //The following constant values are used to specify graph data,
   //and assigned in such a way that the first ones can be
@@ -335,4 +309,37 @@ void globalVars::resizeArrays(int newSize)
   magarray.mresize(newSize,4);
   phaarray.mresize(newSize,5);
   lineCalArray.mresize(newSize,3);
+
+
+
+  datatable.mresize(newSize,5);    //added element for band ver116-4s
+  magarray.mresize(newSize,4);
+  phaarray.mresize(newSize,5);
+  lineCalArray.mresize(newSize,3);
+//  PLL1array.mresize(newSize,49);
+  //PLL3array.mresize(newSize,49);
+  //DDS1array.mresize(newSize,49);
+  //DDS3array.mresize(newSize,49);
+  //cmdallarray.mresize(newSize,40);
+
+
+  freqCorrection.resize(newSize);    //SEWgraph1
+  frontEndCorrection.resize(newSize); //ver115-9c
+  ReflectArray.mresize(newSize,17);   //ver115-2d
+  S21DataArray.mresize(newSize, 4);  //ver116-1b
+  bandLineCal.mresize(newSize, 3);  //ver114-5f
+  OSLa.mresize(newSize, 2);  //ver115-1b
+  OSLb.mresize(newSize, 2);  //ver115-1b
+  OSLc.mresize(newSize, 2);  //ver115-1b
+  OSLstdOpen.mresize(newSize,2);  //ver115-1b
+  OSLstdLoad.mresize(newSize,2);  //ver115-1b
+  OSLcalOpen.mresize(newSize,2);  //ver115-1b
+  OSLcalLoad.mresize(newSize,2);  //ver115-1b
+  OSLcalShort.mresize(newSize,2);  //ver115-1b
+  OSLBandA.mresize(newSize,2); OSLBandB.mresize(800,1); OSLBandC.mresize(800,1);       //ver115-4a
+  OSLBandRef.mresize(newSize,3);        //ver115-4a
+  auxGraphData.mresize(newSize, 6);    //ver115-4a
+
+  frontEndCorrection.reserve(newSize);
+
 }

@@ -136,7 +136,7 @@ void DebugModule::DebugLoadData()
         //Load the preference file
     restoreFileName$=fName$;"\Prefs.txt"
         //Load preference file in restoreFileName$; set restoreErr$ with any error message
-    gosub void DebugModule::LoadPreferenceFile()  //ver115-8c
+    gosub void DebugModule::LoadPreferenceFile()  
 
     //Data is loaded from a folder called "xxDebug" in the default directory
     //We load the array info. The configuration info

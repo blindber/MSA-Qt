@@ -100,7 +100,7 @@ private:
   int TwoPortRefDBTop, TwoPortRefDBBot; //Most recent axis top and bottom for reflection params DB
   int TwoPortPhaseTop, TwoPortPhaseBot;     //Most recent phase top and bottom for any parameters
   int TwoPortStabilityTop, TwoPortStabilityBot;      //Most recent top and bottom for stability factors.ver116-2a
-  int TwoPortZMagTop, TwoPortZMagBot;       //Most recent top and bottom for S11 or S22 as impedance  mag  //ver116-4b
+  int TwoPortZMagTop, TwoPortZMagBot;       //Most recent top and bottom for S11 or S22 as impedance  mag  
   int TwoPortReactTop, TwoPortReactBot;     //Most recent top and bottom for S11 or S22 as reactance  //ver116-4e
   int TwoPortRTop, TwoPortRBot;    //Most recent top and bottom for S11 or S22 as resistance  //ver116-4e
   float TwoPortCTop, TwoPortCBot;    //Most recent top and bottom for S11 or S22 as capacitance  //ver116-4e
@@ -109,7 +109,7 @@ private:
 
   QString twoPortSaveMarkers, twoPortOurMarkers;      //saved main graph marker context when opening, and two port markers saved when closing
 
-  int TwoPortWindH, TwoPortMenuBarH, TwoPortOptionsH;    //Windows handles to #twoPortWin, its menu bar and options submenu  //ver116-4b
+  int TwoPortWindH, TwoPortMenuBarH, TwoPortOptionsH;    //Windows handles to #twoPortWin, its menu bar and options submenu  
 
   QString TwoPortFileDataForm, TwoPortFileFreqForm; //Output file form for frequency (HZ, KHZ, MHZ, GHZ) and data (RA, MI, DB) ver116-4m
 

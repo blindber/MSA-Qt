@@ -130,7 +130,6 @@ public:
   void TransferToDataArrays();
   void ConvertPhadata();
   void ConvertMagPhaseData();
-  void CalcMagpowerPixel();
   void DoSpecialGraph();
   void ConvertRawDataToReflection(int currStep);
   void ApplyExtensionAndTransformR0(float freq, float &db, float &ang);
@@ -304,7 +303,7 @@ private:
   float enterPLL2phasefreq;
   float difPhase;
   //Int64N
-  unsigned long cmdForUsb[2];
+
   float ddsoutput;
   float ddsclock;
   int PLL;
@@ -397,7 +396,7 @@ signals:
   void SkipHardwareInitialization();
   void ResizeArrays(int);
   void ProcessAndPrint();
-  void PrintMessage();
+  void PrintMessage(QString);
   void Halted();
 };
 

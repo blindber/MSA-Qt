@@ -22,6 +22,7 @@
 #include <QFile>
 #include <QCloseEvent>
 #include "msautilities.h"
+#include "constants.h"
 
 class msaConfig
 {

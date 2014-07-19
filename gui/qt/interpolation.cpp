@@ -18,9 +18,7 @@
 
 interpolation::interpolation()
 {
-  intSrc.mresize(802,3);
-  intDest.mresize(802,3);
-  intSrcCoeff.mresize(802,8);
+  intSetMaxNumPoints(802);
 }
 void interpolation::setGlobalVars(globalVars *newVars)
 {
@@ -48,8 +46,9 @@ void interpolation::setGlobalVars(globalVars *newVars)
 void interpolation::intSetMaxNumPoints(int maxPoints)
 {
   if (maxPoints+5<=intMaxPoints) return; //ver115-2d  'so we never shrink or waste time
-  intMaxPoints=maxPoints+5; //ver115-2d
-  intSrc.mresize(intMaxPoints,3); intDest.mresize(intMaxPoints,3);
+  intMaxPoints=maxPoints+5;
+  intSrc.mresize(intMaxPoints,3);
+  intDest.mresize(intMaxPoints,3);
   intSrcCoeff.mresize(intMaxPoints,8);
 }
 void interpolation::intReset()

@@ -56,6 +56,7 @@ sweepStruct::sweepStruct()
   refreshEachScan = 0;
   displaySweepTime = 0;
 
+
 }
 
 
@@ -71,6 +72,17 @@ dialogFreqAxisPreference::dialogFreqAxisPreference(QWidget *parent) :
   h1 = parent->height();
   h2 = height();
   move(x,y + h1 - h2);
+
+  //hide the borders on the group boxes
+  ui->groupBox_AutoWait->setStyleSheet("QGroupBox {border: 0px solid gray; border-radius: 3px; } ");
+  ui->groupBox_Dut->setStyleSheet("QGroupBox {border: 0px solid gray; border-radius: 3px; } ");
+  ui->groupBox_Plane->setStyleSheet("QGroupBox {border: 0px solid gray; border-radius: 3px; } ");
+  ui->groupBox_6->setStyleSheet("QGroupBox {border: 0px solid gray; border-radius: 3px; } ");
+  ui->groupBox_Buttons->setStyleSheet("QGroupBox {border: 0px solid gray; border-radius: 3px; } ");
+  ui->groupBox_4->setStyleSheet("QGroupBox {border: 0px solid gray; border-radius: 3px; } ");
+  ui->groupBox_2->setStyleSheet("QGroupBox {border: 0px solid gray; border-radius: 3px; } ");
+
+  connect(this, SIGNAL(RecalcPlaneExtendAndR0AndRedraw()), parent, SLOT(RecalcPlaneExtendAndR0AndRedraw()));
 }
 
 dialogFreqAxisPreference::~dialogFreqAxisPreference()
@@ -104,61 +116,50 @@ int dialogFreqAxisPreference::DisplayAxisXPreference(sweepStruct *config)
   ui->Appearance->addItems(cfg->appearances);
 
   ui->trackingGroup->setVisible(false);
-  ui->freqoffbox->setVisible(false);
-  ui->sigGenLab->setVisible(false);
-  ui->sigFreqLab->setVisible(false);
 
   if (cfg->msaMode == modeSA)
   {
+    ui->trackingGroup->setVisible(true);
     if (cfg->gentrk == 1)
     {
-      ui->trackingGroup->setVisible(true);
-      ui->freqoffbox->setVisible(true);
+      ui->trackingGroup->setTitle("Tracking Generator");
+      ui->label_Offset->setVisible(true);
+      ui->normReverse->setVisible(true);
     }
     else
     {
       if (cfg->TGtop > 0)
       {
-        ui->freqoffbox->setVisible(true);
-        ui->sigGenLab->setVisible(true);
-        ui->sigFreqLab->setVisible(true);
+        ui->trackingGroup->setTitle("Sig Gen Freq");
+        ui->label_Offset->setVisible(false);
+        ui->normReverse->setVisible(false);
       }
     }
   }
   if (cfg->msaMode != modeSA && cfg->msaMode != modeScalarTrans)  //modes with phase
   {
-    ui->pdminvert->setVisible(true);
-    ui->invdegbox->setVisible(true);
-    ui->planeadj->setVisible(true);
+    ui->groupBox_Plane->setVisible(true);
   }
   else
   {
-    ui->pdminvert->setVisible(false);
-    ui->invdegbox->setVisible(false);
-    ui->planeadj->setVisible(false);
+    ui->groupBox_Plane->setVisible(false);
   }
   //Graph R0
   if (cfg->msaMode == modeReflection)
   {
-    ui->R0->setVisible(true);
-    ui->R0Lab1->setVisible(true);
-    ui->R0Lab2->setVisible(true);
+    ui->groupBox_GraphR0->setVisible(true);
   }
   else
   {
-    ui->R0->setVisible(false);
-    ui->R0Lab1->setVisible(false);
-    ui->R0Lab2->setVisible(false);
+    ui->groupBox_GraphR0->setVisible(false);
   }
   if (cfg->msaMode != modeSA)
   {
-    ui->DirectionF->setVisible(true);
-    ui->DirectionR->setVisible(true);
+    ui->groupBox_Dut->setVisible(true);
   }
   else
   {
-    ui->DirectionF->setVisible(false);
-    ui->DirectionR->setVisible(false);
+    ui->groupBox_Dut->setVisible(false);
   }
   QStringList waitPrecisions;
   waitPrecisions << "Fast";
@@ -168,7 +169,7 @@ int dialogFreqAxisPreference::DisplayAxisXPreference(sweepStruct *config)
   ui->waitPrecision->addItems(waitPrecisions);
 
   QStringList FreqModes;
-  int IF1 = cfg->appxLO2-10.7;   //Approx. IF1 frequency; assumes 10.7 MHz final filter
+  int IF1 = cfg->appxLO2 - 10.7;   //Approx. IF1 frequency; assumes 10.7 MHz final filter
 
   FreqModes << "Auto";
   FreqModes << "1G; approx. 0-" + QString::number(IF1) + " MHz";
@@ -188,7 +189,7 @@ int dialogFreqAxisPreference::DisplayAxisXPreference(sweepStruct *config)
   ui->NDiv->addItems(NumHorDiv);
 
   //now the other init stuff
-  if (cfg->calCanUseAutoWait)
+  if (cfg->calCanUseAutoWait == 0)
   {
     cfg->useAutoWait = 0;
   }
@@ -511,22 +512,6 @@ void dialogFreqAxisPreference::axisSetupNOP()
 {/*    wait
 */
 }
-//ver115-2b added void dialogFreqAxisPreference::RecalcPlaneExt() modver115-2d
-void dialogFreqAxisPreference::RecalcPlaneExtAndR0()
-{
-  // button to Recalculate and draw data with new plane extension or new S11 graph R0
-  //R0 transform is done only for reflection mode
-  float planeadj=util.uCompact(ui->planeadjbox->text()).toFloat();  //Get new planeadj
-  if (cfg->msaMode==modeReflection)
-  {
-    cfg->S11GraphR0=util.uValWithMult(util.uCompact(ui->R0->text()));  //Get R0
-  }
-  VerifyPlaneExtension();    //See if we can do plane ext.
-  ui->planeadjbox->setText(QString::number(planeadj));     //In case it got zeroed
-  //fix me RecalcPlaneExtendAndR0AndRedraw(); //Do actual recalc and redraw
-  cfg->prevPlaneAdj=planeadj;   //because we are making the adjustment here; DetectChanges doesn't have to do anything
-  cfg->prevS11GraphR0=cfg->S11GraphR0;
-}
 void dialogFreqAxisPreference::VerifyPlaneExtension()
 {
   //See if we can do plane extension ver115-4j
@@ -556,24 +541,6 @@ void dialogFreqAxisPreference::axisSetupSelectAppearance()
   //Note that unless the user changes the appearance, we do not activate the selection upon
   //exit. This is because it will override previously selected trace colors.
   changeAppearance=1;
-}
-
-void dialogFreqAxisPreference::NormRevbutton()
-{
-  //when in Tracking Mode, selects either Normal or Reverse tracking 'ver111-17
-  //this button does not exist in old TG topology. Only in new TG topology.
-  if (cfg->normrev == 0)
-  {
-    ui->normReverse->setText("Reverse");
-    cfg->normrev = 1;
-    return;
-  }
-  if (cfg->normrev == 1)
-  {
-    ui->normReverse->setText("Normal");
-    cfg->normrev = 0;
-    return;
-  }
 }
 
 void dialogFreqAxisPreference::axisXFinished()
@@ -637,7 +604,7 @@ void dialogFreqAxisPreference::axisXFinished()
     VerifyPlaneExtension();    //See if we can do plane ext. ver115-4j
     if (cfg->planeadj!=cfg->prevPlaneAdj || R0Changed)     //prevPlaneAdj was saved by RememberState
     {
-      // fix me RecalcPlaneExtendAndR0AndRedraw(); //Redo planeadj adjustment from intermediate data and redraw graph
+      RecalcPlaneExtendAndR0AndRedraw(); //Redo planeadj adjustment from intermediate data and redraw graph
       cfg->prevPlaneAdj=cfg->planeadj;   //because we are making the adjustment here; DetectChanges doesn//t have to do anything
       cfg->prevS11GraphR0=cfg->S11GraphR0;
     }
@@ -951,7 +918,7 @@ void dialogFreqAxisPreference::axisXFinished()
                 //Get the new values; assemble them into spec
         doSpecialCoaxName$=DialogCoaxName$  //ver115-4b
         form$="3,3,4//UseMultiplier"
-        resForm$="3,3,4//UseMultiplier//SuppressMilli" //ver115-4e
+        resForm$="3,3,4//UseMultiplier//SuppressMilli" 
         QForm$="######.###"   //ver115-5f
         R$=uFormatted$(DialogRValue, resForm$)
         L$=uFormatted$(DialogLValue, form$)
@@ -1118,4 +1085,38 @@ void dialogFreqAxisPreference::on_pushButton_clicked()
   cancelled = false;
   allowClose = true;
   close();
+}
+
+void dialogFreqAxisPreference::on_normReverse_clicked()
+{
+  //when in Tracking Mode, selects either Normal or Reverse tracking 'ver111-17
+  //this button does not exist in old TG topology. Only in new TG topology.
+  if (cfg->normrev == 0)
+  {
+    ui->normReverse->setText("Reverse");
+    cfg->normrev = 1;
+    return;
+  }
+  if (cfg->normrev == 1)
+  {
+    ui->normReverse->setText("Normal");
+    cfg->normrev = 0;
+    return;
+  }
+}
+
+void dialogFreqAxisPreference::on_PlaneRecalc_clicked()
+{
+  // button to Recalculate and draw data with new plane extension or new S11 graph R0
+  //R0 transform is done only for reflection mode
+  float planeadj=util.uCompact(ui->planeadjbox->text()).toFloat();  //Get new planeadj
+  if (cfg->msaMode==modeReflection)
+  {
+    cfg->S11GraphR0=util.uValWithMult(util.uCompact(ui->R0->text()));  //Get R0
+  }
+  VerifyPlaneExtension();    //See if we can do plane ext.
+  ui->planeadjbox->setText(QString::number(planeadj));     //In case it got zeroed
+  RecalcPlaneExtendAndR0AndRedraw(); //Do actual recalc and redraw
+  cfg->prevPlaneAdj=planeadj;   //because we are making the adjustment here; DetectChanges doesn't have to do anything
+  cfg->prevS11GraphR0=cfg->S11GraphR0;
 }

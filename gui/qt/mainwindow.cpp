@@ -95,7 +95,15 @@ MainWindow::MainWindow(QWidget *parent) :
   hwdIf->scanResumed = 0;
   hwdIf->suppressSweepTime=0;
 
-  //ui->statusBar->setVisible(false);
+
+  QString bgColorName = palette().color(QPalette::Normal, QPalette::Window).name();
+  QString strStyleSheet = QString("QLineEdit {background-color: ").append(bgColorName).append("}");
+  //ui->lineEdit->setStyleSheet(strStyleSheet);
+
+  ui->lineEdit_SweepTime->setMaximumWidth(70);
+  ui->lineEdit_SweepTime->setStyleSheet( strStyleSheet );
+
+  ui->statusBar->addPermanentWidget(ui->lineEdit_SweepTime);
   ui->mainToolBar->setVisible(false);
 
   special = 0;
@@ -211,7 +219,7 @@ void MainWindow::delayedStart()
 
   vars->bandEnd1G=1000; vars->bandEnd2G=2000;    //good for now ver116-4s
 
-  if (activeConfig.cb == 3)
+  if (activeConfig.cb == hwdUsbV1)
   {
     //            3 means USB. suppressHardware relates only to parallel port ver116-4b
     //            An initial low on the PS bit that controls latched switches may be draining switch capacitors
@@ -271,7 +279,7 @@ void MainWindow::delayedStart()
   }
 */
 
-  vars->bUseUsb = 1;  //USB;01-08-2010
+  vars->bUseUsb = 1;
 
 
   //3.Initialize for whatever mode we will start up in
@@ -284,7 +292,6 @@ void MainWindow::delayedStart()
   vars->multiscanInProgress=0;
   vars->baseFrequency=0;
   vars->cftest=0;    //cavity filter sweep test off ver116-4b
-  vars->message="";
   vars->msaMode= modeSA;
   vars->planeadj=0;
   vars->gentrk=0;
@@ -789,7 +796,7 @@ void MainWindow::GoTransmissionMode()
     ConformMenusToMode();
     graph->gSetNumPoints(0);
     graph->gClearAllReferences();    //Old ones may not make sense
-    vnaCal.SignalNoCalInstalled();   //ver116-4b
+    vnaCal.SignalNoCalInstalled();
   }
 }
 
@@ -860,7 +867,7 @@ void MainWindow::GoReflectionMode()
   ConformMenusToMode();
   graph->gSetNumPoints(0);
   graph->gClearAllReferences();    //Old ones may not make sense
-  vnaCal.SignalNoCalInstalled();   //ver116-4b
+  vnaCal.SignalNoCalInstalled();
   //    end if
   //S21JigR0 is sometimes referenced if we explicitly use the series or shunt jig. But it causes problems
   //in reflection mode if it can have a different value from S11BridgeR0.
@@ -1296,8 +1303,7 @@ void MainWindow::FocusKeyBox()
   {
     graph->gRestoreErasure();    //No erasure in stick modes
   }
-  vars->message="";
-  graph->PrintMessage();
+  graph->PrintMessage("");
   //Indicate whether we are resuming a scan that was stopped in the middle.
   //If PartialRestart was done, we stopped prior to the first step, and are not "resuming"
   if (vars->haltedAfterPartialRestart)
@@ -1631,7 +1637,7 @@ void MainWindow::DetermineLCEquiv() // connect$,startStep, endStep, resonStep
     auxGraphDataInfo(1,1)=0 //axis min
     auxGraphDataInfo(1,2)=util.uRoundUpToPower(maxC,10)  //axis max is power of 10
 
-    QForm$="3,2,3//UseMultiplier//SuppressMilli"    //ver115-4e
+    QForm$="3,2,3//UseMultiplier//SuppressMilli"
     auxGraphDataFormatInfo$(2,0)=s1$;" Q" : auxGraphDataFormatInfo$(2,1)=QForm$     //Q graph
     auxGraphDataFormatInfo$(2,2)=s1$;" Q" : auxGraphDataFormatInfo$(2,3)=s2$;" Q"
     auxGraphDataInfo(2,0)=0 //not an angle
@@ -1727,7 +1733,7 @@ void MainWindow::QFactors(int nPoints)
     next i
 
     //We must now describe the data in auxGraphData for the graphing routines
-    QForm$="3,2,3//UseMultiplier//SuppressMilli"    //ver115-4e
+    QForm$="3,2,3//UseMultiplier//SuppressMilli"
     auxGraphDataFormatInfo$(0,0)="Series Q" : auxGraphDataFormatInfo$(0,1)=QForm$
     auxGraphDataFormatInfo$(0,2)="Series Q" : auxGraphDataFormatInfo$(0,3)="Ser Q"
     auxGraphDataInfo(0,0)=0 //not an angle
@@ -2130,13 +2136,13 @@ end sub
 
 void MainWindow::updateView()
 {
-  //timerStart->stop();
-  ui->graphicsView->setScene(graph->getScene());
-  graph->getScene()->setSceneRect(graph->getScene()->itemsBoundingRect());
-  ui->graphicsView->fitInView(graph->getScene()->sceneRect());
 
   graph->gDrawGrid();
   graph->DrawSetupInfo();     //Draw info describing the sweep setup
+
+  ui->graphicsView->setScene(graph->getScene());
+  //graph->getScene()->setSceneRect(graph->getScene()->itemsBoundingRect());
+  //ui->graphicsView->fitInView(graph->getScene()->sceneRect());
 }
 
 void MainWindow::multiscanCloseAll()
@@ -2295,12 +2301,26 @@ void MainWindow::CloseSpecial(int returnflag)
 
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
+  static bool inHere = false;
+
+  if (inHere)
+  {
+    qDebug() << "reentrant";
+    return;
+  }
+  inHere = true;
   //ui->graphicsView->fitInView(0, 0, graph->getScene()->width(), graph->getScene()->height());
   ui->graphicsView->fitInView(0, 0, ui->graphicsView->width(), ui->graphicsView->height());
   if (!vars->doingInitialization)
   {
+    if (graph->haltsweep)
+    {
+      graph->continueCode=1;
+      FinishSweeping();
+    }
     graph->ResizeGraphHandler();
   }
+  inHere = false;
 }
 
 void MainWindow::showEvent(QShowEvent *event)
@@ -2311,14 +2331,86 @@ void MainWindow::showEvent(QShowEvent *event)
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
+  static bool mouseDown = false;
   if (event->type() == QEvent::MouseMove)
   {
     QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
-    QString global = QString("Mouse move (%1,%2)").arg(mouseEvent->pos().x()).arg(mouseEvent->pos().y());
-    QString local = QString("%1,%2").arg(ui->graphicsView->mapFromGlobal(mouseEvent->pos()).x()).arg(ui->graphicsView->mapFromGlobal(mouseEvent->pos()).y());
-    statusBar()->showMessage(global + " " + local);
+    if (mouseDown)
+    {
+     // graph->gDrawHaltPointerPix((mouseEvent->pos()).x()
+//                                 , (mouseEvent->pos()).y());
+      int xPix = mouseEvent->pos().x();
+      int yPix = mouseEvent->pos().y();
+      int pointNum;
+      int traceNum;
+      graph->gFindClickedPoint(xPix, yPix, pointNum, traceNum);
+      statusBar()->showMessage(QString("%1,%2").arg(xPix).arg(yPix));
+      gMouseQuery(xPix, yPix);
+      //graph->gDrawHaltPointerPix(xPix, yPix);
+    }
+    else
+    {
+      QString global = QString("Mouse move (%1,%2)").arg(mouseEvent->pos().x()).arg(mouseEvent->pos().y());
+      QString local = QString("%1,%2").arg(ui->graphicsView->mapFromGlobal(mouseEvent->pos()).x()).arg(ui->graphicsView->mapFromGlobal(mouseEvent->pos()).y());
+      statusBar()->showMessage(global + " " + local);
+    }
+  }
+  else if (event->type() == QEvent::MouseButtonPress)
+  {
+    mouseDown = true;
+  }
+  else if (event->type() == QEvent::MouseButtonRelease)
+  {
+    mouseDown = false;
   }
   return false;
+}
+void MainWindow::gMouseQuery(float x, float y) //Display info at mouse location
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  if (graph->haltsweep==1 || vars->isStickMode)
+    return; //do nothing
+  if (graph->gPixIsInGrid(x, y)==0)
+  {
+    return; //outside chart
+  }
+  int queryPointNum, gLastQueryTraceNum;
+
+    int xx = x;
+    int yy = y;
+    graph->gFindClickedPoint( xx, yy, queryPointNum, gLastQueryTraceNum);  //Point numbers run 1...
+    int roundedPointNum=int(queryPointNum+0.5);
+    if (vars->msaMode==modeSA)
+    {
+      queryPointNum=roundedPointNum;  //integral points if SA mode
+    }
+    //If we are within one-half pixel of a integral point, we round off because it is nice to have integral points,
+    //and there is no purpose to trying to get extreme resolution.
+    if (abs(queryPointNum-roundedPointNum)*graph->gPixelsPerStep()<=0.5)
+      queryPointNum=roundedPointNum;
+    /*
+    if (gLastQueryPointNum>0)
+    {
+        dum$=gDrawMarkerAtPointNum$(gLastQueryPointNum,"ALL","XOR","");    //Erase prior markers
+        //if smithGraphHndl$()<>"" then call smithDrawSliderMarker gLastQueryPointNum   //erase in Smith chart too
+    }
+    dum$=gDrawMarkerAtPointNum$(queryPointNum,"ALL","XOR","");
+    gLastQueryPointNum=queryPointNum; //draw marker
+    message$=using("####.######", gGetPointXVal(queryPointNum)); " MHz"
+    s1$="";
+    s2$="";
+    call gGetAxisLabels dum$, L1$, L2$ : call gGetAxisFormats dum$, form1$, form2$
+    if Y1DataType<>constNoGraph then s1$=L1$;"=";uCompact$(uFormatted$(gGetPointYVal(queryPointNum,1), form1$))
+    if Y2DataType<>constNoGraph then s2$=L2$;"=";uCompact$(uFormatted$(gGetPointYVal(queryPointNum,2), form2$))
+    if primaryAxisNum=1 then s$= s1$;"    ";s2$ else s$= s2$;"    ";s1$
+    message$=message$;"    ";s$ : call PrintMessage
+                                  */
+    /*
+    if smithGraphHndl$()<>"" then
+        call smithDrawSliderMarker queryPointNum   //draw in Smith chart too
+        call smithClearReflectInfo  //Clear area where marker info will go
+        if calInProgress=0 then call smithDisplayReflectInfo queryPointNum  //Data is garbage during cal
+    end if */
 }
 void MainWindow::on_actionMultiscan_Help_triggered()
 {
@@ -2687,7 +2779,7 @@ void MainWindow::StartSweep()
           }
         }
       }
-      else    //ver114-5c No longer need to retest scanResumed
+      else
       {
         vars->thisstep=vars->sweepStartStep;
       }
@@ -2701,146 +2793,147 @@ void MainWindow::StartSweep()
 }
 void MainWindow::CommandThisStep()
 {
-    //15.[CommandThisStep]. command relevant Control Board and modules
-    //SEW CommandThisStep begins the inner loop that moves from step to step to complete a single
-    //SEW scan.This branch label is accessed only from the end of the loop.
-    //[CommandThisStep]//needs:thisstep ; commands PLL1,DDS1,PLL3,DDS3,PDM
-    //a. first, check to see if any or all the 5 module commands are necessary [DetermineModule]
-    //b. calculate how much delay is needed for each module[DetermineModule], but use only the largest one[WaitStatement].
-    //c. send individual data, clocks, and latch commands that are necessary for[CommandOrigCB]
-    //or for SLIM, use [CommandAllSlims] for commanding concurrently
-    hwdIf->CommandCurrentStep(vars->thisstep);
-    //16.Determine sequence of operations after commanding the modules
-    if (hwdIf->onestep == 1)   //in the One Step mode
-    {
-      hwdIf->glitchhlt = 10; //add extra settling time
-      hwdIf->ReadStep(); //read this step
-      ProcessAndPrint(); //process and print this step
-      DisplayButtonsForHalted();
+  //15.[CommandThisStep]. command relevant Control Board and modules
+  //SEW CommandThisStep begins the inner loop that moves from step to step to complete a single
+  //SEW scan.This branch label is accessed only from the end of the loop.
+  //[CommandThisStep]//needs:thisstep ; commands PLL1,DDS1,PLL3,DDS3,PDM
+  //a. first, check to see if any or all the 5 module commands are necessary [DetermineModule]
+  //b. calculate how much delay is needed for each module[DetermineModule], but use only the largest one[WaitStatement].
+  //c. send individual data, clocks, and latch commands that are necessary for[CommandOrigCB]
+  //or for SLIM, use [CommandAllSlims] for commanding concurrently
+  hwdIf->CommandCurrentStep(vars->thisstep);
+  if (vars->thisstep == 0)
+  {
+    // give the first step extra time to settle
+    util.uSleep(150);
+  }
+  //16.Determine sequence of operations after commanding the modules
+  if (hwdIf->onestep == 1)   //in the One Step mode
+  {
+    hwdIf->glitchhlt = 10; //add extra settling time
+    hwdIf->ReadStep(); //read this step
+    ProcessAndPrint(); //process and print this step
+    DisplayButtonsForHalted();
 
-      graph->mAddMarker("Halt", vars->thisstep+1, "1");
-      //If marker is shown on graph, we need to redraw the whole graph
-      //Otherwise just redraw the marker info
-      if (graph->doGraphMarkers)
-      {
-        graph->RefreshGraph(0);
-      }
-      else
-      {
-        graph->mDrawMarkerInfo();  //No erasure gap in redraw ver114-5m
-      }
-      if (vars->thisstep == vars->sweepEndStep)
-      {
-        //Note reversal is after graph is redrawn
-        if (vars->alternateSweep)
-        {
-          ReverseSweepDirection();
-        }
-        hwdIf->haltWasAtEnd=1;
-      }
-      else
-      {
-        hwdIf->haltWasAtEnd=0;
-      }
-      return;
-    }
-
-    if (graph->haltsweep == 0)  //in first step after a Halt
+    graph->mAddMarker("Halt", vars->thisstep+1, "1");
+    //If marker is shown on graph, we need to redraw the whole graph
+    //Otherwise just redraw the marker info
+    if (graph->doGraphMarkers)
     {
-      graph->haltsweep = 1; //change flag to say we are not in first step after a Halt, for future steps
-      hwdIf->glitchhlt = 10;  //add extra settling time
-      hwdIf->ReadStep(); //read this step
-    }
-    else  //if in middle of sweep. process and print the previous step, then read this step
-    {
-      hwdIf->ProcessAndPrintLastStep();
-      hwdIf->ReadStep();//read this step
-    }
-    //moved sweep time here, so it prints after any refresh action from the prior scan
-    if (graph->displaySweepTime && vars->thisstep == vars->sweepStartStep)
-    {
-      int currTime = util.time("ms").toInt();
-      if (hwdIf->suppressSweepTime == 0)
-      {
-        vars->message= "Sweep Time="+util.usingF("####.##", (currTime-hwdIf->startTime)/1000)+" sec.";
-        graph->PrintMessage();
-      }
-      hwdIf->suppressSweepTime=0; //Only suppress on first scan //ver114-4h
-      hwdIf->startTime=currTime;        //timer for testing
-    }
-    int action = PostScan();
-    if (action == doHalt)
-    {
-      Halted();
-      return;
-      //break;
-    }
-    else if (action == doWait)
-    {
-      return;
-    }
-    else if (action == doRestart)
-    {
-      QTimer::singleShot(0, this, SLOT(Restart()));
-      return;
-    }
-    //}
-    //void MainWindow::IncrementOneStep()
-    //{
-    //18.[IncrementOneStep]
-    //SEW IncrementOneStep is the end of both the inner loop over points and the outer loop
-    //SEW over scans. goto [CommandThisStep] continues the inner loop with the next point.
-    //SEW goto[StartSweep] continues the outer loop with the next scan.
-    //SEW [IncrementOneStep] is commented out to be clear it is not used for any goto.
-    //[IncrementOneStep]
-
-    if (vars->thisstep == vars->sweepEndStep && hwdIf->syncsweep == 1)
-    {
-      hwdIf->SyncSweep();
-    }
-    //ver114-5a modified the following
-    if (vars->sweepDir==1)   //ver114-4k added this block to handle possible reverse sweeps
-    {
-      if (vars->thisstep < vars->sweepEndStep)
-      {
-        vars->thisstep = vars->thisstep + 1;
-        QTimer::singleShot(0, this, SLOT(CommandThisStep()));
-        return;
-        //continue;
-        //goto CommandThisStep();
-      }
+      graph->RefreshGraph(0);
     }
     else
     {
-      if (vars->thisstep > vars->sweepEndStep)
-      {
-        vars->thisstep = vars->thisstep - 1;
-        QTimer::singleShot(0, this, SLOT(CommandThisStep()));
-        return;
-        //continue;
-        // goto CommandThisStep();
-      }
+      graph->mDrawMarkerInfo();  //No erasure gap in redraw ver114-5m
     }
-    //If we are here, we have just read the final step of a sweep
-
-    if (graph->haltAtEnd==0)
+    if (vars->thisstep == vars->sweepEndStep)
     {
-      //Alternate sweep directions if required. When we switch direction, thisstep
-      //was the final point of one sweep and becomes the first point of the next.
-      //We process and print it  immediately as the last point of this sweep; then reverse
-      //direction and start with the same point. To avoid re-processing it at the next step we
-      //set haltsweep=0.
+      //Note reversal is after graph is redrawn
       if (vars->alternateSweep)
       {
-        ProcessAndPrint();
         ReverseSweepDirection();
-        graph->haltsweep=0;
       }
-      QTimer::singleShot(0, this, SLOT(StartSweep()));
-      return;
-      //dostart = true;
+      hwdIf->haltWasAtEnd=1;
     }
+    else
+    {
+      hwdIf->haltWasAtEnd=0;
+    }
+    return;
+  }
+
+  if (graph->haltsweep == 0)  //in first step after a Halt
+  {
+    graph->haltsweep = 1; //change flag to say we are not in first step after a Halt, for future steps
+    hwdIf->glitchhlt = 10;  //add extra settling time
+    hwdIf->ReadStep(); //read this step
+  }
+  else  //if in middle of sweep. process and print the previous step, then read this step
+  {
+    hwdIf->ProcessAndPrintLastStep();
+    hwdIf->ReadStep();//read this step
+  }
+  //print sweep time after any refresh action from the prior scan
+  if (vars->thisstep == vars->sweepStartStep)
+  {
+    int currTime = util.time("ms").toInt();
+    if (hwdIf->suppressSweepTime == 0)
+    {
+      if (graph->displaySweepTime)
+      {
+        graph->PrintMessage("Sweep Time="+util.usingF("####.##", (currTime-hwdIf->startTime)/1000.0)+" sec.");
+      }
+      ui->lineEdit_SweepTime->setText(util.usingF("####.##", (currTime-hwdIf->startTime)/1000.0)+" s");
+    }
+    hwdIf->suppressSweepTime=0; //Only suppress on first scan
+    hwdIf->startTime=currTime;        //timer for testing
+  }
+  int action = PostScan();
+  if (action == doHalt)
+  {
+    Halted();
+    return;
+  }
+  else if (action == doWait)
+  {
+    return;
+  }
+  else if (action == doRestart)
+  {
+    QTimer::singleShot(0, this, SLOT(Restart()));
+    return;
+  }
   //}
+  //void MainWindow::IncrementOneStep()
+  //{
+  //18.[IncrementOneStep]
+  //SEW IncrementOneStep is the end of both the inner loop over points and the outer loop
+  //SEW over scans. goto [CommandThisStep] continues the inner loop with the next point.
+  //SEW goto[StartSweep] continues the outer loop with the next scan.
+  //SEW [IncrementOneStep] is commented out to be clear it is not used for any goto.
+  //[IncrementOneStep]
+
+  if (vars->thisstep == vars->sweepEndStep && hwdIf->syncsweep == 1)
+  {
+    hwdIf->SyncSweep();
+  }
+  //ver114-5a modified the following
+  if (vars->sweepDir==1)   //ver114-4k added this block to handle possible reverse sweeps
+  {
+    if (vars->thisstep < vars->sweepEndStep)
+    {
+      vars->thisstep = vars->thisstep + 1;
+      QTimer::singleShot(0, this, SLOT(CommandThisStep()));
+      return;
+    }
+  }
+  else
+  {
+    if (vars->thisstep > vars->sweepEndStep)
+    {
+      vars->thisstep = vars->thisstep - 1;
+      QTimer::singleShot(0, this, SLOT(CommandThisStep()));
+      return;
+    }
+  }
+  //If we are here, we have just read the final step of a sweep
+
+  if (graph->haltAtEnd==0)
+  {
+    //Alternate sweep directions if required. When we switch direction, thisstep
+    //was the final point of one sweep and becomes the first point of the next.
+    //We process and print it  immediately as the last point of this sweep; then reverse
+    //direction and start with the same point. To avoid re-processing it at the next step we
+    //set haltsweep=0.
+    if (vars->alternateSweep)
+    {
+      ProcessAndPrint();
+      ReverseSweepDirection();
+      graph->haltsweep=0;
+    }
+    QTimer::singleShot(0, this, SLOT(StartSweep()));
+    return;
+  }
   Halted();
 }
 int MainWindow::PostScan()
@@ -2874,7 +2967,6 @@ int MainWindow::PostScan()
     }     //=2 means wait immediately
     graph->continueCode=0;
     graph->haltsweep=0;
-    //Restart();    //Anything else means restart
     return doRestart;
   }
   return doNothing;
@@ -2892,7 +2984,6 @@ void MainWindow::Halted()    // moved guts of this to FinishSweeping, which can 
     vars->specialOneSweep=0;
     return; //Sweep process was called by gosub; we return to caller.
   }
-  //wait //wait for operator action
 }
 
 void MainWindow::FinishSweeping()
@@ -2907,7 +2998,7 @@ void MainWindow::FinishSweeping()
   graph->haltsweep=0; //do now so RefreshGraph will "flush" ver115-1a
   if (vars->isStickMode==0)
   {
-    if (graph->refreshOnHalt)   //ver115-8c
+    if (graph->refreshOnHalt)
     {
       graph->refreshGridDirty=1;
       graph->RefreshGraph(1);  //redraw and show erasure gap; don't do if stick mode ver114-7d
@@ -2922,22 +3013,22 @@ void MainWindow::FinishSweeping()
   if (vars->specialOneSweep && vars->thisstep != vars->sweepEndStep)
   {
     util.beep();
-    vars->message="Sweep Aborted";
+    graph->PrintMessage("Sweep Aborted");
   }
   else
   {
     if (vars->calInProgress)
     {
       util.beep();
-      vars->message="Calibration Complete";
+      graph->PrintMessage("Calibration Complete");
     }
   }
   //test is used for troubleshooting. Coder can insert
   //test = (any variable) anywhere in the code, and it will get displayed in the Messages Box during Halt.
   if (vars->test!=0)
-    vars->message=QString::number(vars->test);
-  if (vars->message!="")
-    graph->PrintMessage();
+  {
+    graph->PrintMessage(QString::number(vars->test));
+  }
   //Alternate sweep directions if required; added by ver114-5a
   if (vars->thisstep==vars->sweepEndStep)
   {
@@ -2969,7 +3060,7 @@ void MainWindow::ReverseSweepDirection()
 
 void MainWindow::ProcessAndPrint()
 {
-//process and print "thisstep" //ver111-22
+//process and print "thisstep"
 //SEW3 changed the next few lines to have phase degrees adjusted for phase-change-over-signal-level
 //The calculation of the phase adjustment, difPhase, is made in ConvertMagPhaseData (formerly ConvertMagData).
 //That correction is then added to phase in ConvertPhadata.Note that ConvertPhadata must now be
@@ -2979,7 +3070,7 @@ void MainWindow::ProcessAndPrint()
   {
     //convert phadata (bits read) to phase (degrees) if we have phase, but not for special graphs, which set phase directly
     if (vars->msaMode!=modeScalarTrans && vars->doSpecialGraph==0)
-      hwdIf->ConvertPhadata(); //ver116-4h
+      hwdIf->ConvertPhadata();
     hwdIf->ProcessDataArrays();   //Enter data in S21DataArray or ReflectArray
   }
   graph->PlotDataToScreen();
@@ -2987,9 +3078,9 @@ void MainWindow::ProcessAndPrint()
 
 }
 
-void MainWindow::PrintMessage()
+void MainWindow::PrintMessage(QString message)
 {
-  graph->PrintMessage();
+  graph->PrintMessage(message);
 }
 
 void MainWindow::Showvar()
@@ -3083,7 +3174,7 @@ void MainWindow::Restart()
 
   //1 Start new sweep series.
   //Reinitialize hardware every time
-  if (vars->suppressHardwareInitOnRestart) //ver115-8c
+  if (vars->suppressHardwareInitOnRestart)
   {
     vars->suppressHardwareInitOnRestart=0; //Clear flag; we only skip initialization for one restart after flag is set.
     setCursor(Qt::WaitCursor);
@@ -3113,7 +3204,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   //ver114-5f moved some items to UpdateGraphParams
 
   //Note x values must be calculated first (in [UpdateGraphParams]) ; modVer115-1c
-  //If calInProgress=1, InstallSelectedxxx will just set applyCal=0 and installed base steps=-1    //ver116-4b
+  //If calInProgress=1, InstallSelectedxxx will just set applyCal=0 and installed base steps=-1
   if (vars->msaMode==modeReflection)
   {
     hwdIf->oslCal.InstallSelectedOSLCal();
@@ -3121,28 +3212,28 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   else
   {
     if (vars->msaMode!=modeSA)
-      vnaCal.InstallSelectedLineCal(graph->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());  //ver115-8c
+      vnaCal.InstallSelectedLineCal(graph->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());
   }
   vars->cycleNumber=1;
   gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[0],gridappearance->cycleColorsAxis2[0]);
-  QString xText, dum1, dum2, gridText;
+  QColor xText, dum1, dum2, gridText;
 
-  gridappearance->gGetTextColors(xText, dum1, dum2, gridText);  //ver116-4s
-  gridappearance->gSetTextColors(xText, gridappearance->cycleColorsAxis1[1],gridappearance->cycleColorsAxis2[1], gridText);    //match text to trace ver116-4s
-  vars->doCycleTraceColors=0;    //start with cycling off. No preference file item for this. ver116-4s
+  gridappearance->gGetTextColors(xText, dum1, dum2, gridText);
+  gridappearance->gSetTextColors(xText, gridappearance->cycleColorsAxis1[0],gridappearance->cycleColorsAxis2[0], gridText);    //match text to trace ver116-4s
+  vars->doCycleTraceColors=0;    //start with cycling off. No preference file item for this.
 
   graph->gInitDynamicDraw();   //Set up for first scan of dynamic draw/erase/redraw...
-  graph->ImplementDisplayModes();  //Done in [UpdateGraphParams] but gInitDynamicDraw overrode it   //ver115-4e
+  graph->ImplementDisplayModes();  //Done in [UpdateGraphParams] but gInitDynamicDraw overrode it
 
   //In multiscan, we don't want to update the time stamp on every redraw, which sometimes happens without scanning.
-  if (vars->multiscanIsOpen==0 || vars->multiscanInProgress==1)  //ver115-9a
+  if (vars->multiscanIsOpen==0 || vars->multiscanInProgress==1)
   {
-    vars->restartTimeStamp=QDateTime::currentDateTime().toString("MM/dd/yy; hh:mm:ss"); //date$("mm/dd/yy"); "; ";time$()   //ver115-2c
+    vars->restartTimeStamp=QDateTime::currentDateTime().toString("MM/dd/yy; hh:mm:ss"); //date$("mm/dd/yy"); "; ";time$()
     graph->gSetTitleLine(2, vars->restartTimeStamp);    //Put date and time in line 3 of title
     if (graph->gGetXIsLinear())
       graph->gSetTitleLine(3, "MSA Linear Sweep " + vars->path);
     else
-      graph->gSetTitleLine(3, "MSA Log Sweep "+vars->path);      //Save linear/log and path info ver116-1b
+      graph->gSetTitleLine(3, "MSA Log Sweep "+vars->path);      //Save linear/log and path info
   }
 
   //For multiscan, the redraw of the background is done prior to scanning via [PartialRestart], and on refresh
@@ -3166,7 +3257,8 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
         graph->CreateReferenceSource();  //RLC or fixed value
       graph->CreateReferenceTransform();   //Generate actual reference graph data
       graph->gClearAllReferences();
-      QString refHeadingColor1; QString refHeadingColor2; //ver115-5d
+      QColor refHeadingColor1;
+      QColor refHeadingColor2;
       if (graph->referenceDoMath==0)    //don't draw ref if we are using ref for math
       {
         if (graph->referenceTrace & 2)
@@ -3196,19 +3288,17 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
 
   if (vars->calInProgress==1)
   {
-    vars->message="Calibration in progress."; graph->PrintMessage();
+    graph->PrintMessage("Calibration in progress.");
   }
   else
   {
-    vars->message="";
-    graph->PrintMessage();
+    graph->PrintMessage("");
   }
   if (vars->msaMode==modeSA && vars->gentrk==0 && vars->multiscanInProgress==0)
   {
     if ((vars->endfreq-vars->startfreq)/vars->steps >activeConfig.finalbw/1000)      //compare as MHz
     {
-      vars->message= "Frequency step size exceeds RBW; signals may be missed.";
-      graph->PrintMessage();
+      graph->PrintMessage("Frequency step size exceeds RBW; signals may be missed.");
     }
   }
 
@@ -3351,7 +3441,7 @@ void MainWindow::LoadDataFileWithContext(QString dataFileName)
   }
   if (contextLoaded)
   {
-    DetectFullChanges(); //ver115-8c
+    DetectFullChanges();
     if (graph->continueCode==3)
       PartialRestart(); //implement changes ver115-3c
   }
@@ -3509,15 +3599,15 @@ void MainWindow::ResizeArrays(int nPoints)
     vars->OSLcalLoad.mresize(maxPoints,2);
     vars->OSLcalShort.mresize(maxPoints,2);
     vars->OSLBandA.mresize(maxPoints,2);
-    vars->OSLBandB.mresize(800,2);
-    vars->OSLBandC.mresize(800,2);
+    vars->OSLBandB.mresize(maxPoints,2);
+    vars->OSLBandC.mresize(maxPoints,2);
     vars->OSLBandRef.mresize(maxPoints,3);
     vars->auxGraphData.mresize(maxPoints, 6);
 
     //Note we do not resize arrays for base Line or base OSL cal, because resizing will invalidate the data, and
     //because base line cal is saved to/retrieved from a file so its max size needs to be known before retrieval.
     //Plus the nature of base cal does not require a massive number of points.
-    inter.intSetMaxNumPoints(maxPoints);  //ver114-5q
+    inter.intSetMaxNumPoints(maxPoints);
 
     //ver115-1d put the loading of the cal file inside the if.. block
     //Load BaseLine Cal file if it exists ver114-5m
@@ -3684,12 +3774,12 @@ void MainWindow::LoadPreferenceFile(QString fileName)
 
 
 
-  graph->RememberState();  //So we can see what changed //ver115-8c
+  graph->RememberState();  //So we can see what changed
   LoadBasicContextsFromFile();   //Load preferences from restoreFileHndl$
   vars->restoreFileHndl->close();
   if (vars->restoreErr!="" && vars->doingInitialization==0)
     QMessageBox::critical(0,"Error", "Error loading preference file: "+vars->restoreErr);
-  DetectFullChanges(); //ver115-8c
+  DetectFullChanges();
   if (graph->continueCode==3 && vars->doingInitialization==0)
     PartialRestart(); //implement changes ver115-3c
   return;
@@ -4475,8 +4565,8 @@ void MainWindow::on_actionPrimary_Axis_triggered()
   {
     gridappearance->gUsePresetColors(lastCol, graph->gPrimaryAxis);    //Reset colors; may be affected by primary axis change
   }
-  QString dum1, dum2;
-  QString referenceColor1, referenceColor2;
+  QColor dum1, dum2;
+  QColor referenceColor1, referenceColor2;
   gridappearance->gGetSupplementalTraceColors(referenceColor1, referenceColor2, dum1, dum2);
   if (vars->primaryAxisNum == 1)
   {

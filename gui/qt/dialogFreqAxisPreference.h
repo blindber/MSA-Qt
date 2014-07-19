@@ -109,6 +109,10 @@ private slots:
 
   void on_pushButton_clicked();
 
+  void on_normReverse_clicked();
+
+  void on_PlaneRecalc_clicked();
+
 private:
   Ui::dialogFreqAxisPreference *ui;
   //void FreqAxisPreference();
@@ -132,10 +136,8 @@ private:
   void enableStartStop();
   void axisXCancel();
   void axisSetupNOP();
-  void RecalcPlaneExtAndR0();
   void VerifyPlaneExtension();
   void axisSetupSelectAppearance();
-  void NormRevbutton();
   void axisXFinished();
 
   void SetCenterSpanFreq(float cent, float span);
@@ -151,6 +153,9 @@ private:
   int changeAppearance;
   int closeValue;
   bool allowClose;
+
+signals:
+  void RecalcPlaneExtendAndR0AndRedraw();
 };
 
 #endif // DIALOGFREQAXISPREFERENCE_H

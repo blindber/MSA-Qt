@@ -132,7 +132,7 @@ void twoPortModule::TwoPortDetermineGraphDataFormat(int componConst, QString &yA
   if (componConst == vars->constTwoPortS11DB
       || componConst == vars->constTwoPortS22DB
       || componConst == vars->constTwoPortMatchedS11DB
-      || componConst == vars->constTwoPortMatchedS22DB) //ver116-4b
+      || componConst == vars->constTwoPortMatchedS22DB) 
   {
     if (componConst==vars->constTwoPortS11DB) SRef="S11";
     if (componConst==vars->constTwoPortS22DB) SRef="S22";
@@ -146,7 +146,7 @@ void twoPortModule::TwoPortDetermineGraphDataFormat(int componConst, QString &yA
     }
     else //will graph reflection in another form, using the same data type constants as the regular graph
     {
-      DetermineGraphDataFormat(TwoPortReflectTypeDB, yAxisLabel, yLabel,yIsPhase, yForm);     //ver116-4b
+      DetermineGraphDataFormat(TwoPortReflectTypeDB, yAxisLabel, yLabel,yIsPhase, yForm);     
       yAxisLabel=SRef+" "+yAxisLabel;
       yLabel=SRef+" "+yLabel;
     }
@@ -154,7 +154,7 @@ void twoPortModule::TwoPortDetermineGraphDataFormat(int componConst, QString &yA
   else if (componConst == vars->constTwoPortS21DB
            || componConst == vars->constTwoPortS12DB
            || componConst == vars->constTwoPortMatchedS21DB
-           || componConst == vars->constTwoPortMatchedS12DB) //ver116-4b
+           || componConst == vars->constTwoPortMatchedS12DB) 
   {
     if (componConst==vars->constTwoPortS21DB) SRef="S21";
     if (componConst==vars->constTwoPortS12DB) SRef="S12";
@@ -182,8 +182,8 @@ void twoPortModule::TwoPortDetermineGraphDataFormat(int componConst, QString &yA
     }
     else //will graph reflection in another form, using the same data type constants as the regular graph
     {
-      DetermineGraphDataFormat(TwoPortReflectTypeAng, yAxisLabel, yLabel,yIsPhase, yForm);     //ver116-4b            end if
-      yAxisLabel=SRef+" "+yAxisLabel; yLabel=SRef+" "+yLabel;   //ver116-4b
+      DetermineGraphDataFormat(TwoPortReflectTypeAng, yAxisLabel, yLabel,yIsPhase, yForm);                 end if
+      yAxisLabel=SRef+" "+yAxisLabel; yLabel=SRef+" "+yLabel;   
     }
   }
   else if (componConst == vars->constTwoPortS12Ang || componConst == vars->constTwoPortS21Ang)

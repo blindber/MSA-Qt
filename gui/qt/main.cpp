@@ -45,6 +45,8 @@ int main(int argc, char *argv[])
     }
   }
 
+  QFont _Font("Tahoma", 8);
+  QApplication::setFont(_Font);
   a.setApplicationVersion(version);
 
   if (argc > 1)

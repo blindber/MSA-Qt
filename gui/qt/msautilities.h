@@ -136,6 +136,7 @@ public:
 
 
   QString fixColor(QString col);
+  QColor fixColor1(QString col);
 
 private:
   float uKRadsPerDegree;

@@ -13,135 +13,13 @@
   <property name="windowTitle">
    <string>Sweep Parameters</string>
   </property>
-  <widget class="QLabel" name="label">
-   <property name="geometry">
-    <rect>
-     <x>17</x>
-     <y>98</y>
-     <width>80</width>
-     <height>15</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Video Filter BW</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="Appearance">
-   <property name="geometry">
-    <rect>
-     <x>7</x>
-     <y>153</y>
-     <width>110</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="SweepWait">
-   <property name="geometry">
-    <rect>
-     <x>452</x>
-     <y>111</y>
-     <width>40</width>
-     <height>20</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="NDiv">
-   <property name="geometry">
-    <rect>
-     <x>532</x>
-     <y>73</y>
-     <width>50</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLabel" name="WaitLab">
-   <property name="geometry">
-    <rect>
-     <x>442</x>
-     <y>98</y>
-     <width>46</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Wait (ms)</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="pushButton">
-   <property name="geometry">
-    <rect>
-     <x>152</x>
-     <y>178</y>
-     <width>90</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>OK</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="baseFreq">
-   <property name="geometry">
-    <rect>
-     <x>642</x>
-     <y>72</y>
-     <width>75</width>
-     <height>20</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="VideoFilt">
-   <property name="geometry">
-    <rect>
-     <x>7</x>
-     <y>113</y>
-     <width>100</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_6">
-   <property name="geometry">
-    <rect>
-     <x>467</x>
-     <y>144</y>
-     <width>91</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Frequency Band</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="OpMode">
-   <property name="geometry">
-    <rect>
-     <x>7</x>
-     <y>23</y>
-     <width>130</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="invdegbox">
-   <property name="geometry">
-    <rect>
-     <x>337</x>
-     <y>28</y>
-     <width>50</width>
-     <height>20</height>
-    </rect>
-   </property>
-  </widget>
   <widget class="QGroupBox" name="groupBox">
    <property name="geometry">
     <rect>
-     <x>454</x>
+     <x>470</x>
      <y>0</y>
-     <width>310</width>
-     <height>56</height>
+     <width>331</width>
+     <height>61</height>
     </rect>
    </property>
    <property name="title">
@@ -152,7 +30,7 @@
      <rect>
       <x>3</x>
       <y>22</y>
-      <width>14</width>
+      <width>21</width>
       <height>18</height>
      </rect>
     </property>
@@ -165,7 +43,7 @@
      <rect>
       <x>160</x>
       <y>22</y>
-      <width>14</width>
+      <width>21</width>
       <height>18</height>
      </rect>
     </property>
@@ -176,7 +54,7 @@
    <widget class="QLabel" name="CentLab">
     <property name="geometry">
      <rect>
-      <x>18</x>
+      <x>20</x>
       <y>8</y>
       <width>46</width>
       <height>13</height>
@@ -189,7 +67,7 @@
    <widget class="QLabel" name="SpanLab">
     <property name="geometry">
      <rect>
-      <x>18</x>
+      <x>20</x>
       <y>31</y>
       <width>46</width>
       <height>13</height>
@@ -202,7 +80,7 @@
    <widget class="QLabel" name="label_10">
     <property name="geometry">
      <rect>
-      <x>125</x>
+      <x>130</x>
       <y>8</y>
       <width>25</width>
       <height>13</height>
@@ -215,7 +93,7 @@
    <widget class="QLabel" name="label_12">
     <property name="geometry">
      <rect>
-      <x>125</x>
+      <x>130</x>
       <y>31</y>
       <width>25</width>
       <height>13</height>
@@ -228,7 +106,7 @@
    <widget class="QLineEdit" name="SweepCent">
     <property name="geometry">
      <rect>
-      <x>46</x>
+      <x>55</x>
       <y>8</y>
       <width>75</width>
       <height>20</height>
@@ -238,7 +116,7 @@
    <widget class="QLineEdit" name="SweepSpan">
     <property name="geometry">
      <rect>
-      <x>46</x>
+      <x>55</x>
       <y>29</y>
       <width>75</width>
       <height>20</height>
@@ -248,10 +126,10 @@
    <widget class="QLabel" name="StartLab">
     <property name="geometry">
      <rect>
-      <x>175</x>
+      <x>180</x>
       <y>8</y>
-      <width>25</width>
-      <height>13</height>
+      <width>31</width>
+      <height>16</height>
      </rect>
     </property>
     <property name="text">
@@ -261,10 +139,10 @@
    <widget class="QLabel" name="StopLab">
     <property name="geometry">
      <rect>
-      <x>175</x>
+      <x>180</x>
       <y>31</y>
-      <width>25</width>
-      <height>13</height>
+      <width>31</width>
+      <height>16</height>
      </rect>
     </property>
     <property name="text">
@@ -274,7 +152,7 @@
    <widget class="QLineEdit" name="SweepStart">
     <property name="geometry">
      <rect>
-      <x>201</x>
+      <x>213</x>
       <y>8</y>
       <width>75</width>
       <height>20</height>
@@ -284,7 +162,7 @@
    <widget class="QLineEdit" name="SweepStop">
     <property name="geometry">
      <rect>
-      <x>201</x>
+      <x>213</x>
       <y>31</y>
       <width>75</width>
       <height>20</height>
@@ -294,7 +172,7 @@
    <widget class="QLabel" name="label_13">
     <property name="geometry">
      <rect>
-      <x>278</x>
+      <x>290</x>
       <y>8</y>
       <width>25</width>
       <height>13</height>
@@ -307,7 +185,7 @@
    <widget class="QLabel" name="label_14">
     <property name="geometry">
      <rect>
-      <x>278</x>
+      <x>290</x>
       <y>31</y>
       <width>25</width>
       <height>13</height>
@@ -318,79 +196,20 @@
     </property>
    </widget>
   </widget>
-  <widget class="QGroupBox" name="trackingGroup">
-   <property name="enabled">
-    <bool>true</bool>
-   </property>
-   <property name="geometry">
-    <rect>
-     <x>160</x>
-     <y>68</y>
-     <width>145</width>
-     <height>70</height>
-    </rect>
-   </property>
-   <property name="title">
-    <string>Tracking Generator</string>
-   </property>
-   <widget class="QPushButton" name="normReverse">
-    <property name="geometry">
-     <rect>
-      <x>51</x>
-      <y>20</y>
-      <width>50</width>
-      <height>20</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Normal</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_8">
-    <property name="geometry">
-     <rect>
-      <x>7</x>
-      <y>45</y>
-      <width>30</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Offset</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="label_9">
-    <property name="geometry">
-     <rect>
-      <x>115</x>
-      <y>45</y>
-      <width>24</width>
-      <height>16</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>MHz</string>
-    </property>
-   </widget>
-  </widget>
-  <widget class="QComboBox" name="FiltList">
-   <property name="geometry">
-    <rect>
-     <x>7</x>
-     <y>66</y>
-     <width>140</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
   <widget class="QGroupBox" name="group">
    <property name="geometry">
     <rect>
-     <x>612</x>
-     <y>98</y>
-     <width>165</width>
+     <x>609</x>
+     <y>120</y>
+     <width>181</width>
      <height>60</height>
     </rect>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>60</height>
+    </size>
    </property>
    <property name="title">
     <string>Sweep</string>
@@ -398,11 +217,16 @@
    <widget class="QCheckBox" name="linear">
     <property name="geometry">
      <rect>
-      <x>50</x>
+      <x>39</x>
       <y>15</y>
-      <width>50</width>
-      <height>18</height>
+      <width>61</width>
+      <height>20</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Tahoma</family>
+     </font>
     </property>
     <property name="text">
      <string>Linear</string>
@@ -413,7 +237,7 @@
      <rect>
       <x>105</x>
       <y>15</y>
-      <width>40</width>
+      <width>51</width>
       <height>18</height>
      </rect>
     </property>
@@ -424,7 +248,7 @@
    <widget class="QCheckBox" name="LR">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>5</x>
       <y>40</y>
       <width>41</width>
       <height>18</height>
@@ -450,9 +274,9 @@
    <widget class="QCheckBox" name="Alternate">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>100</x>
       <y>40</y>
-      <width>71</width>
+      <width>81</width>
       <height>18</height>
      </rect>
     </property>
@@ -461,351 +285,692 @@
     </property>
    </widget>
   </widget>
-  <widget class="QLabel" name="label_7">
+  <widget class="QGroupBox" name="groupBox_2">
    <property name="geometry">
     <rect>
-     <x>642</x>
-     <y>58</y>
-     <width>90</width>
-     <height>13</height>
+     <x>0</x>
+     <y>0</y>
+     <width>150</width>
+     <height>221</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Base Freq(MHz)</string>
-   </property>
-  </widget>
-  <widget class="QGroupBox" name="planeadj">
-   <property name="geometry">
-    <rect>
-     <x>322</x>
-     <y>78</y>
-     <width>120</width>
-     <height>80</height>
-    </rect>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>16777215</height>
+    </size>
    </property>
    <property name="title">
-    <string>Plane Extension</string>
+    <string/>
    </property>
-   <widget class="QLabel" name="label_11">
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <widget class="QLabel" name="modeLab">
     <property name="geometry">
      <rect>
-      <x>72</x>
-      <y>22</y>
-      <width>20</width>
+      <x>5</x>
+      <y>10</y>
+      <width>90</width>
+      <height>15</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Data Mode</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>110</y>
+      <width>101</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Video Filter BW</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="OpMode">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>30</y>
+      <width>130</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="VideoFilt">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>130</y>
+      <width>100</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_2">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>160</y>
+      <width>130</width>
+      <height>15</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Graph Appearance</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="FiltList">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>80</y>
+      <width>140</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="filter">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>60</y>
+      <width>130</width>
       <height>13</height>
      </rect>
     </property>
     <property name="text">
-     <string>ns</string>
+     <string>Select Final Filter Path:</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="PlaneRecalc">
+   <widget class="QComboBox" name="Appearance">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>50</y>
-      <width>75</width>
-      <height>23</height>
+      <x>5</x>
+      <y>180</y>
+      <width>110</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_4">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>0</y>
+     <width>181</width>
+     <height>77</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <widget class="QCheckBox" name="spurbox">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>45</y>
+      <width>91</width>
+      <height>18</height>
      </rect>
     </property>
     <property name="text">
-     <string>Recalc</string>
+     <string>Spur Test</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="planeadjbox">
+   <widget class="QCheckBox" name="SweepTime">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>5</x>
+      <y>25</y>
+      <width>151</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Display Sweep Time</string>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="Refresh">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>5</y>
+      <width>181</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Refresh Screen Each Scan</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_AutoWait">
+   <property name="geometry">
+    <rect>
+     <x>440</x>
+     <y>110</y>
+     <width>171</width>
+     <height>100</height>
+    </rect>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>100</height>
+    </size>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <widget class="QComboBox" name="waitPrecision">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>20</y>
+      <width>70</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QCheckBox" name="cbAutoWait">
+    <property name="geometry">
+     <rect>
+      <x>80</x>
+      <y>20</y>
+      <width>81</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Auto Wait</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="SweepWait">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>20</y>
+      <width>40</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="WaitLab">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>0</y>
+      <width>61</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Wait (ms)</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="FreqMode">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>70</y>
+      <width>160</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_6">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>50</y>
+      <width>91</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Frequency Band</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_Buttons">
+   <property name="geometry">
+    <rect>
+     <x>190</x>
+     <y>180</y>
+     <width>241</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <widget class="QPushButton" name="pushButton_2">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>0</y>
+      <width>90</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Cancel</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="pushButton">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>90</width>
+      <height>30</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>OK</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_6">
+   <property name="geometry">
+    <rect>
+     <x>470</x>
+     <y>60</y>
+     <width>315</width>
+     <height>51</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <widget class="QLineEdit" name="baseFreq">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>22</y>
+      <width>75</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="DivLab1">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>1</y>
+      <width>60</width>
+      <height>13</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Hor. Div.</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_7">
+    <property name="geometry">
+     <rect>
+      <x>220</x>
+      <y>1</y>
+      <width>90</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Base Freq(MHz)</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="SweepSteps">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>22</y>
+      <width>40</width>
+      <height>20</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="NDiv">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>22</y>
+      <width>50</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="StepsLab">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>1</y>
+      <width>81</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Steps/Sweep</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_Plane">
+   <property name="geometry">
+    <rect>
+     <x>330</x>
+     <y>0</y>
+     <width>131</width>
+     <height>150</height>
+    </rect>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>150</height>
+    </size>
+   </property>
+   <property name="title">
+    <string/>
+   </property>
+   <property name="flat">
+    <bool>false</bool>
+   </property>
+   <widget class="QLineEdit" name="invdegbox">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
       <y>20</y>
       <width>50</width>
       <height>20</height>
      </rect>
     </property>
    </widget>
+   <widget class="QLabel" name="pdminvert">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>5</y>
+      <width>121</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>PDM Inversion (deg)</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="planeadj">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>50</y>
+      <width>111</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Plane Extension</string>
+    </property>
+    <widget class="QLabel" name="label_11">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>20</y>
+       <width>20</width>
+       <height>13</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>ns</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="PlaneRecalc">
+     <property name="geometry">
+      <rect>
+       <x>5</x>
+       <y>50</y>
+       <width>75</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Recalc</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="planeadjbox">
+     <property name="geometry">
+      <rect>
+       <x>5</x>
+       <y>20</y>
+       <width>50</width>
+       <height>20</height>
+      </rect>
+     </property>
+    </widget>
+   </widget>
   </widget>
-  <widget class="QLabel" name="DivLab1">
+  <widget class="QWidget" name="verticalLayoutWidget">
    <property name="geometry">
     <rect>
-     <x>532</x>
-     <y>58</y>
-     <width>60</width>
-     <height>13</height>
+     <x>150</x>
+     <y>80</y>
+     <width>171</width>
+     <height>191</height>
     </rect>
    </property>
-   <property name="text">
-    <string>Hor. Div.</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="pdminvert">
-   <property name="geometry">
-    <rect>
-     <x>322</x>
-     <y>13</y>
-     <width>105</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>PDM Inversion (deg)</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="pushButton_2">
-   <property name="geometry">
-    <rect>
-     <x>302</x>
-     <y>178</y>
-     <width>90</width>
-     <height>30</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Cancel</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="spurbox">
-   <property name="geometry">
-    <rect>
-     <x>162</x>
-     <y>48</y>
-     <width>75</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Spur Test</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="filter">
-   <property name="geometry">
-    <rect>
-     <x>7</x>
-     <y>53</y>
-     <width>130</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Select Final Filter Path:</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="modeLab">
-   <property name="geometry">
-    <rect>
-     <x>17</x>
-     <y>8</y>
-     <width>90</width>
-     <height>15</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Data Mode</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="FreqMode">
-   <property name="geometry">
-    <rect>
-     <x>449</x>
-     <y>159</y>
-     <width>160</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="DirectionF">
-   <property name="geometry">
-    <rect>
-     <x>162</x>
-     <y>138</y>
-     <width>91</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>DUT Forward</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="Refresh">
-   <property name="geometry">
-    <rect>
-     <x>162</x>
-     <y>8</y>
-     <width>145</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Refresh Screen Each Scan</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="DirectionR">
-   <property name="geometry">
-    <rect>
-     <x>162</x>
-     <y>158</y>
-     <width>91</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>DUT Reverse</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="label_2">
-   <property name="geometry">
-    <rect>
-     <x>7</x>
-     <y>138</y>
-     <width>130</width>
-     <height>15</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Graph Appearance</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="StepsLab">
-   <property name="geometry">
-    <rect>
-     <x>442</x>
-     <y>58</y>
-     <width>68</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Steps/Sweep</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="SweepTime">
-   <property name="geometry">
-    <rect>
-     <x>162</x>
-     <y>28</y>
-     <width>140</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Display Sweep Time</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="SweepSteps">
-   <property name="geometry">
-    <rect>
-     <x>452</x>
-     <y>73</y>
-     <width>40</width>
-     <height>20</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="R0">
-   <property name="geometry">
-    <rect>
-     <x>245</x>
-     <y>76</y>
-     <width>30</width>
-     <height>20</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLabel" name="R0Lab1">
-   <property name="geometry">
-    <rect>
-     <x>240</x>
-     <y>60</y>
-     <width>65</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Graph R0</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="R0Lab2">
-   <property name="geometry">
-    <rect>
-     <x>277</x>
-     <y>78</y>
-     <width>35</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>ohms</string>
-   </property>
-  </widget>
-  <widget class="QComboBox" name="waitPrecision">
-   <property name="geometry">
-    <rect>
-     <x>450</x>
-     <y>109</y>
-     <width>70</width>
-     <height>22</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="cbAutoWait">
-   <property name="geometry">
-    <rect>
-     <x>535</x>
-     <y>103</y>
-     <width>14</width>
-     <height>18</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-  </widget>
-  <widget class="QLabel" name="cbAutoWaitLab">
-   <property name="geometry">
-    <rect>
-     <x>550</x>
-     <y>103</y>
-     <width>60</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Auto Wait</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="sigFreqLab">
-   <property name="geometry">
-    <rect>
-     <x>208</x>
-     <y>92</y>
-     <width>72</width>
-     <height>13</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>Sig Gen Freq</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="freqoffbox">
-   <property name="geometry">
-    <rect>
-     <x>200</x>
-     <y>113</y>
-     <width>72</width>
-     <height>20</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QLabel" name="sigGenLab">
-   <property name="geometry">
-    <rect>
-     <x>275</x>
-     <y>115</y>
-     <width>21</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>MHz</string>
-   </property>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QGroupBox" name="trackingGroup">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>70</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>70</height>
+       </size>
+      </property>
+      <property name="title">
+       <string>Tracking Generator</string>
+      </property>
+      <widget class="QPushButton" name="normReverse">
+       <property name="geometry">
+        <rect>
+         <x>51</x>
+         <y>20</y>
+         <width>71</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Normal</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_Offset">
+       <property name="geometry">
+        <rect>
+         <x>7</x>
+         <y>45</y>
+         <width>41</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Offset</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="label_9">
+       <property name="geometry">
+        <rect>
+         <x>130</x>
+         <y>45</y>
+         <width>24</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>MHz</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="freqoffbox">
+       <property name="geometry">
+        <rect>
+         <x>50</x>
+         <y>40</y>
+         <width>72</width>
+         <height>20</height>
+        </rect>
+       </property>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBox_GraphR0">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>50</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>40</height>
+       </size>
+      </property>
+      <property name="title">
+       <string/>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+      <widget class="QLabel" name="R0Lab2">
+       <property name="geometry">
+        <rect>
+         <x>42</x>
+         <y>22</y>
+         <width>35</width>
+         <height>13</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>ohms</string>
+       </property>
+      </widget>
+      <widget class="QLabel" name="R0Lab1">
+       <property name="geometry">
+        <rect>
+         <x>5</x>
+         <y>4</y>
+         <width>65</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Graph R0</string>
+       </property>
+      </widget>
+      <widget class="QLineEdit" name="R0">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>20</y>
+         <width>30</width>
+         <height>20</height>
+        </rect>
+       </property>
+      </widget>
+      <zorder>R0Lab2</zorder>
+      <zorder>R0Lab1</zorder>
+      <zorder>R0</zorder>
+      <zorder>groupBox_Buttons</zorder>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBox_Dut">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>40</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>40</height>
+       </size>
+      </property>
+      <property name="title">
+       <string/>
+      </property>
+      <property name="flat">
+       <bool>false</bool>
+      </property>
+      <widget class="QCheckBox" name="DirectionF">
+       <property name="geometry">
+        <rect>
+         <x>5</x>
+         <y>0</y>
+         <width>101</width>
+         <height>18</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>DUT Forward</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="DirectionR">
+       <property name="geometry">
+        <rect>
+         <x>5</x>
+         <y>20</y>
+         <width>101</width>
+         <height>18</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>DUT Reverse</string>
+       </property>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <spacer name="verticalSpacer">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+   </layout>
   </widget>
  </widget>
  <resources/>

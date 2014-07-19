@@ -10,6 +10,12 @@
     <height>600</height>
    </rect>
   </property>
+  <property name="minimumSize">
+   <size>
+    <width>0</width>
+    <height>400</height>
+   </size>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -34,6 +40,16 @@
      <widget class="QGraphicsView" name="graphicsView"/>
     </item>
     <item>
+     <widget class="QLineEdit" name="lineEdit_SweepTime">
+      <property name="frame">
+       <bool>true</bool>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QFrame" name="frame">
       <property name="minimumSize">
        <size>
@@ -54,6 +70,15 @@
        <enum>QFrame::Raised</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout">
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <property name="verticalSpacing">
+        <number>2</number>
+       </property>
        <item row="2" column="0">
         <widget class="QComboBox" name="comboBox">
          <property name="enabled">
@@ -116,13 +141,6 @@
           </size>
          </property>
         </spacer>
-       </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Marker</string>
-         </property>
-        </widget>
        </item>
        <item row="2" column="1">
         <widget class="QPushButton" name="btnMarkClear">
@@ -303,6 +321,13 @@ Setups</string>
          </property>
          <property name="text">
           <string>Redraw</string>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label">
+         <property name="text">
+          <string>Marker</string>
          </property>
         </widget>
        </item>

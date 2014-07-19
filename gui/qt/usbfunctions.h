@@ -37,7 +37,7 @@ struct Int64N
 {
   unsigned long msLong;
   unsigned long lsLong;
-}; //, msLong as ulong, lsLong as ulong // USB:15/08/10
+};
 
 struct Int64SW
 {
@@ -53,7 +53,7 @@ struct UsbAllSlimsAndLoadData
   short pdmcommand;
   short pdmcmdmult;
   short pdmcmdadd;
-};// USB:15/08/10
+};
 
 // The following struct is used to control ADC reading configuration.
 struct UsbAdcControl
@@ -63,7 +63,7 @@ struct UsbAdcControl
   short Delay;
   short Bits;
   short Average;
-};// USB:15/08/10
+};
 
 
 class usbFunctions
@@ -106,89 +106,20 @@ public:
 
   void *getUSBDevice();
 
-/*
-  //------Start items for USB interface----------
-   // USB interface dll //USB:01-08-2010
-  // this is used as a form of handle used by the USB interface
-  // it is necessary because of the limitations of liberty basic
-  // and it is actually a memory pointer to a USB device class object
-  // we set it to zero when the interface is not initialised
-  global USBdevice //USB:01-08-2010
-  // this is a boolean flag used to control when the USB interfcae dll is open (I hate basic)
-  global UsbInterfaceOpen //USB:01-08-2010
-  // set this flag to != 0 for usb interface active
-  global bUseUsb //USB:01-08-2010
-  global bUsbAvailable //USB:01-08-2010
-  // these are string buffers used in USB I/O operations
-  */
-  //QString USBwrbuf; //USB:01-08-2010
-  //QString USBwrbuf2;
-  /*
-  // used in ADC input functions; the number of ADC readings made and the results read
-//ver116-4r deleted (since not used)    global UsbAdcCount //USB:01-08-2010
-//ver116-4r deleted    global UsbAdcResult1 //USB:01-08-2010
-//ver116-4r deleted    global UsbAdcResult2 //USB:01-08-2010
-  USBdevice = 0 //USB:01-08-2010
-  UsbInterfaceOpen = 0 //USB:01-08-2010
-  bUseUsb = 0 //USB:01-08-2010
-  struct USBrBuf, numreads as ulong, magnitude as ulong , phase as ulong //USB:01-08-2010
-  // the next 3 are used to create a memory buffer for the dll to use to save scan time
-  // it contains a char[][] version of cmdallarray
-  global AllArrayBlockSize // current size of memory block allocated for AllArrays
-  global hSAllArray // handle for memory block
-  global ptrSAllArray // pointer to memory block
-
-  global hSDDS1Array //USB:05/12/2010
-  global ptrSDDS1Array //USB:05/12/2010
-  global hSDDS3Array //USB:05/12/2010
-  global ptrSDDS3Array //USB:05/12/2010
-  global hSPLL1Array //USB:05/12/2010
-  global ptrSPLL1Array //USB:05/12/2010
-  global hSPLL3Array //USB:05/12/2010
-  global ptrSPLL3Array //USB:05/12/2010
-  */
-
-  //struct Int64N, msLong as ulong, lsLong as ulong ' USB:15/08/10
-  //struct Int64SW, msLong as ulong, lsLong as ulong // USB:15/08/10
-  // This structure is used to minimize time spent forming commands to send to the USB DLL
-  // the values correspond to the parameters of the same name (or similar description) in the parallel function
-  // we aim to try not to set them each time to save processing time in basic code
-  //struct UsbAllSlimsAndLoadData, thisstep as short, filtbank as short, latches as short, pdmcommand as short, pdmcmdmult as short, pdmcmdadd as short // USB:15/08/10
-  // The following struct is used to control ADC reading configuration.
-//  struct UsbAdcControl, Adcs as short, Clocking as short, Delay as short, Bits as short, Average as short // USB:15/08/10
-  // Placed here to save liberty basic from having to fill it in each time it goes to read the ADC//s
-  // The parameters map to the parameters in the ADC convert commands in fw-msa
-  // Adcs takes values 1 or 3 normally ( 1 = magnitude ADC only, 3 = both ) but will also do 2 (phase only) //it will always be =3 //ver116-4r
-  // Clocking is the clocking option - 0 for AD7685 and 1 for LT1860. Use same clocking option for either 12 or 16 bit serial ADC. =1 //ver116-4r
-  // Delay is the ADC Convert clock high time delay - 2 for AD7684, 4 for LT1960. Use same delay for both. =4 (about 5.4 usec) //ver116-4r
-  // Bits is the number of data bits - 16 for AD7685, 10 for LT1860. Will always use 16. When 12 bit ADC is used, we delete the last 4 serial bits. //ver116-4r
-  // Average is normally 1 - set to higher number if you want the interface to do multiple readings and average. Always use 1. //ver116-4r
-/*          UsbAdcControl.Adcs.struct = 3 //ver116-4r
-          UsbAdcControl.Clocking.struct = 1 //ver116-4r
-          UsbAdcControl.Delay.struct = 4 //ver116-4r
-          UsbAdcControl.Bits.struct = 16 //ver116-4r
-          UsbAdcControl.Average.struct = 1 //ver116-4r
-
-  //---------End items for USB interface------------
-
-*/
-
   int AllArrayBlockSize; // current size of memory block allocated for AllArrays
   int DeviceArrayBlockSize;
   void * hSAllArray; // handle for memory block
   void * ptrSAllArray; // pointer to memory block
 
-  void * hSDDS1Array; //USB:05/12/2010
-  void * ptrSDDS1Array; //USB:05/12/2010
-  void * hSDDS3Array; //USB:05/12/2010
-  void * ptrSDDS3Array; //USB:05/12/2010
-  void * hSPLL1Array; //USB:05/12/2010
-  void * ptrSPLL1Array; //USB:05/12/2010
-  void * hSPLL3Array; //USB:05/12/2010
-  void * ptrSPLL3Array; //USB:05/12/2010
+  void * hSDDS1Array;
+  void * ptrSDDS1Array;
+  void * hSDDS3Array;
+  void * ptrSDDS3Array;
+  void * hSPLL1Array;
+  void * ptrSPLL1Array;
+  void * hSPLL3Array;
+  void * ptrSPLL3Array;
 
-  //Int64SW int64SW;
-  //Int64N int64N;
   unsigned long int64SW[2];
   unsigned long int64N[2];
 

@@ -138,6 +138,7 @@ msagraph::msagraph(QWidget *parent)
   gGraphPix.mresize(805,3);
   gTrace1.resize(805);
   gTrace2.resize(805);
+  gErase1.resize(805);
   gErase2.resize(805);
   referenceSource.mresize(802, 3);
   referenceTransform.mresize(802, 3);
@@ -188,7 +189,7 @@ void msagraph::setActiveConfig(msaConfig *newActiveConfig)
 void msagraph::gSetYAxisRange(int axisNum, int yMin, int yMax)
 {
   //Change range of specified y axis
-  //'gCalcGraphParams, which must be called before graphing.
+  //gCalcGraphParams, which must be called before graphing.
   if (axisNum==1)
   {
     gY1AxisMin=yMin; gY1AxisMax=yMax;
@@ -203,7 +204,7 @@ void msagraph::gGetYAxisRange(int axisNum, int &yMin, int &yMax)
 {
   //Get specified axis min and max
   //This is the full axis min/max, not the min and max actual y values
-  if (axisNum==1)
+  if (axisNum == 1)
   {
     yMin=gY1AxisMin;
     yMax=gY1AxisMax;
@@ -232,7 +233,7 @@ void msagraph::gSetIsLinear(int linX, int linY1, int linY2)
 {
   //Set linearity for each axis; lin=1 for linear, 0 for log.
   //If changing from log X scale to linear, force horizontal divisions to 10 in case user doesn't adjust
-  if (gXIsLinear==0 && linX==1)
+  if (gXIsLinear == 0 && linX == 1)
   {
     gHorDiv=10;
   }
@@ -284,11 +285,12 @@ void msagraph::gGetNumDivisions(int &xDiv, int &yDiv)
 }
 void msagraph::gSetTraceWidth(int wid1, int wid2)
 {
-  //Set width of graph traces 'mod ver116-4b
+  //Set width of graph traces
   if (wid1<=0)
      gTrace1Width=0;
   else
     gTrace1Width=wid1;
+
   if (wid2<=0)
     gTrace2Width=0;
   else
@@ -334,10 +336,10 @@ void msagraph::gSetTitleLine(int N, QString t)
   //Set one of 4 lines of title to print above top grid line. Numbered 1,2,3,4
   if (N<0)
     N=0;
-  else if (N>3) N=3;   //ver114-5m
+  else if (N>3)
+    N=3;
   gTitle[N]=t;
 }
-
 
 void msagraph::gSetGridStyles(QString xStyle, QString y1Style, QString y2Style)
 {
@@ -368,7 +370,7 @@ void msagraph::gSetMaxPoints(int n)
   //Set max number of allowed points
   //gGraphVal will be redimensioned. No need to use this if the number of points has not increased
   //Existing points are erased if we resize. Number will always be 800 or more
-  //ver114-1e changed so dimension is never reduced
+  //changed so dimension is never reduced
 
   if (n>gMaxPoints)
   {
@@ -377,6 +379,7 @@ void msagraph::gSetMaxPoints(int n)
     gGraphPix.mresize(gMaxPoints+5,3);
     gTrace1.resize(gMaxPoints+5);
     gTrace2.resize(gMaxPoints+5);
+    gErase1.resize(gMaxPoints+5);
     gErase2.resize(gMaxPoints+5);
     gNumPoints=0;
   }
@@ -418,6 +421,7 @@ void msagraph::gActivateGraphs(int graphY1, int graphY2)
     gGraphY1=0;
   else
     gGraphY1=graphY1;
+
   if (gDoY2==0)
     gGraphY2=0;
   else
@@ -448,8 +452,8 @@ void msagraph::gGetPointVal(int N, int &x, int &y1, int &y2)
       x=x+fract*(gGraphVal[whole+1][0]-x);
       if (gY1IsPhase)
       {
-        //ver114-7d created special interpolation for angles to deal with wrap-around
-        y1=inter.intLinearInterpolateDegrees(fract, y1, gGraphVal[whole+1][1], gY1AxisMin, gY1AxisMax);   //ver116-4k
+        //created special interpolation for angles to deal with wrap-around
+        y1=inter.intLinearInterpolateDegrees(fract, y1, gGraphVal[whole+1][1], gY1AxisMin, gY1AxisMax);
       }
       else
       {
@@ -457,8 +461,8 @@ void msagraph::gGetPointVal(int N, int &x, int &y1, int &y2)
       }
       if (gY2IsPhase)
       {
-        //ver114-7d created special interpolation for angles to deal with wrap-around
-        y2=inter.intLinearInterpolateDegrees(fract, y2, gGraphVal[whole+1][2], gY2AxisMin, gY2AxisMax);   //ver116-4k
+        //created special interpolation for angles to deal with wrap-around
+        y2=inter.intLinearInterpolateDegrees(fract, y2, gGraphVal[whole+1][2], gY2AxisMin, gY2AxisMax);
       }
       else
       {
@@ -477,9 +481,10 @@ float msagraph::gGetPointYVal(int N, int yNum)
   float y;
   //Get y1 or y2 (indicated by yNum=1 or 2) for point N, possibly non-integral
   //Angles will have values in the graph range, not necessarily -180 to +180
-  if (N>0 && N<=gDynamicSteps+1)
+  if (N > 0 && N <= gDynamicSteps+1)
   {
-    int whole=(int)(N); float fract=N-whole;
+    int whole=(int)(N);
+    float fract=N-whole;
     y=gGraphVal[whole][yNum];
     if (fract>0)
     {
@@ -501,8 +506,8 @@ float msagraph::gGetPointYVal(int N, int yNum)
       {
         //Note that angles in the main program are kept in the range -180 to +180, but
         //in gGraphVal they have been adjusted to fit graph range
-        //ver114-7d created special interpolation for angles to deal with wrap-around
-        y=inter.intLinearInterpolateDegrees(fract, y, gGraphVal[whole+1][yNum], yMin, yMax);   //ver116-4k
+        //created special interpolation for angles to deal with wrap-around
+        y=inter.intLinearInterpolateDegrees(fract, y, gGraphVal[whole+1][yNum], yMin, yMax);
       }
       else
       {
@@ -578,8 +583,8 @@ void msagraph::gClearYValues()
   //Zero Y values of gNumPoints points
   for (int i=1; i <= gNumPoints;i++)
   {
-    gGraphVal[i][1]=0;
-    gGraphVal[i][2]= 0;
+    gGraphVal[i][1] = 0;
+    gGraphVal[i][2] = 0;
   }
 }
 int msagraph::gPointCount()
@@ -594,8 +599,8 @@ void msagraph::gChangePoints(int pNum, int y1, int y2)
   {
     QMessageBox::warning(0,"Error", QString("Invalid point number: %1").arg(pNum));    //debugging
   }
-  gGraphVal[pNum][1]=y1;
-  gGraphVal[pNum][2]=y2;
+  gGraphVal[pNum][1] = y1;
+  gGraphVal[pNum][2] = y2;
 }
 
 int msagraph::gAddPoints(float x, float y1, float y2)
@@ -619,7 +624,7 @@ void msagraph::gGenerateXValues(int numValidPoints)
   //an existing partial graph, nValidPoints would be the number of completed points in the
   //Also fills gGraphPix() with the pixel coords for the x values.
   //Does not affect y values or y pixel coords.
-  //ver116-4k: Log sweeps may now be for negative X values. The X values are not allowed to contain or cross zero.
+  //Log sweeps may now be for negative X values. The X values are not allowed to contain or cross zero.
   //If user specifies a zero endpoint, it gets changed to a small value.
   int numPoints=gDynamicSteps+1;
   //X axis starts at gXAxisMin and ends at gXAxisMax
@@ -657,7 +662,8 @@ void msagraph::gGenerateXValues(int numValidPoints)
         gGraphVal[i][0]=0-(double)( (int)(1000000*(0-x)+0.5) )/1000000;    //Round to nearest Hz
       }
       //We round pixels to the nearest tenth
-      gGraphPix[i][0]=(double)( (int)(10*xPix+0.5) )/10;
+      //gGraphPix[i][0]=(double)( (int)(10*xPix+0.5) )/10;
+      gGraphPix[i][0]=xPix;
     }
     xPix=xPix+pixInterval;
     if (gXIsLinear)
@@ -743,7 +749,7 @@ void msagraph::gFindPeaks(int traceNum, int p1, int p2, int &minNum, int &maxNum
   //minNum and maxNum will be set to the point numbers (1...gDynamicSteps+1) where the peaks occur;
   //minY and maxY will be the peak value
   int pMin, pMax;
-  gGetMinMaxPointNum(pMin, pMax);    //ver114-6d
+  gGetMinMaxPointNum(pMin, pMax);
   if (p1<pMin) p1=pMin;
   if (p2>pMax) p2=pMax;
   int minPeakEnded=1 ; int maxPeakEnded=1;
@@ -761,16 +767,33 @@ void msagraph::gFindPeaks(int traceNum, int p1, int p2, int &minNum, int &maxNum
     {
      //See if peak is found. Once found, so long as we remain at that level, continue
      //to record maxPeakEnded
-      if (y>maxY) {maxY=y ; maxNumStart=i ; maxPeakEnded=0;}
-      if (maxPeakEnded==0 && y>=maxY) maxNumEnd=i; else maxPeakEnded=1;
-      if (y<minY) { minY=y ; minNumStart=i ; minNumEnd=i ; minPeakEnded=0;}
-      if (minPeakEnded==0 && y<=minY) minNumEnd=i; else minPeakEnded=1;
+      if (y>maxY)
+      {
+        maxY=y;
+        maxNumStart=i;
+        maxPeakEnded=0;
+      }
+      if (maxPeakEnded==0 && y>=maxY)
+        maxNumEnd=i;
+      else
+        maxPeakEnded=1;
+      if (y<minY)
+      {
+        minY=y;
+        minNumStart=i;
+        minNumEnd=i;
+        minPeakEnded=0;
+      }
+      if (minPeakEnded==0 && y<=minY)
+        minNumEnd=i;
+      else
+        minPeakEnded=1;
     }
   }
   //Here the min or max start and end numbers indicate where the peak started and ended; we consider
   //the actual peak to be in the middle.
-  maxNum=(int)((maxNumEnd+maxNumStart)/2);   //ver115-4b
-  minNum=(int)((minNumEnd+minNumStart)/2);   //ver115-4b
+  maxNum=(int)((maxNumEnd+maxNumStart)/2);
+  minNum=(int)((minNumEnd+minNumStart)/2);
 }
 
 void msagraph::gGetGridCorner(QString corner, float &xPix, float &yPix)
@@ -841,9 +864,12 @@ void msagraph::gSetDoAxis(int doY1, int doY2)
   //Set variables indicating whether data exists for Y1 and Y2
   //We don't necessarily graph it just because we have it, but we will label the axis and put
   //the data in the marker info.
-  gDoY1=doY1; gDoY2=doY2;
-  if (doY1==0) gGraphY1=0;   //Can't graph it if we don't have it
-  if (doY2==0) gGraphY2=0;
+  gDoY1=doY1;
+  gDoY2=doY2;
+  if (doY1==0)
+    gGraphY1=0;   //Can't graph it if we don't have it
+  if (doY2==0)
+    gGraphY2=0;
     //Clear accumulated draw commands. We use "down" as the empty command
   for (int i=0; i < gDynamicSteps; i++)
   {
@@ -854,7 +880,7 @@ void msagraph::gSetDoAxis(int doY1, int doY2)
     }
     if (doY2==0)
     {
-      gTrace2[i]= QPointF(0,0);  //"down";
+      gTrace2[i]= QPointF(0,0);
       gGraphVal[i][2]=0;
     }
   }
@@ -868,12 +894,13 @@ void msagraph::gInitDefaults()
   gY1IsPhase=1;
   gY2IsPhase=0;
   gActivateGraphs(1,1);
-  gHorDiv=10; gVertDiv=10;
+  gHorDiv=10;
+  gVertDiv=10;
   gridappearance->gUsePresetColors("LIGHT", gPrimaryAxis);
   gUsePresetText("BasicText");
   gDoHist=0;
   gPrimaryAxis=1;
-  gSetGridStyles("ENDSANDCENTER", "All", "All"); //Label these grid lines ver114-5f
+  gSetGridStyles("ENDSANDCENTER", "All", "All"); //Label these grid lines
 }
 void msagraph::gSetSweepDir(int dir)
 {
@@ -885,7 +912,7 @@ void msagraph::gSetSweepDir(int dir)
     if (gEraseLead<0)
       gEraseLead=0-gEraseLead;
     gSweepStart=1;
-    gSweepEnd=gDynamicSteps+1; //ver114-5e
+    gSweepEnd=gDynamicSteps+1;
   }
   else
   {
@@ -894,7 +921,7 @@ void msagraph::gSetSweepDir(int dir)
     if (gEraseLead>0)
       gEraseLead=0-gEraseLead;
     gSweepStart=gDynamicSteps+1;
-    gSweepEnd=1; //ver114-5e
+    gSweepEnd=1;
   }
 }
 
@@ -924,6 +951,10 @@ void msagraph::gUpdateGraphObject(int winWidth, int winHt, int marLeft, int marR
   //set the size of the area we are going to be drawing in
   graphScene->clear();
 
+  for (int i = 0; i < gErase1.count(); i++)
+  {
+    gErase1[i] = 0;
+  }
   for (int i = 0; i < gErase2.count(); i++)
   {
     gErase2[i] = 0;
@@ -939,7 +970,7 @@ void msagraph::gUpdateGraphObject(int winWidth, int winHt, int marLeft, int marR
   gGridWidth=gWindowWidth-gMarginLeft-gMarginRight;    //width of graph grid
   gOriginY=gWindowHeight-gMarginBot;   //pixel number of bottom grid line
 
-  gMarkerInfoTop=gOriginY+40;      //Top of area below x axis labels ver114-4e
+  gMarkerInfoTop=gOriginY+40;      //Top of area below x axis labels
   gMarkerInfoLeft=10;              //Near left of graphic box
   gMarkerInfoRight=gMarkerInfoLeft;    //Recalc in gDrawMarkerInfo
   gIsFirstDynamicScan=0;
@@ -956,18 +987,20 @@ void msagraph::gDrawReferences()
     //QString t=gRefTrace[i];
     if (i == 1)
     {
-      Pen.setBrush(QColor(util.fixColor(referenceColor1)));
+      //Pen.setBrush(QColor(util.fixColor(referenceColor1)));
+      Pen.setBrush(referenceColor1);
       Pen.setWidth(referenceWidth1);
     }
     else if (i == 2)
     {
-      Pen.setBrush(QColor(util.fixColor(referenceColor2)));
+      //Pen.setBrush(QColor(util.fixColor(referenceColor2)));
+      Pen.setBrush(referenceColor2);
       Pen.setWidth(referenceWidth2);
     }
     graphScene->addPath(refLine[i],Pen);
   }
 }
-void msagraph::gAddReference(int N, QString t)
+void msagraph::gAddReference(int N, QColor t)
 {
   if (N>0 && N<11)
   {
@@ -1072,10 +1105,11 @@ QGraphicsTextItem *msagraph::gPrintMessage(QString msg)
   //The message is in msg$
   int y=gGetMarkerInfoTop()-5;
   int x=30;
-  QString textColor, backColor;
+  QColor textColor;
+  QColor backColor;
   gridappearance->gGetInfoColors(textColor, backColor);
-  //cmd$="font Tahoma 8 bold;color ";textColor$;";backcolor ";backColor$    //ver116-4i
-  gPrintText(util.Space(140), x, y);   //note spaces are smaller than letters ver116-4j
+  //cmd$="font Tahoma 8 bold;color ";textColor$;";backcolor ";backColor$
+  gPrintText(util.Space(140), x, y);   //note spaces are smaller than letters
   if (msg!="")
   {
     return gPrintText("MESSAGE: "+msg.left(75), x, y,textColor);
@@ -1161,7 +1195,7 @@ void msagraph::gPrintGridLabels()
       thisLabel=gY2GridLabels[i];
       if (thisLabel!="")
       {
-        gPrintText(thisLabel, gMarginLeft+gGridWidth+6, gOriginY-gY2GridLines[i]-10, QColor(gridappearance->gY2TextColor));
+        gPrintText(thisLabel, gMarginLeft+gGridWidth+6, gOriginY-gY2GridLines[i]-10, gridappearance->gY2TextColor);
       }
     }
   }
@@ -1198,7 +1232,7 @@ void msagraph::gPrintTitle(int doClear)
   item = gPrintTextCentered(gTitle[1], titleCenter, 15, gridappearance->gGridTextColor);
   item->setData(0,"gtitle1");
 
-  //There is a fourth title line for sweep info, but we don't print it ver114-5m
+  //There is a fourth title line for sweep info, but we don't print it
 }
 void msagraph::gPrintAxisLabels()
 {
@@ -1237,7 +1271,7 @@ void msagraph::gPrintSupplementalAxisLabels(int nSupp, int axisNum, QString col,
           */
 }
 
-void msagraph::gPrintAxisAnnotation(int axisNum, QString annotText, QString annotFont, QString annotColor)
+void msagraph::gPrintAxisAnnotation(int axisNum, QString annotText, QString annotFont, QColor annotColor)
 {
   //Print annotation above axis labels
   //The specified text is printed above the axis label of the specified axis (1 or 2)
@@ -1739,6 +1773,7 @@ int msagraph::gPixIsInGrid(int xPix, int yPix)
   //We allow an extra pixel boundary to be part of the grid
   if (xPix < gMarginLeft-1 || xPix > gMarginLeft+gGridWidth+1)
     return 0;
+
   if (yPix < gMarginTop-1 || yPix > gOriginY+1)
     return 0;
 
@@ -1746,38 +1781,76 @@ int msagraph::gPixIsInGrid(int xPix, int yPix)
 }
 void msagraph::gFindClickedPoint(int xPix, int &yPix, int &pointNum, int &traceNum)
 {
-  /*
-'Return data for clicked point
-    'xPix, yPix originally represent the pixel coordinates of a mouse click. We determine what
-    'graph point was clicked and return its point number and trace number, and the Y-pixel value at the clicked trace.
-    'pointNum will be the number (1...), possibly non-integral, of the
-    'clicked point, and traceNum (1 or 2) will be the number of the trace that was clicked.
-    'We return pointNum=0 if no graph point was near the click. pointNum may be fractional
-    if gNumPoints<2 then pointNum=0 : exit sub  'To avoid problems
-    if yPix>gOriginY+2 or yPix<gMarginTop-2 then pointNum=0 : exit sub  'click not in grid
-    pointNum=gPointNumOfXPix(xPix)  'Point number for xPix
-    call gGetMinMaxPointNum pMin, pMax    'ver114-6d
-    'Allow click to be a bit outside graph to mark end point
-    if pointNum<pMin then
-        if pointNum>=0 then pointNum=pMin else pointNum=0   'zero indicates outside graph
-    else
-        if pointNum>pMax then
-            if pointNum<=pMax+1 then pointNum=pMax else pointNum=0
-        end if
-    end if
-        'We determine the closest trace 'ver114-7d changed to use actual pixel values, not nearest point values
-    xPix=gGetPointXPix(pointNum)
-    y1Pix=gGetPointYVal(pointNum,1) : y2Pix=gGetPointYVal(pointNum,2)   'These aren't pixel values yet
-    call gConvertY1ToPix y1Pix : call gConvertY2ToPix y2Pix   'ver116-4k
-    if y1Pix>yPix then d1=y1Pix-yPix else d1=yPix-y1Pix 'distance from trace 1
-    if y2Pix>yPix then d2=y2Pix-yPix else d2=yPix-y2Pix 'distance from trace 2
-    if gGraphY2=0 or (gGraphY1=1 and d1<d2 )then
-        traceNum=1 : yPix=y1Pix   'Closest to trace 1; or we are not doing trace 2
-    else
-        traceNum=2 : yPix=y2Pix   'Closest to trace 2; or we are not doing trace 1
-    end if*/
+  //Return data for clicked point
+  //xPix, yPix originally represent the pixel coordinates of a mouse click. We determine what
+  //graph point was clicked and return its point number and trace number, and the Y-pixel value at the clicked trace.
+  //pointNum will be the number (1...), possibly non-integral, of the
+  //clicked point, and traceNum (1 or 2) will be the number of the trace that was clicked.
+  //We return pointNum=0 if no graph point was near the click. pointNum may be fractional
+  if (gNumPoints<2)
+  {
+    pointNum=0;
+    return;
+  }
+  if (yPix > gOriginY + 2 || yPix < gMarginTop - 2)
+  {
+    pointNum=0;
+    return;  //click not in grid
+  }
+  pointNum=gPointNumOfXPix(xPix);  //Point number for xPix
+  int pMin, pMax;
+  gGetMinMaxPointNum(pMin, pMax);
+  //Allow click to be a bit outside graph to mark end point
+  if (pointNum<pMin)
+  {
+   if (pointNum>=0)
+     pointNum=pMin;
+   else
+     pointNum=0;   //zero indicates outside graph
+  }
+  else
+  {
+    if (pointNum>pMax)
+    {
+     if (pointNum<=pMax+1)
+       pointNum=pMax;
+     else
+       pointNum=0;
+    }
+  }
+  //We determine the closest trace //ver114-7d changed to use actual pixel values, not nearest point values
+  xPix=gGetPointXPix(pointNum);
+  float y1Pix=gGetPointYVal(pointNum,1);
+  float y2Pix=gGetPointYVal(pointNum,2);   //These aren't pixel values yet
+  gConvertY1ToPix(y1Pix);
+  gConvertY2ToPix(y2Pix);
+  int d1, d2;
+  if (y1Pix>yPix)
+      d1=y1Pix-yPix;
+  else
+    d1=yPix-y1Pix; //distance from trace 1
+  if (y2Pix>yPix)
+    d2=y2Pix-yPix;
+  else
+    d2=yPix-y2Pix; //distance from trace 2
+  if (gGraphY2==0 || (gGraphY1=1 && d1<d2 ))
+  {
+    traceNum=1;
+    yPix=y1Pix;   //Closest to trace 1; or we are not doing trace 2
+  }
+  else
+  {
+    traceNum=2;
+    yPix=y2Pix;   //Closest to trace 2; or we are not doing trace 1
+  }
 }
-
+int msagraph::gPixelsPerStep()  //return number of pixels per step    'ver116-4k
+{
+    if (gDynamicSteps<=0)
+      return gGridWidth;
+    else
+      return gGridWidth/gDynamicSteps;
+}
 float msagraph::gPointNumOfX(int x)
 {
   //Return point num (1...), possibly non-integral, for the X value x
@@ -1799,27 +1872,36 @@ float msagraph::gPointNumOfX(int x)
 }
 
 float msagraph::gPointNumOfXPix(float xPix)
-{/*
-'Return point num (1...), possibly non-integral, for the X pixel xPix
-    'Note this can yield point numbers above or below the actual graph range, for pixels outside that range
-    'ver114-6d used gDynamicSteps in place of gNumPoints to find the final point; this is necessary
-    'for reverse sweeps.
-    x1=gGraphPix(1,0) : x2=gGraphPix(gDynamicSteps+1,0)    'First and last graph points; x pixel values
-    call gGetMinMaxPointNum pMin, pMax    'ver114-6d
-    if gNumPoints<2 then gPointNumOfXPix=pMin : exit function
-    interval=(x2-x1)/(gDynamicSteps) 'Pixels from point to point
-    if interval=0 then  'Weird situation; entire graph at one x pixel value; may happen with halted graph
-        gPointNumOfXPix=pMin    'ver116-4f
-    else
-        p=1+(xPix-x1)/interval
-                'If point number is very close to an integer, make it one.
-        nearInt=int(p+0.01) 'e.g. p=2.99 and p=3.01 both produce nearInt=3
-        dif=p-nearInt
-        if dif<0.01 and dif>-0.01 then p=nearInt 'If close, make p=nearInt  'ver116-4f
-        gPointNumOfXPix=p
-    end if
-end function*/
-  return 0;
+{
+  //Return point num (1...), possibly non-integral, for the X pixel xPix
+  //Note this can yield point numbers above or below the actual graph range, for pixels outside that range
+  //ver114-6d used gDynamicSteps in place of gNumPoints to find the final point; this is necessary
+  //for reverse sweeps.
+  float x1=gGraphPix[1][0];
+  float x2=gGraphPix[gDynamicSteps+1][0];    //First and last graph points; x pixel values
+  int pMin, pMax;
+  gGetMinMaxPointNum(pMin, pMax);
+  if (gNumPoints<2)
+  {
+    return pMin;
+  }
+  float interval=(x2-x1)/(gDynamicSteps); //Pixels from point to point
+  if (interval==0)  //Weird situation; entire graph at one x pixel value; may happen with halted graph
+  {
+    return pMin;
+  }
+  else
+  {
+    float p=1+(xPix-x1)/interval;
+            //If point number is very close to an integer, make it one.
+    int nearInt=int(p+0.01); //e.g. p=2.99 and p=3.01 both produce nearInt=3
+    float dif = p - nearInt;
+    if (dif<0.01 && dif>-0.01)
+    {
+      p=nearInt; //If close, make p=nearInt
+    }
+    return p;
+  }
 }
 
 void msagraph::gConvertXToPix(float &x)
@@ -1847,7 +1929,7 @@ void msagraph::gConvertXToPix(float &x)
       x=gGridWidth-pixDist+gMarginLeft;
     }
   }
-  x=((int)(x*10+0.5))/10;    //Round to tenth of a pixel    //ver116-4b*/
+  x=((int)(x*10+0.5))/10;    //Round to tenth of a pixel    */
 }
 
 void msagraph::gConvertY1ToPix(float &y1)
@@ -1881,7 +1963,7 @@ void msagraph::gConvertY1ToPix(float &y1)
       {
         y1=gY1BlackHolePix-util.uSafeLog10((gY1BlackHoleRadius-y1)/gY1BlackHoleRadius)*gY1Scale+gOriginY;
       }
-      y1=((int)(y1*10+0.5))/10;
+      y1=((int)(y1*10+0.5))/10.0;
       return;  //Round to tenth and exit
     }
     //Here for no zero crossing. If all positive, axis starts at gXGridStart; if all negative it ends at gXGridStart.
@@ -1906,7 +1988,7 @@ void msagraph::gConvertY1ToPix(float &y1)
       y1=gGridHeight-pixDist+gOriginY;
     }
   }
-  y1=((int)(y1*10+0.5))/10;    //Round to tenth of a pixel    //ver116-4b
+  y1=((int)(y1*10+0.5))/10;    //Round to tenth of a pixel
   if (y1<gMarginTop)
     y1=gMarginTop; //don//t let it go off the top
   if (y1>gOriginY)
@@ -1953,7 +2035,7 @@ void msagraph::gConvertY2ToPix(float &y2)
     {
       y2=-1;
       return;
-    }  //y is out of bounds; return pixel=-1 ver116-4k
+    }  //y is out of bounds; return pixel=-1
     float pixDist=util.uSafeLog10(ratio)*gY2Scale; //Num of pixels from start to value y
     if (gY2AxisMin>0) //all positive values with grid starting at bottom
     {
@@ -1964,11 +2046,11 @@ void msagraph::gConvertY2ToPix(float &y2)
       y2=gGridHeight-pixDist+gOriginY;
     }
   }
-  y2=((int)(y2*10+0.5))/10;    //Round to tenth of a pixel    //ver116-4b
+  y2=((int)(y2*10+0.5))/10;    //Round to tenth of a pixel
   if (y2<gMarginTop)
-    y2=gMarginTop; //don//t let it go off the top
+    y2=gMarginTop; //don't let it go off the top
   if (y2>gOriginY)
-    y2=gOriginY;     //don//t let it go off the bottom
+    y2=gOriginY;     //don't let it go off the bottom
 }
 
 float msagraph::gAdjustPhaseToDisplay(int axisNum, int pointNum, int useWorkArray)
@@ -2032,7 +2114,7 @@ float msagraph::gAdjustPhaseToDisplay(int axisNum, int pointNum, int useWorkArra
   if (phase<axisMin || phase>axisMax)
   {
     //Couldn//t find in-bounds value; put in normal range. Can happen only if phaseRange<360
-    phase=origPhase;    //ver114-5o
+    phase=origPhase;
     while (phase>180)
     {
       phase=phase-360;
@@ -2103,9 +2185,9 @@ void msagraph::gSetNumDynamicSteps(int nSteps)
   int nPoints=nSteps+1;
   //Our existing points probably aren//t any good anyway, but in case they get graphed...
   if (gNumPoints>nSteps+1)
-    gNumPoints=nSteps+1; //ver114-6d
+    gNumPoints=nSteps+1;
   gSetMaxPoints(nPoints);  //Be sure we have room
-  gSetSweepDir(gSweepDir);  //ver114-5e To set sweep start and end point numbers
+  gSetSweepDir(gSweepDir);  //To set sweep start and end point numbers
 }
 void msagraph::gSetErasure(int doErase1, int doErase2, int nEraseLead)
 {
@@ -2230,133 +2312,209 @@ void msagraph::gDynamicDrawPoint(float y1, float y2)
 
 void msagraph::gDynamicComboDrawPoint(float y1, float y2)
 {
-qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'Do segment erase and redraw for dynamic drawing
-    'This is called repeatedly to dynamically erase (if necessary) the prior line and draw a new one.
-    'Each call draws the segment from gPrevPointNum to gPrevPointNum+1, using y1 and y2
-    'as the new values for point gPrevPointNum+1; those values are also saved.
-    'Erasure is not done on the very first scan of points, signalled by gIsFirstDynamicScan=1.
-    'On the first scan, we save the x value; thereafter we reuse them. We always save the y values.
-    'After the first scan, if gDoErase for the trace is 1, then before we draw a segment we erase the segment
-    'from point gPrevPointNum+gEraseLead to the point after it.
-    'This subroutine is called for each point except the first point of each scan, for which gStartNextDynamicPass
-    'is called.
-    'The data for the prior line, is already in gGraphVal(); we reuse the X-values.
-    prevPoint=gPrevPointNum 'ver114-4m
-        '1A. Erase prior segments if required
-        'ver114-4m created this if... block to deal with reverse sweeps
-    'ver114-5e modified to use gSweepStart and gSweepEnd
-    oneBeforeStart=gSweepStart-gSweepDir    'The point before the sweep start
-    if prevPoint=0 then prevPoint=oneBeforeStart
-    if prevPoint=oneBeforeStart then isFirstPoint=1 else isFirstPoint=0
-    currPoint=prevPoint+gSweepDir
-    if currPoint=gSweepEnd then isFinalDrawPoint=1 else isFinalDrawPoint=0
-    prevErasePoint=prevPoint+gEraseLead 'Erase is ahead of draw by gEraseLead points
-    thisErasePoint=prevErasePoint+gSweepDir
-    eraseInBounds=0
-    if gSweepDir=1 then
-        if thisErasePoint>=gSweepStart and thisErasePoint<=gSweepEnd then eraseInBounds=1
+  //Do segment erase and redraw for dynamic drawing
+  //This is called repeatedly to dynamically erase (if necessary) the prior line and draw a new one.
+  //Each call draws the segment from gPrevPointNum to gPrevPointNum+1, using y1 and y2
+  //as the new values for point gPrevPointNum+1; those values are also saved.
+  //Erasure is not done on the very first scan of points, signalled by gIsFirstDynamicScan=1.
+  //On the first scan, we save the x value; thereafter we reuse them. We always save the y values.
+  //After the first scan, if gDoErase for the trace is 1, then before we draw a segment we erase the segment
+  //from point gPrevPointNum+gEraseLead to the point after it.
+  //This subroutine is called for each point except the first point of each scan, for which gStartNextDynamicPass
+  //is called.
+  //The data for the prior line, is already in gGraphVal(); we reuse the X-values.
+  int prevPoint=gPrevPointNum;
+  //1A. Erase prior segments if required
+  // created this if... block to deal with reverse sweeps
+  // modified to use gSweepStart and gSweepEnd
+  int oneBeforeStart = gSweepStart - gSweepDir;    //The point before the sweep start
+  if (prevPoint==0)
+    prevPoint=oneBeforeStart;
+
+  int isFirstPoint;
+  int currPoint;
+  int isFinalDrawPoint;
+  if (prevPoint==oneBeforeStart)
+    isFirstPoint=1;
+  else
+    isFirstPoint=0;
+  currPoint=prevPoint+gSweepDir;
+
+  if (currPoint == gSweepEnd)
+    isFinalDrawPoint=1;
+  else
+    isFinalDrawPoint=0;
+  int prevErasePoint=prevPoint+gEraseLead; //Erase is ahead of draw by gEraseLead points
+  int thisErasePoint=prevErasePoint+gSweepDir;
+  int eraseInBounds=0;
+
+  if (gSweepDir==1)
+  {
+    if (thisErasePoint>=gSweepStart && thisErasePoint<=gSweepEnd)
+      eraseInBounds=1;
+  }
+  else
+  {
+    if (thisErasePoint<=gSweepStart && thisErasePoint>=gSweepEnd)
+      eraseInBounds=1;
+  }
+
+  if (gIsFirstDynamicScan==0 && eraseInBounds)
+  {
+    //1. Erase a segment on each trace
+    if (gErase1[thisErasePoint] != 0)
+    {
+      QGraphicsItem *temp = gErase1[thisErasePoint];
+      graphScene->removeItem(temp);
+      delete temp;
+      gErase1[thisErasePoint] = 0;
+    }
+    if (gErase2[thisErasePoint] != 0)
+    {
+      QGraphicsItem *temp = gErase2[thisErasePoint];
+      graphScene->removeItem(temp);
+      delete temp;
+      gErase2[thisErasePoint] = 0;
+    }
+  }  //End Erase
+
+  //2. Draw the new Segments
+  //created isFirstPoint and isFinalPoint, and added the gSweepDir tests
+  gGraphVal[currPoint][1]=y1;
+  gGraphVal[currPoint][2]=y2;
+  //2A. Save Y1 and convert to pixel coords
+  if (gDoY1==1)
+  {
+    //Adjust phase by multiples of 360 to conform to graph bounds
+    if (gY1IsPhase)
+    {
+      y1=gAdjustPhaseToDisplay(1, currPoint, 0);
+      gGraphVal[currPoint][1]=y1;
+    }
+    if (gY1IsLinear==1)
+      y1=(y1-gY1AxisMin)*gY1Scale+gOriginY;
     else
-        if thisErasePoint<=gSweepStart and thisErasePoint>=gSweepEnd then eraseInBounds=1
-    end if
+      gConvertY1ToPix(y1);
 
-    if gIsFirstDynamicScan=0 and eraseInBounds then  'ver114-5e
-            '1. Erase a segment on each trace
-        cmd$=""
-        'ver114-6d We erase by using the same command used to draw the segment, which is
-        'in gTrace1$() or gTrace2$(). We prefix with our size/color info. ver116-4b added trace width tests
-        if gDoErase1 and gTrace1Width<>0 then cmd$=gErase1$;gTrace1$(thisErasePoint) else cmd$="down"   'down is our NOP command
-        if gDoErase2 and gTrace2Width<>0 then  cmd$=cmd$;";";gErase2$;gTrace2$(thisErasePoint)
-        if cmd$<>"" then #gGraphHandle$, cmd$    'Send command to erase
-    end if  'End Erase
+    // disbale rounding as we are not using trings for graphics
+    //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
+    //y1=int(10*y1+0.5)/10;
 
-        '2. Draw the new Segments
-         'ver114-4m created isFirstPoint and isFinalPoint, and added the gSweepDir tests
-    gGraphVal(currPoint, 1)=y1 : gGraphVal(currPoint, 2)=y2
-            '2A. Save Y1 and convert to pixel coords
-    if gDoY1=1 then
-        'ver114-5e Adjust phase by multiples of 360 to conform to graph bounds
-        if gY1IsPhase then y1=gAdjustPhaseToDisplay(1, currPoint, 0) :gGraphVal(currPoint, 1)=y1
-        if gY1IsLinear=1 then
-            y1=(y1-gY1AxisMin)*gY1Scale+gOriginY
-        else
-            call gConvertY1ToPix y1 'ver116-4k
-        end if
-            'We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
-        y1=int(10*y1+0.5)/10
-
-        if y1<gMarginTop then y1=gMarginTop 'don't let it go off the top
-        if y1>gOriginY then y1=gOriginY     'don't let it go off the bottom
-    end if
-                '2B. Save y2 and convert to pixel coords
-    if gDoY2=1 then
-        if gY2IsPhase then y2=gAdjustPhaseToDisplay(2, currPoint,0) : gGraphVal(currPoint, 2)=y2
-        if gY2IsLinear=1 then
-            y2=(y2-gY2AxisMin)*gY2Scale+gOriginY
-        else
-            call gConvertY2ToPix y2 'ver116-4k
-        end if
-        if y2<gMarginTop then y2=gMarginTop 'don't let it go off the top
-        if y2>gOriginY then y2=gOriginY     'don't let it go off the bottom
-                    'We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
-        y2=int(10*y2+0.5)/10
-    end if
-            '2C. If first scan, we need to count the points
-    if gIsFirstDynamicScan=1 then
-        if gNumPoints>gMaxPoints then notice "Too many points to " : exit sub
-        gNumPoints=gNumPoints+1
-    end if
-    x=gGraphPix(currPoint,0)    'Use old x pixel coord; it's still good
-
-            '2D. For every scan, save the y  pixel coords
-    gGraphPix(currPoint,1)=y1 : gGraphPix(currPoint,2)=y2   'save y pixel coords
-            '2E. Find point from which to draw
-          'ver114-4m created isFirstPoint and isFinalPoint, and added the gSweepDir tests
-
-    if gDoHist=1 then
-            'For histogram draw vertical line.
-            lastX=x :lastY1=gOriginY : lastY2=gOriginY
+    if (y1<gMarginTop)
+      y1=gMarginTop; //don't let it go off the top
+    if (y1>gOriginY)
+      y1=gOriginY;     //don't let it go off the bottom
+  }
+                //2B. Save y2 and convert to pixel coords
+  if (gDoY2==1)
+  {
+    if (gY2IsPhase)
+    {
+      y2=gAdjustPhaseToDisplay(2, currPoint,0);
+      gGraphVal[currPoint][2]=y2;
+    }
+    if (gY2IsLinear==1)
+        y2=(y2-gY2AxisMin)*gY2Scale+gOriginY;
     else
-                'For normal trace, draw from last point if there is one
-        if isFirstPoint=0 then 'ver114-4m
-            lastX=gGraphPix(prevPoint,0)
-            lastY1=gGraphPix(prevPoint,1)
-            lastY2=gGraphPix(prevPoint,2)
-        end if
-    end if
-            '2F. Construct total draw command as one string and send it
-    cmd$="" : thisCmd$=""
-         'The "line" command does not draw the final endpoint of the line, which normally
-        'gets drawn as the start point of the next line. But for the last point, or for
-        'any point at which a halt occurs, that final pixel does not get drawn.
-        'ver114-6d modified to accumulate all draw commands
-    if gDoY1 then 'ver115-1a
-        if gGraphY2 then j$=";" else j$=""
-        'ver114-4n We normally draw a line, but in special cases we use "set" to set a point
-        'We do so for the very first point of non-histogram, and for any histogram point
-        'consisting of a single point, which "line" will not draw.
-        'ver114-6d modified to accumulate all draw commands when gIsDynamic=1
-        if isFirstPoint and (gDoHist=0) or (gDoHist and int(y1)=gOriginY) then
-            thisCmd$="set ";x;" ";y1   'just set the point
-        else
-            thisCmd$="line ";lastX; " ";lastY1;" ";x;" ";y1;";line ";x;" ";y1;" ";lastX; " ";lastY1
-        end if
-        if gIsDynamic=1 then  gTrace1$(currPoint)=thisCmd$
-        if gGraphY1 and gTrace1Width<>0 then cmd$=gDraw1$;thisCmd$;j$  'ver116-4b
-    end if
-    if gDoY2=1 then  'ver115-1a
-        if isFirstPoint and (gDoHist=0) or (gDoHist and int(y2)=gOriginY) then
-            thisCmd$="set ";x;" ";y2   'just set the point
-        else
-            thisCmd$="line ";lastX; " ";lastY2;" ";x;" ";y2;";line ";x;" ";y2;" ";lastX; " ";lastY2
-        end if
-        if gIsDynamic=1 then  gTrace2$(currPoint)=thisCmd$
-        if gGraphY2 and gTrace2Width<>0 then cmd$=cmd$;gDraw2$;thisCmd$  'ver116-4b
-    end if
-    if cmd$<>"" and gGraphHandle$<>"" then #gGraphHandle$, cmd$   'Draw lines
-    gPrevPointNum=currPoint
-end sub*/
+        gConvertY2ToPix(y2);
+
+    if (y2<gMarginTop)
+      y2=gMarginTop; //don't let it go off the top
+    if (y2>gOriginY)
+      y2=gOriginY;     //don't let it go off the bottom
+
+    // disbale rounding as we are not using trings for graphics
+    //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
+    //y2=int(10*y2+0.5)/10;
+  }
+        //2C. If first scan, we need to count the points
+  if (gIsFirstDynamicScan==1)
+  {
+    if (gNumPoints>gMaxPoints)
+    {
+      QMessageBox::about(0, "Notice", "Too many points to ");
+      return;
+    }
+    gNumPoints=gNumPoints+1;
+  }
+  int x=gGraphPix[currPoint][0];    //Use old x pixel coord; it//s still good
+
+  //2D. For every scan, save the y  pixel coords
+  gGraphPix[currPoint][1]=y1;
+  gGraphPix[currPoint][2]=y2;   //save y pixel coords
+  //2E. Find point from which to draw
+  //created isFirstPoint and isFinalPoint, and added the gSweepDir tests
+
+  int lastX;
+  int lastY1;
+  int lastY2;
+  if (gDoHist==1)
+  {
+    //For histogram draw vertical line.
+    lastX=x;
+    lastY1=gOriginY;
+    lastY2=gOriginY;
+  }
+  else
+  {
+    //For normal trace, draw from last point if there is one
+    if (isFirstPoint==0)
+    {
+      lastX=gGraphPix[prevPoint][0];
+      lastY1=gGraphPix[prevPoint][1];
+      lastY2=gGraphPix[prevPoint][2];
+    }
+  }
+  //2F. Construct total draw command as one string and send it
+  //The "line" command does not draw the final endpoint of the line, which normally
+  //gets drawn as the start point of the next line. But for the last point, or for
+  //any point at which a halt occurs, that final pixel does not get drawn.
+  //ver114-6d modified to accumulate all draw commands
+  if (gDoY1)
+  {
+    //We normally draw a line, but in special cases we use "set" to set a point
+    //We do so for the very first point of non-histogram, and for any histogram point
+    //consisting of a single point, which "line" will not draw.
+    //ver114-6d modified to accumulate all draw commands when gIsDynamic=1
+    if ((isFirstPoint && (gDoHist==0)) || (gDoHist && int(y1)==gOriginY))
+    {
+      //thisCmd$="set ";x;" ";y1;   //just set the point
+    }
+    else
+    {
+      if (gGraphY1 && gTrace1Width!=0)
+      {
+        QPen pen(gridappearance->gTrace1Color);
+        pen.setWidth(gTrace1Width);
+        gErase1[vars->thisstep] = graphScene->addLine(lastX, lastY1, x, y1, pen);
+      }
+    }
+    if (gIsDynamic==1)
+    {
+      gTrace1[currPoint]=QPointF(x,y1);
+    }
+  }
+  if (gDoY2==1)
+  {
+    if ((isFirstPoint && (gDoHist==0)) || (gDoHist && int(y2)==gOriginY))
+    {
+        //thisCmd$="set ";x;" ";y2;   //just set the point
+    }
+    else
+    {
+      if (gGraphY2 && gTrace2Width!=0)
+      {
+        QPen pen(gridappearance->gTrace2Color);
+        pen.setWidth(gTrace2Width);
+        gErase2[vars->thisstep] = graphScene->addLine(lastX, lastY2, x, y2, pen);
+      }
+    }
+    if (gIsDynamic==1)
+    {
+      gTrace2[currPoint]=QPointF(x,y2);
+    }
+  }
+  gPrevPointNum=currPoint;
 }
 
 int msagraph::gCanUseExpeditedDraw()
@@ -2394,7 +2552,7 @@ void msagraph::gDrawSingleTrace()
   //The data for the prior line, is already in gGraphVal(); we reuse the X-values.
 
   //Draws single Normal trace 2; not histogram; not log Y values; not phase trace
-  int prevPoint = vars->thisstep - vars->sweepDir + 1;      //thisstep runs from 0; here 1 is first point. //ver114-4k
+  int prevPoint = vars->thisstep - vars->sweepDir + 1;      //thisstep runs from 0; here 1 is first point.
   int currPoint=prevPoint+vars->sweepDir;
   int prevErasePoint=prevPoint+gEraseLead;     //Erase is ahead of draw by gEraseLead points
   int thisErasePoint=prevErasePoint+vars->sweepDir;
@@ -2433,7 +2591,6 @@ void msagraph::gDrawSingleTrace()
         QGraphicsItem *temp = gErase2[thisErasePoint];
         graphScene->removeItem(temp);
         delete temp;
-        //delete gErase2[thisErasePoint];
         gErase2[thisErasePoint] = 0;
       }
 
@@ -2471,7 +2628,7 @@ void msagraph::gDrawSingleTrace()
   }
   else
   {
-    QPen pen(QColor(util.fixColor(gridappearance->gTrace2Color)));
+    QPen pen(gridappearance->gTrace2Color);
     pen.setWidth(gTrace2Width);
 
     gErase2[vars->thisstep] = graphScene->addLine(lastX, lastY2, xPix, yPix,pen);
@@ -2506,7 +2663,7 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
   }
 
   gGraphVal[currPoint][1]=y1;
-  gGraphVal[currPoint][2]=y2; //ver114-5e
+  gGraphVal[currPoint][2]=y2;
   int x=gGraphPix[currPoint][0];    //Get previously calculated x pixel value for current point
 
   //Draw to Y1 if necessary
@@ -2527,7 +2684,7 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
       gConvertY1ToPix(y1); //ver116-4k
     }
     //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
-    y1=((int)(10*y1+0.5))/10;
+    //y1=((int)(10*y1+0.5))/10;
     if (y1<gMarginTop)
       y1=gMarginTop; //don't let it go off the top
     if (y1>gOriginY)
@@ -2550,7 +2707,7 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
       gConvertY2ToPix(y2);
     }
     //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
-    y2=((int)(10*y2+0.5))/10;
+    //y2=((int)(10*y2+0.5))/10;
     if (y2<gMarginTop)
       y2=gMarginTop; //don't let it go off the top
     if (y2>gOriginY)
@@ -2639,6 +2796,9 @@ void msagraph::gDrawNextPoint()
     }
     else
     {
+      QPen pen(gridappearance->gTrace1Color);
+      pen.setWidth(gTrace1Width);
+      gErase1[currPoint] = graphScene->addLine(lastX, lastY1, x, y1, pen);
       //thisCmd="line "+lastX+ " "+lastY1+" "+x+" "+y1=";line "+x+" "+y1=" "+lastX+ " "+lastY1;
     }
     if (gIsDynamic==1)
@@ -2647,7 +2807,7 @@ void msagraph::gDrawNextPoint()
     }
     if (gGraphY1 && gTrace1Width!=0)
     {
-      cmd=gDraw1+thisCmd+j;  //ver116-4b
+      cmd=gDraw1+thisCmd+j;
     }
   }
   if (gDoY2==1)
@@ -2658,6 +2818,10 @@ void msagraph::gDrawNextPoint()
     }
     else
     {
+      QPen pen(gridappearance->gTrace2Color);
+      pen.setWidth(gTrace2Width);
+      gErase2[currPoint] = graphScene->addLine(lastX, lastY2, x, y2, pen);
+
       //thisCmd="line ";lastX; " ";lastY2;" ";x;" ";y2;";line ";x;" ";y2;" ";lastX; " ";lastY2
     }
 
@@ -2667,12 +2831,12 @@ void msagraph::gDrawNextPoint()
     }
     if (gGraphY2 && gTrace2Width!=0)
     {
-      // cmd$=cmd$;gDraw2$;thisCmd$  //ver116-4b
+      // cmd$=cmd$;gDraw2$;thisCmd$
     }
   }
   if (cmd!="")
   {
-    //and gGraphHandle$<>"" then #gGraphHandle$, cmd$   //Draw lines
+    //and gGraphHandle$!="" then #gGraphHandle$, cmd$   //Draw lines
   }
   gPrevPointNum=currPoint;
 }
@@ -2731,12 +2895,9 @@ end sub*/
 void msagraph::gInitDraw()
 {
   //initialize width and color commands for drawing new
-  //gPrevPointNum=0 delver114-6d
   //Create initial specs for drawing and erasing traces.
-  gDraw1="size "+QString::number(gTrace1Width)+";color "+gridappearance->gTrace1Color + ";";
-  gDraw2="size "+QString::number(gTrace2Width)+";color "+gridappearance->gTrace2Color + ";";
-  gErase1="size "+QString::number(gTrace1Width)+";color "+gridappearance->gBackColor + ";";
- // gErase2="size "+QString::number(gTrace2Width)+";color "+gridappearance->gBackColor + ";";
+  gDraw1="size "+QString::number(gTrace1Width)+";color "+gridappearance->gTrace1Color.name() + ";";
+  gDraw2="size "+QString::number(gTrace2Width)+";color "+gridappearance->gTrace2Color.name() + ";";
 }
 
 void msagraph::gInitErase()
@@ -2866,6 +3027,21 @@ void msagraph::gDrawMarkerInfo()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
 
+  QGraphicsItem *item;
+  QList<QGraphicsItem *> allItems = graphScene->items();
+
+  QListIterator<QGraphicsItem *> i(allItems);
+  while(i.hasNext())
+  {
+    item = i.next();
+    QString data = item->data(0).toString();
+    if (data == "MarkerText")
+    {
+      graphScene->removeItem(item);
+      delete item;
+    }
+  }
+
 //sub gDrawMarkerInfo //Draw marker info in specified area
   //(gMarkerInfoLeft, gMarkerInfoTop) is the upper left for the actual marker info, which will be printed
   //one line per marker. The heading for the marker info will be printed at the top.
@@ -2904,7 +3080,7 @@ void msagraph::gDrawMarkerInfo()
   {
     boxWidth=headWidth+4;
   }
-  int boxHt= 4+ headHeight + (markPerCol)*13;
+  int boxHt= 4 + headHeight + (markPerCol)*13;
       //First clear entire marker area
   //#gGraphHandle$, "color ";gBackColor$
   //#gGraphHandle$, "place ";markerX;" "; markerY //locate pen at upper left
@@ -2924,6 +3100,7 @@ void msagraph::gDrawMarkerInfo()
 }
 void msagraph::gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, int markerY, int &endNum)
 {
+  QGraphicsTextItem *item;
 //sub gPrivateDrawMarkerInfo startNum, maxLines, markerX, markerY, byref endNum
     //This is an internal helper routine to draw up to maxLines lines of markers
     //in an area whose upper left is (markerX, markerY), except that the heading
@@ -2977,8 +3154,10 @@ void msagraph::gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, i
             //markF=gGetPointXVal(markPointNum);
             QString markF=util.usingF("####.######",gGetPointXVal(markPointNum));
                //ver114-6f use axis label formats to format the marker values
-            gPrintTextRightJust(markID, markX-5, markerY, QColor(Qt::white));
-            gPrintTextRightJust(markF, freqX, markerY, QColor(Qt::white));
+            item = gPrintTextRightJust(markID, markX-5, markerY, QColor(Qt::white));
+            item->setData(0,"MarkerText");
+            item = gPrintTextRightJust(markF, freqX, markerY, QColor(Qt::white));
+            item->setData(0,"MarkerText");
             if (gDoY1==0)
               markY1="";
             else
@@ -2990,16 +3169,28 @@ void msagraph::gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, i
             if (gPrimaryAxis==1)
             {
                 if (gDoY1==1)
-                  gPrintTextRightJust(markY1, primX, markerY, QColor(Qt::white));  //Print primary axis first ver115-3b
+                {
+                  item = gPrintTextRightJust(markY1, primX, markerY, QColor(Qt::white));  //Print primary axis first ver115-3b
+                  item->setData(0,"MarkerText");
+                }
                 if (gDoY2)
-                  gPrintTextRightJust(markY2, secX, markerY, QColor(Qt::white));
+                {
+                  item = gPrintTextRightJust(markY2, secX, markerY, QColor(Qt::white));
+                  item->setData(0,"MarkerText");
+                }
             }
             else
             {
                 if (gDoY2)
-                  gPrintTextRightJust(markY2, primX, markerY, QColor(Qt::white));
+                {
+                  item = gPrintTextRightJust(markY2, primX, markerY, QColor(Qt::white));
+                  item->setData(0,"MarkerText");
+                }
                 if (gDoY1==1)
-                  gPrintTextRightJust(markY1, secX, markerY, QColor(Qt::white));
+                {
+                  item = gPrintTextRightJust(markY1, secX, markerY, QColor(Qt::white));
+                  item->setData(0,"MarkerText");
+                }
             }
             markerY=markerY+13;  //To next line
             drawCount=drawCount+1;
@@ -3014,21 +3205,35 @@ void msagraph::gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, i
       return;
       //then exit sub
     }
-    gPrintTextRightJust("Mark", markX, headY, QColor(Qt::white));
-    gPrintTextRightJust("Freq (MHz)", freqX-5, headY, QColor(Qt::white));
+    item = gPrintTextRightJust("Mark", markX, headY, QColor(Qt::white));
+    item->setData(0,"MarkerText");
+    item = gPrintTextRightJust("Freq (MHz)", freqX-5, headY, QColor(Qt::white));
+    item->setData(0,"MarkerText");
     if (gPrimaryAxis==1)
     {
         if (gDoY1)
-          gPrintTextRightJust(gY1DataLabel, primX-2, headY, QColor(Qt::white));
+        {
+          item = gPrintTextRightJust(gY1DataLabel, primX-2, headY, QColor(Qt::white));
+          item->setData(0,"MarkerText");
+        }
         if (gDoY2)
-          gPrintTextRightJust(gY2DataLabel, secX-2, headY, QColor(Qt::white));
+        {
+          item = gPrintTextRightJust(gY2DataLabel, secX-2, headY, QColor(Qt::white));
+          item->setData(0,"MarkerText");
+        }
     }
     else
     {
         if (gDoY2)
-          gPrintTextRightJust(gY2DataLabel, primX-2, headY, QColor(Qt::white));
+        {
+          item = gPrintTextRightJust(gY2DataLabel, primX-2, headY, QColor(Qt::white));
+          item->setData(0,"MarkerText");
+        }
         if (gDoY1)
-          gPrintTextRightJust(gY1DataLabel, secX-2, headY, QColor(Qt::white));
+        {
+          item = gPrintTextRightJust(gY1DataLabel, secX-2, headY, QColor(Qt::white));
+          item->setData(0,"MarkerText");
+        }
     }
 
 }
@@ -3055,9 +3260,9 @@ void msagraph::RefreshGraph(int restoreErase)
   //global refreshAutoScale        //Forces autoscaling of axes; implies refreshRedrawFromScratch
   //global refreshRedrawFromScratch  //Forces complete redraw from scratch in RefreshGraph
 
-  /*  call gMouseQueryClear   //Should already be clear, but right-clicking during MouseOver can confuse ver116-4k
+  /*  call gMouseQueryClear   //Should already be clear, but right-clicking during MouseOver can confuse
 */
-  if(refreshAutoScale)  //ver114-7a
+  if(refreshAutoScale)
   {
     PerformAutoScale();   //Recalculates scaling in graph module
     refreshRedrawFromScratch=1;
@@ -3075,7 +3280,7 @@ void msagraph::RefreshGraph(int restoreErase)
     //gRefreshGrid();
   }
 
-  if (referenceLineType!=0)    //ver114-7f
+  if (referenceLineType!=0)
   {
     if (recreateReferences || refreshTracesDirty==1)
     {
@@ -3085,7 +3290,7 @@ void msagraph::RefreshGraph(int restoreErase)
       }
       CreateReferenceTransform();
       gClearAllReferences();
-      if (referenceDoMath==0)   //don't draw if we are using ref for math ver114-8b
+      if (referenceDoMath==0)   //don't draw if we are using ref for math
       {
         if (referenceTrace & 2)
         {
@@ -3100,25 +3305,26 @@ void msagraph::RefreshGraph(int restoreErase)
     PrintReferenceHeading();
     if (referenceDoMath==0)
     {
-      gDrawReferences();  //don't draw if we are using ref for math ver115-5d
+      gDrawReferences();  //don't draw if we are using ref for math
     }
   }
 
   gPauseDynamicScan();  //Keeps the trace redraws from accumulating
   if (refreshTracesDirty==1 || refreshRedrawFromScratch)
   {
-    gRecreateTraces(1);   //Recreate and draw trace draw commands //ver114-6e //ver114-7e
+    gRecreateTraces(1);   //Recreate and draw trace draw commands
   }
   else
   {
-    gRefreshTraces(); //Draw from accumulated trace draw commands  //ver114-6e
+    gRefreshTraces(); //Draw from accumulated trace draw commands
   }
   if (restoreErase)
   {
     gRestoreErasure();
   }
+  QCoreApplication::processEvents();
   gResumeDynamicScan();
-        //Discard draw commands if scan is still in progress; otherwise we flush a bit later
+  //Discard draw commands if scan is still in progress; otherwise we flush a bit later
   if (haltsweep==1)
   {
    //   then #graphBox$, "discard"
@@ -3157,7 +3363,7 @@ void msagraph::RefreshGraph(int restoreErase)
   refreshGridDirty=0;
   refreshTracesDirty=0;
   refreshMarkersDirty=0;
-  refreshAutoScale=0;      //ver114-7b
+  refreshAutoScale=0;
   refreshRedrawFromScratch=0;
 }
 
@@ -3236,7 +3442,8 @@ void msagraph::DrawSetupInfo()
   gGetGraphicsSize(InfoX, InfoY);
   InfoX = InfoX - 100;
   InfoY = graphMarTop+2;
-  QString textColor, backColor;
+  QColor textColor;
+  QColor backColor;
   gridappearance->gGetInfoColors(textColor, backColor);
   //#graphBox$, "font Tahoma 8 bold;color ";textColor$;";backcolor ";backColor$
   QFont Tahoma("Tahoma", 8, QFont::Bold);
@@ -3397,7 +3604,7 @@ void msagraph::DrawSetupInfo()
     gPrintText(s, InfoX, InfoY,textColor); InfoY=InfoY+16;
   }
 }
-void msagraph::PrintMessage()
+void msagraph::PrintMessage(QString message)
 {
   //Print message above top of marker info area; Limited to 75 characters; don't print if blank
   //The message is in message$
@@ -3415,7 +3622,7 @@ void msagraph::PrintMessage()
     }
   }
 
-  item = gPrintMessage(vars->message);
+  item = gPrintMessage(message);
   item->setData(0,"message");
 }
 QString msagraph::gSweepContext()
@@ -3679,22 +3886,26 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
 void msagraph::mUpdateMarkerLocations()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-/*
+
   //Find point numbers for peak markers and for L and R if relative to the peaks
       //We are called from mDrawMarkerInfo, which also has the ability to move markers.
-      saveSel$=selMarkerID$   //We want to save and restore the current selected marker
-      axisNum$=str$(primaryAxisNum)
-      if hasMarkPeakPos or hasMarkPeakNeg then    //Locate peaks
-          if doPeaksBounded=1 then
+      //saveSel$=selMarkerID$   //We want to save and restore the current selected marker
+  /*    //axisNum$=str$(primaryAxisNum)
+      if (hasMarkPeakPos || hasMarkPeakNeg)    //Locate peaks
+      {
+          if (doPeaksBounded==1)
+          {
               if hasMarkL=0 then pStart=1 else pStart=gMarkerPointNum(mMarkerNum("L"))
               if hasMarkR=0 then pEnd=gPointCount() else pEnd=gMarkerPointNum(mMarkerNum("R"))
+          }
           else
+          {
               pStart=1 : pEnd=gPointCount()   //Signals to search all points
-          end if
-          call gFindPeaks primaryAxisNum,pStart, pEnd, minNum, maxNum, minY, maxY //ver115-3b
+          }
+          gFindPeaks(primaryAxisNum,pStart, pEnd, minNum, maxNum, minY, maxY);
           if hasMarkPeakPos then call gUpdateMarkerPointNum mMarkerNum("P+"),maxNum
           if hasMarkPeakNeg then call gUpdateMarkerPointNum mMarkerNum("P-"),minNum
-      end if
+      }
       if doLRRelativeTo$<>"" then  //Locate LR relative to another marker
           markNum=mMarkerNum(doLRRelativeTo$)
           if markNum<1 then notice "Invalid Marker Number"    //For debugging
@@ -3740,11 +3951,11 @@ void msagraph::mDrawMarkerInfo()
   //Draw marker info at bottom of graph
   //gGetGraphicsSize(graphwide, graphigh);
   mUpdateMarkerLocations();  //Determines locations of peak markers and L,R if they are relative to the peaks
-  /*
-    'We will draw marker info in a rectangular area below the labels of the x axis.
-    'This is the frequency and graph values
-    call gDrawMarkerInfo
 
+    //We will draw marker info in a rectangular area below the labels of the x axis.
+    //This is the frequency and graph values
+    gDrawMarkerInfo();
+/*
     'Set InfoX and InfoY where additional info can be printed.
     InfoX=gGetMarkerInfoRight()+5
     InfoY=gGetMarkerInfoTop()
@@ -3836,6 +4047,10 @@ void msagraph::gDrawGrid()
   QString stopTime;
   graphScene->clear();
 
+  for (int i = 0; i < gErase1.count(); i++)
+  {
+    gErase1[i] = 0;
+  }
   for (int i = 0; i < gErase2.count(); i++)
   {
     gErase2[i] = 0;
@@ -3850,7 +4065,7 @@ void msagraph::gDrawGrid()
   //of text to be printed.
   //ver115-1b caused gGridString$ to be created even if gIsDynamic=0
 
-  graphScene->setBackgroundBrush(QColor(gridappearance->gBackColor)); // set background to black
+  graphScene->setBackgroundBrush(gridappearance->gBackColor); // set background to black
 
   //cmd$="down;size 1;color ";gGridLineColor$;";"   //Set color and size 1
   if (gDoY1 || gDoY2)
@@ -3863,7 +4078,7 @@ void msagraph::gDrawGrid()
         y=gOriginY - gY1GridLines[i];
       else
         y=gOriginY - gY2GridLines[i];
-      graphScene->addLine(gMarginLeft, y, gMarginLeft+gGridWidth, y, QPen(util.fixColor(gridappearance->gGridLineColor)));
+      graphScene->addLine(gMarginLeft, y, gMarginLeft+gGridWidth, y, QPen(gridappearance->gGridLineColor));
     }
   }
 
@@ -3872,11 +4087,11 @@ void msagraph::gDrawGrid()
       //Pixel locations are in gXGridLines
       int x=gMarginLeft+gXGridLines[i];
       //cmd$=cmd$+"line "; x; " ";gOriginY; " "; x; " ";gOriginY-gGridHeight ;";"
-      graphScene->addLine(x, gOriginY, x, gOriginY-gGridHeight, QPen(util.fixColor(gridappearance->gGridLineColor)));
+      graphScene->addLine(x, gOriginY, x, gOriginY-gGridHeight, QPen(gridappearance->gGridLineColor));
   }
 
   int gridRight=gMarginLeft+gGridWidth;
-  QPen pen(QColor(util.fixColor(gridappearance->gGridBoundsColor)), 3);
+  QPen pen(gridappearance->gGridBoundsColor, 3);
   graphScene->addLine(gMarginLeft, gOriginY+1, gridRight, gOriginY+1, pen);  //bottom
   graphScene->addLine(gMarginLeft-1, gMarginTop, gMarginLeft-1, gOriginY, pen); // left
   graphScene->addLine(gMarginLeft,gMarginTop-1,gridRight,gMarginTop-1,pen);  //top
@@ -3926,7 +4141,7 @@ void msagraph::CreateReferenceSource()
     }   //set up for uRLCComboResponse
       //Calc response in whatever S11 or S21 setup the user has chosen
     int doSpecialR0; QString doSpecialJig;
-    if (vars->msaMode==modeReflection)
+    if (vars->msaMode == modeReflection)
     {
       doSpecialR0=vnaCal->S11BridgeR0; doSpecialJig="S11";   //ver115-2a
     }
@@ -4080,7 +4295,7 @@ sub CalcReferences stepNum, ref1IsAngle, byref ref1, ref2IsAngle, byref ref2   '
 end sub
 */
 }
-QString msagraph::CreateReferenceTraces(QString tCol, int tSize, int traceNum, QPainterPath *path)
+QString msagraph::CreateReferenceTraces(QColor tCol, int tSize, int traceNum, QPainterPath *path)
 {
   QString retVal;
   //Return reference trace ver114-7e
@@ -4100,7 +4315,7 @@ QString msagraph::CreateReferenceTraces(QString tCol, int tSize, int traceNum, Q
     uWork->uWorkArray[i][2]=referenceTransform[i][2]; //Trace 2 data
   }
 
-  retVal = "color "+tCol+";size "+tSize+";"+PrivateCreateReferenceTrace(traceNum, 1, gNumDynamicSteps()+1, path);
+  retVal = "color "+tCol.name()+";size "+tSize+";"+PrivateCreateReferenceTrace(traceNum, 1, gNumDynamicSteps()+1, path);
   return retVal;
 }
 QString msagraph::PrivateCreateReferenceTrace(int traceNum, int startPoint, int endPoint, QPainterPath *path)
@@ -4533,7 +4748,7 @@ qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
 //  #gGraphHandle$, "color "; gGridTextColor$; ";font "; gGridFont$
 //  #gGraphHandle$, "size 1"
   gMarkerString="";
-  QString join="";   //ver116-4b added gMarkerString$ to cumulate info on markers that are drawn
+  //QString join="";
   for (int i=1; i < gNumMarkers; i++)   //Send each marker to the draw routines
   {
     QString cmd=gDrawMarkerAtPointNum(gMarkerPoints[i][0], gMarkers[i][1], gMarkers[i][2], gMarkers[i][0]);
@@ -4567,7 +4782,7 @@ QString msagraph::gDrawMarkerAtPointNum(float N,QString trace, QString style, QS
     //that we are part way between two points
     //We return a string that can be later used for erasing the markers, containing one or two groups of four
     //items: style$, markLabel$, x pixel location, and y pixel location, separated by semicolons.
-    if (N<1 || N>gDynamicSteps+1)
+    if (N<1 || N > gDynamicSteps+1)
     {
       return "";    //Don't draw if out of bounds
     }
@@ -4825,12 +5040,11 @@ void msagraph::gDrawHaltPointerPix(float x, float y)    //Draw pointer at pixel 
 }
 void msagraph::gRefreshTraces()  //Redraw traces from gTrace1$() and gTrace2$()
 {
-  //gTrace1$() and gTrace2$() will each have gNumPoints points, some
-  //of which may be just "down".
-  //ver114-6d: Grouping the commands into groups of six per string took slightly longer
-  //than going one-by-one, so we do the latter.
+  //gTrace1 and gTrace2 will each have gNumPoints points,
+
   if (gNumPoints<=0)
     return;
+
   gInitDraw();
   int pMin;
   int pMax;
@@ -4849,7 +5063,7 @@ void msagraph::gRefreshTraces()  //Redraw traces from gTrace1$() and gTrace2$()
     pen.setBrush(QColor(gridappearance->gTrace1Color));
     pen.setWidth(gTrace1Width);
 
-    graphScene->addPath(trace1, pen);
+//    graphScene->addPath(trace1, pen);
 
   }
   if (gGraphY2 && gTrace2Width>0)
@@ -4860,7 +5074,7 @@ void msagraph::gRefreshTraces()  //Redraw traces from gTrace1$() and gTrace2$()
     {
       trace2.lineTo(gTrace2.at(j));
     }
-    pen.setBrush(QColor(util.fixColor(gridappearance->gTrace2Color)));
+    pen.setBrush(gridappearance->gTrace2Color);
     pen.setWidth(gTrace2Width);
 
     //graphScene->addPath(trace2,pen);
@@ -4948,8 +5162,7 @@ void msagraph::CalcTransmitGraphData(int currStep, float &y1, float &y2, int use
       if (vars->startfreq==vars->endfreq)
       {
 
-        vars->message= "Can't calculate Group Delay with zero sweep width.";
-        PrintMessage();
+        PrintMessage("Can't calculate Group Delay with zero sweep width.");
         y=-1;
       }
       else
@@ -5060,33 +5273,45 @@ QString msagraph::gRestoreTraceContext(QString &s, int &startPos, int isValidati
     if (tag == "DOHIST")
     {
       isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);
-      if (isValidation==0) gDoHist=v1;
+      if (isValidation==0)
+        gDoHist=v1;
     }
     else if (tag == "ACTIVEGRAPHS")
     {
       isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
-      int graphY1=v1; int graphY2=v2;
-      if (isValidation==0) gGraphY1=graphY1; gGraphY2=graphY2;  //ver115-1a
+      int graphY1=v1;
+      int graphY2=v2;
+      if (isValidation==0)
+      {
+        gGraphY1=graphY1;
+        gGraphY2=graphY2;
+      }
     }
     else if (tag == "TRACEWIDTHS")
     {
       isErr=util.uExtractNumericItems(2, tLine,nonTextDelims, v1, v2, v3);
-      if (isValidation==0) gTrace1Width=v1; gTrace2Width=v2;
+      if (isValidation==0)
+      {
+        gTrace1Width=v1;
+        gTrace2Width=v2;
+      }
     }
     else if (tag == "TRACECOLORS")
     {
       QString t1=util.uExtractTextItem(tLine,sep);
       QString t2=util.uExtractTextItem(tLine,sep);
-      if (t1=="" || t2=="") isErr=1;
+      if (t1=="" || t2=="")
+        isErr=1;
       //It was originally intended that trace colors and their grid labels be independent in the graph module,
       //but that is not how we use it, and the independence makes it awkward if the chosen Appearance has
       //one trace/label color and the preference file has a different trace color. So we tie them together.
       if (isValidation==0)
       {
-        gridappearance->gTrace1Color=t1;
-        gridappearance->gTrace2Color=t2;
-        gridappearance->gY1TextColor=t1;
-        gridappearance->gY2TextColor=t2; } //ver116-4L
+        gridappearance->gTrace1Color = util.fixColor1(t1);
+        gridappearance->gTrace2Color = util.fixColor1(t2);
+        gridappearance->gY1TextColor = util.fixColor1(t1);
+        gridappearance->gY2TextColor = util.fixColor1(t2);
+      }
     }
     else
     {
@@ -5241,12 +5466,12 @@ QString msagraph::RestoreGridContext(QString s, int &startPos, int isValidation)
   //For now, we restore the previous size with the possibly new margins
   gUpdateGraphObject(oldWidth, oldHeight, graphMarLeft, graphMarRight, graphMarTop, graphMarBot);
   graphicsView->fitInView(getScene()->sceneRect());
-  QString referenceColor1, referenceColor2, dum1, dum2;
-  gridappearance->gGetSupplementalTraceColors(referenceColor1, referenceColor2, dum1, dum2); //ver116-4b
+  QColor referenceColor1, referenceColor2, dum1, dum2;
+  gridappearance->gGetSupplementalTraceColors(referenceColor1, referenceColor2, dum1, dum2);
   if (vars->primaryAxisNum==1)
     referenceColorSmith=referenceColor1;
   else
-    referenceColorSmith=referenceColor2;  //ver116-4b
+    referenceColorSmith=referenceColor2;
 
   return errMsg;
 }
@@ -5265,13 +5490,13 @@ QString msagraph::gGridContext()
   s1= s1+ newLine+ "PrimaryAxis="+ QString::number(gPrimaryAxis);
   s1= s1+ newLine+ "AxisLabels="+ gXAxisLabel+ sep+ gY1AxisLabel+ sep+ gY2AxisLabel;
 
-  QString s2= "AxisTextColors="+ gridappearance->gXTextColor+ sep+ gridappearance->gY1TextColor+ sep+ gridappearance->gY2TextColor;
+  QString s2= "AxisTextColors="+ gridappearance->gXTextColor.name()+ sep+ gridappearance->gY1TextColor.name()+ sep+ gridappearance->gY2TextColor.name();
   s2= s2+ newLine+ "AxisFonts="+ gridappearance->gXAxisFont+ sep+ gridappearance->gY1AxisFont+ sep+ gridappearance->gY1AxisFont;
-  s2= s2+ newLine+ "BackColor="+ gridappearance->gBackColor;
-  s2= s2+ newLine+ "GridTextColor="+ gridappearance->gGridTextColor;
+  s2= s2+ newLine+ "BackColor="+ gridappearance->gBackColor.name();
+  s2= s2+ newLine+ "GridTextColor="+ gridappearance->gGridTextColor.name();
   s2= s2+ newLine+ "GridFont="+ gridappearance->gGridFont;
-  s2= s2+ newLine+ "GridLineColor="+ gridappearance->gGridLineColor;
-  s2= s2+ newLine+ "GridBoundsColor="+ gridappearance->gGridBoundsColor;
+  s2= s2+ newLine+ "GridLineColor="+ gridappearance->gGridLineColor.name();
+  s2= s2+ newLine+ "GridBoundsColor="+ gridappearance->gGridBoundsColor.name();
   s2= s2+ newLine+ "GridStyles="+ gXGridStyle+ sep+ gY1GridStyle+ sep+ gY2GridStyle;
   s2= s2+ newLine+ "AxisFormats="+ gXAxisForm+ sep+ gY1AxisForm+ sep+ gY2AxisForm;
 
@@ -5279,12 +5504,12 @@ QString msagraph::gGridContext()
   {
     QString s3="CustomColors="+QString::number(i)+",";
 
-    QString grid, bounds, back, gridText, XText, Y1Text, Y2Text, trace1, trace2, trace1A, trace2A, trace1B, trace2B;
+    QColor grid, bounds, back, gridText, XText, Y1Text, Y2Text, trace1, trace2, trace1A, trace2A, trace1B, trace2B;
     gridappearance->gGetCustomPresetColors( i, grid,bounds,back,gridText,XText,Y1Text,Y2Text, trace1, trace2,
             trace1A, trace2A, trace1B, trace2B);
 
-    s3=s3+grid+sep+bounds+sep+back+sep+ gridText+sep+XText+sep+Y1Text+sep+
-                Y2Text+sep+trace1+sep+trace2+sep+trace1A+sep+trace2A+sep+trace1B+sep+trace2B+sep;
+    s3=s3+grid.name()+sep+bounds.name()+sep+back.name()+sep+ gridText.name()+sep+XText.name()+sep+Y1Text.name()+sep+
+                Y2Text.name()+sep+trace1.name()+sep+trace2.name()+sep+trace1A.name()+sep+trace2A.name()+sep+trace1B.name()+sep+trace2B.name()+sep;
 
     s2=s2+newLine+s3; //Append this line to s1
   }
@@ -5301,8 +5526,8 @@ QString msagraph::gTraceContext()
   QString sep=";;";   //delimits text items on one line
   QString s1= newLine+ "ActiveGraphs="+ QString::number(gGraphY1)+ aSpace+ QString::number(gGraphY2);
   s1="DoHist="+ QString::number(gDoHist);
-  s1= s1+ newLine+ "TraceWidths="+ QString::number(gTrace1Width)+ aSpace+ QString::number(gTrace2Width); //ver114-4d eliminated typo
-  s1= s1+ newLine+ "TraceColors="+ gridappearance->gTrace1Color+ sep+ gridappearance->gTrace2Color;
+  s1= s1+ newLine+ "TraceWidths="+ QString::number(gTrace1Width)+ aSpace+ QString::number(gTrace2Width);
+  s1= s1+ newLine+ "TraceColors="+ gridappearance->gTrace1Color.name()+ sep+ gridappearance->gTrace2Color.name();
   return s1;
 }
 
@@ -5314,7 +5539,7 @@ QString msagraph::GridContext()
   {
     s=s+gridappearance->customPresetNames[i]+";:";   //use a goofy separator so user won't have used it
   }
-  return s+"\r"+gGridContext();    //ver116-1b
+  return s+"\r"+gGridContext();
 }
 QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidation)
 {
@@ -5326,18 +5551,19 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
   //CalcGraphParams MUST BE CALLED at some point after this routine to adjust to the margins
   //and hor/vert divisions. This can be done by a subsequent call of gRestoreSweepContext or
   //by a direct call.
-  QString newLine="\r";
-  QString aSpace=" ";
+  //QString newLine="\r";
+  //QString aSpace=" ";
   QString sep=";;"; //Used to separate text items
   QString nonTextDelims=" ,\t";    //space, comma and tab are delimiters
   //Get next line and increment startPos to start of the following line
   QString tLine=util.uGetLine(s, startPos);
   float v1, v2, v3;
   QString t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13;
-  while (tLine!="")
+  while (tLine != "")
   {
-    QString origLine=tLine;  //ver115-1b
-    if (tLine.left(10).toUpper()=="ENDCONTEXT") break;
+    QString origLine=tLine;
+    if (tLine.left(10).toUpper()=="ENDCONTEXT")
+      break;
     int isErr=0;
     int equalPos=tLine.indexOf("=");     //equal sign marks end of tag
     QString tag;
@@ -5381,10 +5607,11 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
         gMarginBot=v2;
       }
     }
-    else if (tag == "PRIMARYAXIS")  //ver115-3b
+    else if (tag == "PRIMARYAXIS")
     {
       isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);
-      if (v1!=1 && v1!=2) isErr=1;
+      if (v1!=1 && v1!=2)
+        isErr=1;
       if (isValidation==0 && isErr==0)
       {
         gSetPrimaryAxis(v1);
@@ -5395,12 +5622,13 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
       t1=util.uExtractTextItem(tLine,sep);
       t2=util.uExtractTextItem(tLine,sep);
       t3=util.uExtractTextItem(tLine,sep);
-      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (t1=="" || t2=="" || t3=="")
+        isErr=1;
       if (isValidation==0)
       {
-        gridappearance->gXTextColor=t1;
-        gridappearance->gY1TextColor=t2;
-        gridappearance->gY2TextColor=t3;
+        gridappearance->gXTextColor=util.fixColor1(t1);
+        gridappearance->gY1TextColor=util.fixColor1(t2);
+        gridappearance->gY2TextColor=util.fixColor1(t3);
       }
     }
     else if (tag == "AXISFONTS")
@@ -5408,7 +5636,8 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
       t1=util.uExtractTextItem(tLine,sep);
       t2=util.uExtractTextItem(tLine,sep);
       t3=util.uExtractTextItem(tLine,sep);
-      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (t1=="" || t2=="" || t3=="")
+        isErr=1;
       if (isValidation==0)
       {
         gridappearance->gXAxisFont=t1;
@@ -5431,25 +5660,28 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
     else if (tag == "BACKCOLOR")
     {
       t1=util.uExtractTextItem(tLine,sep);
-      if (t1=="") isErr=1;
+      if (t1=="")
+        isErr=1;
       if (isValidation==0)
       {
-        gridappearance->gBackColor=t1;
+        gridappearance->gBackColor = util.fixColor1(t1);
       }
     }
     else if (tag == "GRIDTEXTCOLOR")
     {
       t1=util.uExtractTextItem(tLine,sep);
-      if (t1=="") isErr=1;
+      if (t1=="")
+        isErr=1;
       if (isValidation==0)
       {
-        gridappearance->gGridTextColor=t1;
+        gridappearance->gGridTextColor=util.fixColor1(t1);
       }
     }
     else if (tag == "GRIDFONT")
     {
       t1=util.uExtractTextItem(tLine,sep);
-      if (t1=="") isErr=1;
+      if (t1=="")
+        isErr=1;
       if (isValidation==0)
       {
         gridappearance->gGridFont=t1;
@@ -5458,19 +5690,21 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
     else if (tag == "GRIDLINECOLOR")
     {
       t1=util.uExtractTextItem(tLine,sep);
-      if (t1=="") isErr=1;
+      if (t1=="")
+        isErr=1;
       if (isValidation==0)
       {
-        gridappearance->gGridLineColor=t1;
+        gridappearance->gGridLineColor=util.fixColor1(t1);
       }
     }
     else if (tag == "GRIDBOUNDSCOLOR")
     {
       t1=util.uExtractTextItem(tLine,sep);
-      if (t1=="") isErr=1;
+      if (t1=="")
+        isErr=1;
       if (isValidation==0)
       {
-        gridappearance->gGridBoundsColor=t1;
+        gridappearance->gGridBoundsColor=util.fixColor1(t1);
       }
     }
     else if (tag == "GRIDDIVISIONS")
@@ -5487,7 +5721,8 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
       t1=util.uExtractTextItem(tLine,sep);
       t2=util.uExtractTextItem(tLine,sep);
       t3=util.uExtractTextItem(tLine,sep);
-      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (t1=="" || t2=="" || t3=="")
+        isErr=1;
       if (isValidation==0)
       {
         gXGridStyle=t1;
@@ -5500,7 +5735,8 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
       t1=util.uExtractTextItem(tLine,sep);
       t2=util.uExtractTextItem(tLine,sep);
       t3=util.uExtractTextItem(tLine,sep);
-      if (t1=="" || t2=="" || t3=="") isErr=1;
+      if (t1=="" || t2=="" || t3=="")
+        isErr=1;
       if (isValidation==0)
       {
         gXAxisForm=t1;
@@ -5508,10 +5744,11 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
         gY2AxisForm=t3;
       }
     }
-    else if (tag == "CUSTOMCOLORS") //ver115-2a
+    else if (tag == "CUSTOMCOLORS")
     {
       isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);    //Get preset number
-      if (v1<1 || v1>5) isErr=1;
+      if (v1<1 || v1>5)
+        isErr=1;
       //Get the colors
       t1=util.uExtractTextItem(tLine,sep);
       t2=util.uExtractTextItem(tLine,sep);
@@ -5522,10 +5759,13 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
       t7=util.uExtractTextItem(tLine,sep);
       t8=util.uExtractTextItem(tLine,sep);
       t9=util.uExtractTextItem(tLine,sep);
-      //ver116-4b added colors for traces 1A, 1B, 2A and 2B. If not present, duplicate the 1 and 2 colors
+      //added colors for traces 1A, 1B, 2A and 2B. If not present, duplicate the 1 and 2 colors
       if (tLine=="")
       {
-        t10=t8 ; t11=t9 ; t12=t8 ; t13=t9;
+        t10=t8;
+        t11=t9;
+        t12=t8;
+        t13=t9;
       }
       else
       {
@@ -5535,18 +5775,34 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
         t13=util.uExtractTextItem(tLine,sep);
       }
       if (isErr==0 && isValidation==0)
-        gridappearance->gSetCustomPresetColors(v1,t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13); //ver116-4b
+      {
+        gridappearance->gSetCustomPresetColors(v1
+                                               ,util.fixColor1(t1)
+                                               ,util.fixColor1(t2)
+                                               ,util.fixColor1(t3)
+                                               ,util.fixColor1(t4)
+                                               ,util.fixColor1(t5)
+                                               ,util.fixColor1(t6)
+                                               ,util.fixColor1(t7)
+                                               ,util.fixColor1(t8)
+                                               ,util.fixColor1(t9)
+                                               ,util.fixColor1(t10)
+                                               ,util.fixColor1(t11)
+                                               ,util.fixColor1(t12)
+                                               ,util.fixColor1(t13));
+      }
     }
     else if (tag == "LASTPRESETS")
     {
       t1=util.uExtractTextItem(tLine,sep) ;
       t2=util.uExtractTextItem(tLine,sep);
-      if (t1=="" || t2=="") isErr=1;
+      if (t1=="" || t2=="")
+        isErr=1;
       if (isValidation==0)
       {
         gridappearance->gUsePresetColors(t1, gPrimaryAxis);
         gUsePresetText(t2);
-        gridappearance->SetCycleColors(); //ver116-4s
+        gridappearance->SetCycleColors();
       }
     }
     else
@@ -5890,7 +6146,7 @@ void msagraph::DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QS
     Strans="S12";  //ReverseDUT
   }
   yIsPhase=0;  //Default, since most are not phase
-  //select case componConst //ver116-4b shortened some labels
+  //select case componConst  shortened some labels
   if (componConst == constGraphS11DB)
   {
     yAxisLabel=Sref+" Mag(dB)";
@@ -5939,29 +6195,29 @@ void msagraph::DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QS
   {
     yAxisLabel="Xs";
     yLabel="Xs";
-    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact";
   }
   else if (componConst == constParReact)
   {
     yAxisLabel="Xp";
     yLabel="Xp";
-    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact";
   }
   else if (componConst == constImpedMag)
   {
     yAxisLabel="Z ohms";
     yLabel="Z ohms";
-    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact";
   }
   else if (componConst == constSerR)
   {
     yAxisLabel="Rs" ; yLabel="Rs";
-    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact";
   }
   else if (componConst == constParR)
   {
     yAxisLabel="Rp" ; yLabel="Rp";
-    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact";
   }
   else if (componConst == constSerC)
   {
@@ -6022,7 +6278,7 @@ void msagraph::DetermineGraphDataFormat(int componConst, QString &yAxisLabel, QS
     {
       yAxisLabel="Mag (Ratio)" ; yLabel="Ratio";
     }
-    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact"; //ver115-4e
+    yForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact";
   }
   else if (componConst == constMagV)
   {
@@ -6135,7 +6391,7 @@ void msagraph::InitGraphParams()
   doGraphMarkers=1;
   refreshEachScan=1;
   referenceTrace=3;
-  QString dum1, dum2;
+  QColor dum1, dum2;
   gridappearance->gGetSupplementalTraceColors(referenceColor1, referenceColor2, dum1, dum2);
   referenceWidth1=1;
   referenceWidth2=1;
@@ -6163,7 +6419,7 @@ void msagraph::SetYAxes(int data1, int top1, int bot1, int auto1, int data2, int
   SetY1Range(bot1, top1);
   SetY2Range(bot2, top2);
   vars->Y1DisplayMode=1;
-  vars->Y2DisplayMode=1; //ver115-4e
+  vars->Y2DisplayMode=1;
   gSetDoAxis((vars->Y1DataType!=constNoGraph), (vars->Y2DataType!=constNoGraph));  //Tell graph module whether we have graphs ver115-2c
   ImplementDisplayModes();
 
@@ -6180,7 +6436,7 @@ void msagraph::SetDefaultGraphData()
   SetY1Range(min1, max1);
   SetY2Range(min2, max2);
   vars->Y1DisplayMode=1;
-  vars->Y2DisplayMode=1; //ver115-4e
+  vars->Y2DisplayMode=1;
   ImplementDisplayModes();
 
 }
@@ -6321,10 +6577,9 @@ void msagraph::PlotDataToScreen()
   {
     //Enter new Y values and draw from last point
     //Comment out all but one; two choices allowed for testing
-    //call gDynamicDrawPoint thispointy1,thispointy2
     gDynamicComboDrawPoint(thispointy1,thispointy2);     //This is the full-blown drawing procedure
   }
-  if (vars->steps>=1000)  //ver114-4k
+  if (vars->steps>=1000)
   {
     //Discard at least every 1000 points to avoid a slowdown.
     //oneThousandthThisStep=vars->thisstep/1000;
@@ -6335,7 +6590,7 @@ void msagraph::PlotDataToScreen()
   {
     //If autoscale is on for either axis then calculate the scale and redraw from raw values
     //We only do this for the first scan. ver114-7a added this autoscale material
-    if (firstScan && (autoScaleY2 || autoScaleY1))   //ver115-3b
+    if (firstScan && (autoScaleY2 || autoScaleY1))
     {
       if (haltAtEnd==1) //Halt will redraw, so we just autoscale here
       {
@@ -6381,7 +6636,7 @@ void msagraph::PlotDataToScreen()
 
       //If no refresh, draw markers on first scan only, and only if user wants them drawn
       if ((firstScan==1 || partialRefresh) && doGraphMarkers==1)
-        gDrawMarkers(); //ver116-4b
+        gDrawMarkers();
       //#graphBox$, "discard"    //Get rid of marker draw commands in memory
     }
     if ((vars->doCycleTraceColors==1) && (vars->isStickMode==1))  //ver116-4s  cycleTrace colors if necessary
@@ -6471,42 +6726,33 @@ void msagraph::gSetMarkerNum(int markNum, int pointNum, QString ID, QString trac
 }
 void msagraph::ResizeGraphHandler()
 {
-  /*
   //Called when graph window resizes
-  #handle, "hide"     //hide window to avoid multiple system redraws ver115-1b
-  #graphBox$ "home"
-  #graphBox$ "posxy CenterX CenterY"
-  */
+
   int CenterX = graphicsView->width() / 2;
   int CenterY = graphicsView->height() / 2;
 
-  currGraphBoxWidth = CenterX * 2-1;   //ver115-1c
-  currGraphBoxHeight = CenterY * 2-1;  //ver115-1c
+  currGraphBoxWidth = CenterX * 2-1;
+  currGraphBoxHeight = CenterY * 2-1;
 
   //Note: On resizing, all non-buttons seem to end up a few pixels higher than the original spec,
   //so the Y locations are adjusted accordingly via markTop
   //Note WindowHeight when window is created is entire height; on resizing, it is the client area only
   //int markTop=currGraphBoxHeight+15;
-  //int markSelLeft=5; //ver115-1b   //ver115-1c
+  //int markSelLeft=5;
   //int markEditLeft=markSelLeft+55;
   //int markMiscLeft=markEditLeft+185;
   //int configLeft=markMiscLeft+80;
 
-/*
-  #handle, "refresh"
-  #handle.Cover, "!show"      //Cover the crap that can appear from resizing
-  #handle.Cover, "!hide"      //Uncover and the crap is gone
-  #handle, "show"     //show window ver115-1b
-*/
-    //The graphicbox auto resizes but we have to update the graph module
-    //to let it know the new size
 
   gUpdateGraphObject(currGraphBoxWidth, currGraphBoxHeight
                      , graphMarLeft, graphMarRight, graphMarTop, graphMarBot);
   graphicsView->fitInView(getScene()->sceneRect());
   gCalcGraphParams();   //Calculate new scaling. May change min or max.
   float xMin, xMax;
-  gGetXAxisRange(xMin, xMax); if (vars->startfreq!=xMin || vars->endfreq!=xMax) SetStartStopFreq(xMin, xMax);
+  gGetXAxisRange(xMin, xMax);
+  if (vars->startfreq!=xMin || vars->endfreq!=xMax)
+    SetStartStopFreq(xMin, xMax);
+
   gGenerateXValues(gPointCount()); //recreate x values and x pixel locations; keep same number of points
   gRecalcPix(0);   //0 signals not to recalc x pixel coords, which we just did in gGenerateXValues.
   //If a sweep is in progress, we don't want to redraw from here, because that can cause a crash.
@@ -6517,9 +6763,7 @@ void msagraph::ResizeGraphHandler()
   //LB resizing process. The crash still sometimes occurs, so it is best to halt before resizing.
   if (haltsweep==1)
   {
-//    #graphBox$, "cls"
-//    notice "Warning: Halt before resizing to avoid LB bug."
-    RequireRestart(); //ver115-9e  Otherwise old graph still appears, in wrong place.
+    RequireRestart();
   }
   else
   {
@@ -6541,8 +6785,8 @@ void msagraph::RememberState()
   vars->prevMSAMode=vars->msaMode;
 
     //Changes to these will require a complete Restart
-  vars->prevFreqMode=vars->freqBand;       //ver115-1c
-  vars->prevPath=vars->path; //ver116-4j
+  vars->prevFreqMode=vars->freqBand;
+  vars->prevPath=vars->path;
   gGetXAxisRange(vars->prevStartF, vars->prevEndF);
   vars->prevBaseF=vars->baseFrequency;
   gGetIsLinear(vars->prevXIsLinear, vars->prevY1IsLinear, vars->prevY2IsLinear);

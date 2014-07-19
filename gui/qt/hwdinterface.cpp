@@ -17,7 +17,7 @@ hwdInterface::hwdInterface(QWidget *parent)
   connect(this, SIGNAL(SkipHardwareInitialization()), parent, SLOT(SkipHardwareInitialization()));
   connect(this, SIGNAL(ResizeArrays(int)), parent, SLOT(ResizeArrays(int)));
   connect(this, SIGNAL(ProcessAndPrint()), parent, SLOT(ProcessAndPrint()));
-  connect(this, SIGNAL(PrintMessage()), parent, SLOT(PrintMessage()));
+  connect(this, SIGNAL(PrintMessage(QString)), parent, SLOT(PrintMessage(QString)));
   connect(this, SIGNAL(Halted()), parent, SLOT(Halted()));
 
 
@@ -61,7 +61,6 @@ hwdInterface::hwdInterface(QWidget *parent)
   levalue = 0;
   pdf2 = 0;
   appxVCO = 0;
-  //appxLO2 = 0;
   ncounter2 = 0;
   fcounter1 = 0;
   lastfcounter1 = 0;
@@ -88,8 +87,6 @@ hwdInterface::hwdInterface(QWidget *parent)
   //private vars
   enterPLL2phasefreq = 0;
   difPhase = 0;
-  cmdForUsb[0] = 0;
-  cmdForUsb[1] = 0;
   ddsoutput = 0;
   ddsclock = 0;
 
@@ -145,6 +142,7 @@ void hwdInterface::resizeArrays(int newSize)
   pll_3.resize(newSize);
   usb->resizeMemory(newSize);
   lpt.cmdAllArray.resize(newSize);
+  calMan->resizeArrays(newSize);
 
 }
 
@@ -155,37 +153,36 @@ void hwdInterface::initVars()
   globalSELT=SELT;
   globalContClear=contclear;
 
-  if (activeConfig->cb==0)
+  switch (activeConfig->cb)
   {
-    le1=4;
-    le2=8;
-    le3=16;
-    fqud1=STRB;
-    fqud3=2;
-  }
-  else if (activeConfig->cb==1)
-  {
-    le1=1;
-    le2=1;
-    le3=4;
-    fqud1=2;
-    fqud3=8;
-  }
-  else if (activeConfig->cb==2)
-  {
-    le1=1;
-    le2=16;
-    le3=4;
-    fqud1=2;
-    fqud3=8;
-  }
-  else if (activeConfig->cb==3)
-  {
-    le1=1;
-    le2=16;
-    le3=4;
-    fqud1=2;
-    fqud3=8;
+    case hwdOld:
+      le1=4;
+      le2=8;
+      le3=16;
+      fqud1=STRB;
+      fqud3=2;
+      break;
+    case hwdOldNewHarness:
+      le1=1;
+      le2=1;
+      le3=4;
+      fqud1=2;
+      fqud3=8;
+      break;
+    case hwdSlim:
+      le1=1;
+      le2=16;
+      le3=4;
+      fqud1=2;
+      fqud3=8;
+      break;
+    case hwdUsbV1:
+      le1=1;
+      le2=16;
+      le3=4;
+      fqud1=2;
+      fqud3=8;
+    break;
   }
   lpt.setLatchLines(le1, le2, le3, fqud1, fqud3);
   if (activeConfig->adconv == 8)
@@ -215,14 +212,8 @@ void hwdInterface::initVars()
 
 void hwdInterface::CreateRcounter()
 {
-  //needed:reference,appxpdf ; creates:rcounter,pdf
-  rcounter = (int)(vars->reference/appxpdf);      //16
-  if ((vars->reference/appxpdf) - rcounter >= .5)
-  {
-    rcounter = rcounter + 1;   //rounds off rcounter
-  }
-  pdf = vars->reference/rcounter;   //4.0000175
-  //to (Initialize PLL 3),[InitializePLL2],or[InitializePLL1]with rcounter,pdf
+  rcounter = (int(round(vars->reference/appxpdf)));
+  pdf = vars->reference/rcounter;
 }
 void hwdInterface::CommandPLL1R()
 {
@@ -241,10 +232,8 @@ void hwdInterface::CommandPLL1R()
   CommandRBuffer();//needs:rcounter,preselector,phasepolarity,fractional,Jcontrol,LEPLL,PLL
   if (errora.length()>0)
   {
-    error = "PLL 1, " + errora;
-    vars->message=error;
-    PrintMessage();
-    RequireRestart();   //ver115-1c
+    PrintMessage("PLL 1, " + errora);
+    RequireRestart();
   }
   return;
 }
@@ -262,9 +251,7 @@ void hwdInterface::CommandPLL2R()
 
   if (errora.length()>0)
   {
-    error = "PLL 2, " + errora;
-    vars->message=error;
-    PrintMessage();
+    PrintMessage("PLL 2, " + errora);
     RequireRestart();
   }
 
@@ -284,10 +271,8 @@ void hwdInterface::CommandPLL3R()
 
   if (errora.length()>0)
   {
-    error = "PLL 3, " + errora;
-    vars->message=error;
-    PrintMessage();
-    RequireRestart();   //ver115-1c
+    PrintMessage("PLL 3, " + errora);
+    RequireRestart();
   }
   return; //to //CommandPLL3R and Init Buffers
 }
@@ -311,8 +296,7 @@ void hwdInterface::CreateIntegerNcounter()
 
   //needed:appxVCO,reference,rcounter ; creates:ncount,ncounter,fcounter(0),pdf
   double ncount = appxVCO/(vars->reference/rcounter);  //approximates the Ncounter for PLL
-  ncounter = int(ncount + 0.5);     //approximates the ncounter for PLL
-  //if (ncount - ncounter >= .5) ncounter = ncounter + 1;   //rounds off ncounter
+  ncounter = int(round(ncount));
   fcounter = 0;
   pdf = appxVCO/ncounter;        //actual phase freq of PLL
   return;  //to //CreatePLL2N,//[CalculateThisStepPLL1],or //[CalculateThisStepPLL3] with ncount, ncounter and fcounter(=0)
@@ -392,17 +376,13 @@ void hwdInterface::CreatePLL1N()
   CreateNBuffer();  //needs:ncounter,fcounter,PLL,preselector;creates:Bcounter,Acounter, and N Bits N0-Nx
   if (errora.length()>0)
   {
-    error = "PLL 1, " + errora;
-    vars->message=error;
-    PrintMessage();
+    PrintMessage("PLL 1, " + errora);
     RequireRestart();
     return;
   }
   pll_1[vars->thisstep].Bcounter = Bcounter;
   pll_1[vars->thisstep].Acounter = Acounter;
-  //Bcounter1=Bcounter;
-  //Acounter1=Acounter;
-  return; //returns with Bcounter1,Acounter1,N0thruNx
+  return;
 
 }
 void hwdInterface::CreatePLL2N()
@@ -413,12 +393,10 @@ void hwdInterface::CreatePLL2N()
   CreateNBuffer();//needs:ncounter,fcounter,PLL,preselector;creates:Bcounter,Acounter, and N Bits N0-Nx
   if (errora.length()>0)
   {
-    error = "PLL 2, " + errora;
-    vars->message=error;
-    PrintMessage();
+    PrintMessage("PLL 2, " + errora);
     RequireRestart();
   }
-  return; //to //CreatePLL2N
+  return;
 }
 
 void hwdInterface::CreatePLL3N()
@@ -433,16 +411,13 @@ void hwdInterface::CreatePLL3N()
   CreateNBuffer();//needs:ncounter,fcounter,PLL,preselector;creates:Bcounter,Acounter, and N Bits N0-Nx
   if (errora.length()>0)
   {
-    error = "PLL 3, " + errora;
-    vars->message=error;
-    PrintMessage();
+    PrintMessage("PLL 3, " + errora);
     RequireRestart();
     return;
   }
   pll_3[vars->thisstep].Bcounter = Bcounter;
   pll_3[vars->thisstep].Acounter = Acounter;
-  //    Bcounter3=Bcounter: Acounter3=Acounter
-  return; //returns with Bcounter3,Acounter3,N0thruNx
+  return;
 }
 
 
@@ -523,64 +498,10 @@ void hwdInterface::Create2326N()
     errora="2326 Bcounter<Acounter";
     return; //with errora
   }
-  //ver116-4o deleted "if" block, per Lrev1
-  n.N0 = 1;       //n address bit 0, must be 1
-  n.N1 = 0;       //n address bit 1, must be 0
-  na0 = int(Acounter/2);
-  n.N2 = Acounter- 2*na0;      //Acounter bit 0 LSB
-  na1 = int(na0/2);
-  n.N3 = na0 - 2*na1;
-  na2 = int(na1/2);
-  n.N4 = na1 - 2*na2;
-  na3 = int(na2/2);
-  n.N5 = na2 - 2*na3;
-  na4 = int(na3/2);
-  n.N6 = na3 - 2*na4;              //Acounter bit 4 MSB
-  nb0 = int(Bcounter/2);
-  n.N7 = Bcounter- 2*nb0;      //Bcounter bit 0 LSB
-  nb1 = int(nb0/2);
-  n.N8 = nb0 - 2*nb1;
-  nb2 = int(nb1/2);
-  n.N9 = nb1 - 2*nb2;
-  nb3 = int(nb2/2);
-  n.N10 = nb2 - 2*nb3;
-  nb4 = int(nb3/2);
-  n.N11 = nb3 - 2*nb4;
-  nb5 = int(nb4/2);
-  n.N12 = nb4 - 2*nb5;
-  nb6 = int(nb5/2);
-  n.N13 = nb5 - 2*nb6;
-  nb7 = int(nb6/2);
-  n.N14 = nb6 - 2*nb7;
-  nb8 = int(nb7/2);
-  n.N15 = nb7 - 2*nb8;
-  nb9 = int(nb8/2);
-  n.N16 = nb8 - 2*nb9;
-  nb10 = int(nb9/2);
-  n.N17 = nb9 - 2*nb10;
-  nb11 = int(nb10/2);
-  n.N18 = nb10 - 2*nb11;
-  nb12 = int(nb11/2);
-  n.N19 = nb11 - 2*nb12;          //Bcounter bit 12 MSB
-  n.N20 = 1;    //Phase Det Current, 1= 1 ma, 0= 250 ua
-  n.N21 = 0;
-  n.N22 = 0;
-  n.N23 = 0;
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
-    //usb->int64N.lsLong
-        usb->int64N[1] = (1<<23)*n.N23+ (1<<22)*n.N22+ (1<< 21)*n.N21+ (1<< 20)*n.N20+ (1<< 19)*n.N19+ (1<< 18)*n.N18+ (1<< 17)*n.N17+ (1<< 16)*n.N16+ (1<< 15)*n.N15+
-                (1<< 14)*n.N14+ (1<< 13)*n.N13+ (1<< 12)*n.N12+ (1<< 11)*n.N11+ (1<< 10)*n.N10+ (1<< 9)*n.N9+ (1<< 8)*n.N8+
-                (1<< 7)*n.N7+ (1<< 6)*n.N6+ (1<< 5)*n.N5+ (1<< 4)*n.N4+ (1<< 3)*n.N3+ (1<< 2)*n.N2+ (1<< 1)*n.N1+ (1<< 0)*n.N0;
-//      then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
-//            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
-//            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
-  }
-    if (activeConfig->cb == 3)
-  {
-      //usb->int64N.msLong = 0;
-      usb->int64N[0] = 0;
-      //then Int64N.msLong.struct = 0 //ver116-4o per Lrev1
+    usb->int64N[1] = (1 << 20) + (Bcounter << 7) + (Acounter << 2) + 1;
+    usb->int64N[0] = 0;
   }
 }
 
@@ -727,8 +648,7 @@ void hwdInterface::CreateBaseForDDSarray()
   if (ddsoutput >= ddsclock/2)
   {
     util.beep();
-    vars->message="Error, ddsoutput > .5 ddsclock";
-    PrintMessage();
+    PrintMessage("Error, ddsoutput > .5 ddsclock");
     Halted();
     return;
   }
@@ -744,13 +664,11 @@ void hwdInterface::CreateBaseForDDSarray()
   w2= int((base-(w1*pow(2.0,24)))/pow(2.0,16));
   w3= int((base-(w1*pow(2.0,24))-(w2*pow(2.0,16)))/pow(2.0,8));
   w4= int(base-(w1*pow(2.0,24))-(w2*pow(2.0,16))-(w3*pow(2.0,8)));
-  if (activeConfig->cb == 3)
+
+  if (activeConfig->cb == hwdUsbV1)
   {
-//       usb->int64SW.msLong = 0;
-//       usb->int64SW.lsLong = int( base );
        usb->int64SW[0] = 0;
        usb->int64SW[1] = int( base );
-
   }
   else
   {
@@ -867,7 +785,6 @@ void hwdInterface::ResetDDS1serUSB()
 
 void hwdInterface::ResetDDS3serUSB()
 {
-  //USB:01-08-2010
   //reset serial DDS3 without disturbing Filter Bank or PDM. usb v1.0
   //must have DDS (AD9850/9851) hard wired. pin2=D2=0, pin3=D1=1,pin4=D0=1, D3-D7 are don't care.
   //this will reset DDS into parallel, involk serial mode, then command to 0 Hz.
@@ -931,7 +848,7 @@ void hwdInterface::CommandDDS1()
   CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
   lastpdmstate=phaarray(thisstep,0);
   }
-    if cb = 3 then gosub [CommandAllSlimsUSB]//will command all 4 modules. ver113-4a //USB:01-08-2010
+    if cb = 3 then gosub [CommandAllSlimsUSB]//will command all 4 modules.
     wait
 
 */
@@ -971,7 +888,7 @@ void hwdInterface::CommandDDS3()
 {CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]); //will command all 4 modules. ver113-4a
 lastpdmstate=phaarray(thisstep,0);
 }
-    if cb = 3 then gosub [CommandAllSlimsUSB]//will command all 4 modules. ver113-4a //USB:01-08-2010
+    if cb = 3 then gosub [CommandAllSlimsUSB]//will command all 4 modules.
     wait
 */
 }
@@ -1042,18 +959,18 @@ void hwdInterface::DDS1Sweep()
     }
     //thisstep = remember
     CreateCmdAllArray();
-    if (activeConfig->cb == 0)
+    if (activeConfig->cb == hwdOld)
     {
 //      CommandDDS1OrigCB();  //will command DDS 1, only
     }
-    else if (activeConfig->cb == 2)
+    else if (activeConfig->cb == hwdSlim)
     {
 //      CommandAllSlims(vars->thisstep, filtbank, vars->phaarray[vars->thisstep][0]*64)]);  //will command all 4 modules. ver113-4a
 //      lastpdmstate=phaarray(thisstep,0);
     }
-    else if (activeConfig->cb == 3)
+    else if (activeConfig->cb == hwdUsbV1)
     {
-      CommandAllSlimsUSB();//will command all 4 modules.  //USB:01-08-2010 moved ver116-4f
+      CommandAllSlimsUSB();//will command all 4 modules.
     }
     */
 }
@@ -1143,7 +1060,7 @@ void hwdInterface::SyncTestPDM()
 }
 void hwdInterface::SyncSweep()
 {
-  //comes here at end of sweep if syncsweep = 1 //ver112-2b
+  //comes here at end of sweep if syncsweep = 1
   //it will not continue sweeping until the phase data is between 80 and 90% of maxpdmout
   //hopefully, it will "trigger" a sweep at 81%
   while(1)
@@ -1334,10 +1251,8 @@ void hwdInterface::Command2325R()
 
 void hwdInterface::Command2326R()
 {
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
-    cmdForUsb[1] = 0x00000003 | (phasepolarity << 7);
-    cmdForUsb[0] = 0;
     usb->int64N[1] = 0x00000003 | (phasepolarity << 7);
     usb->int64N[0] = 0;
   }
@@ -1367,13 +1282,13 @@ void hwdInterface::Command2326R()
   n.N2=0;        //1= Counter Reset Enable, allows reset of R,N counters,use 0
   n.N1=1;        //F1 address bit 1, must be 1
   n.N0=1;        //F1 address bit 0, must be 1
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
     //Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
     //            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
     //            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
   }
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
     //    Int64N.msLong.struct = 0; //ver116-4o per Lrev1
   }
@@ -1430,19 +1345,11 @@ void hwdInterface::Command2326R()
   n.N19 = 0;     //Test Bit
   n.N20 = 0;     //Lock Detector Mode, 0=3 refcycles, 1=5 cycles
 
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
-    //cmdForUsb[1] = rcounter << 2;
-    //cmdForUsb[0] = 0;
     usb->int64N[1] = rcounter << 2;
     usb->int64N[0] = 0;
-    /*if cb = 3 then Int64N.lsLong.struct = 2^23*N23+ 2^22*N22+ 2^21*N21+ 2^20*N20+ 2^19*N19+ 2^18*N18+ 2^17*N17+ 2^16*N16+ 2^15*N15+_
-            2^14*N14+ 2^13*N13+ 2^12*N12+ 2^11*N11+ 2^10*N10+ 2^9*N9+ 2^8*N8+_
-            2^7*N7+ 2^6*N6+ 2^5*N5+ 2^4*N4+ 2^3*N3+ 2^2*N2+ 2^1*N1+ 2^0*N0 //ver116-4o per Lrev1
-    if cb = 3 then Int64N.msLong.struct = 0 //ver116-4o per Lrev1
-    */
   }
-  //[Command2326Rbuffer]//need Jcontrol,LEPLL,contclear
   CommandPLL(vars->thisstep);//needs:N23-N0,control,Jcontrol,port,contclear,LEPLL ; commands N23-N0,old ControlBoard ver111
 }
 
@@ -1714,10 +1621,10 @@ void hwdInterface::InitializeHardware()
   //they are repeated on Restart is to fix any hardware glitches that might occur. Whenever it is known
   //that a hardware change is made, such as filter selection changing, it is best to take action immediately,
   //and not rely on the Restart process. In some cases, Restart skips these initializations for speed.
-  if (vars->suppressHardware==0 && activeConfig->cb<3)
+  if (vars->suppressHardware==0 && activeConfig->cb != hwdUsbV1)
   {
     lpt.output(port, 0);    //begin with all data lines low
-    if (activeConfig->cb == 2)
+    if (activeConfig->cb == hwdSlim)
     {
       lpt.output(control, INITSELT); //latch "0" into SLIM Control Board Buffers 1 and 2
       lpt.output(control, AUTO); //latch "0" into SLIM Control Board Buffers 3
@@ -1726,10 +1633,10 @@ void hwdInterface::InitializeHardware()
     }
     lpt.output(control, contclear);      //begin with all control lines low
   }
-  if (activeConfig->cb == 3 && vars->bUseUsb !=0)  //USB:01-08-2010
+  if (activeConfig->cb == hwdUsbV1 && vars->bUseUsb != 0)
   {
-    QString USBwrbuf = "A5010000"; // reset all lines low //USB:01-08-2010
-    usb->usbMSADeviceWriteString(USBwrbuf,4);    //USB:01-08-2010
+    QString USBwrbuf = "A5010000"; // reset all lines low
+    usb->usbMSADeviceWriteString(USBwrbuf,4);
   }
   //the following are meaningless values to guarantee first time commanding. Used in subroutine, [DetermineModule]
   vars->lastdds1output = activeConfig->appxdds1;
@@ -1758,7 +1665,7 @@ void hwdInterface::InitializeHardware()
     if (activeConfig->TGtop != 0) //goto endInitializeTrkGen;// there is no Tracking Generator ver111-22
     {
       //Initialize DDS 3
-      if (activeConfig->cb == 0 && activeConfig->TGtop == 2)
+      if (activeConfig->cb == hwdOld && activeConfig->TGtop == 2)
       {
         Jcontrol = INIT;
         swclk = 32;
@@ -1766,11 +1673,11 @@ void hwdInterface::InitializeHardware()
         lpt.ResetDDS3ser();
       } //ver111-7
       //[ResetDDS3ser]needs:port,control,Jcontrol,swclk,sfqud,contclear ; resets DDS3 into Serial mode
-      if (activeConfig->cb == 2)
+      if (activeConfig->cb == hwdSlim)
       {
         lpt.ResetDDS3serSLIM(vars->phaarray[vars->thisstep][0], filtbank);
       }
-      else if (activeConfig->cb == 3)
+      else if (activeConfig->cb == hwdUsbV1)
       {
         ResetDDS3serUSB();
       }
@@ -1841,14 +1748,17 @@ void hwdInterface::InitializeHardware()
 
     //10.initialize DDS1 by resetting. Frequency is commanded to zero
     //It should power up in parallel mode, but could power up in a bogus condition.
-    if (activeConfig->cb == 0 && activeConfig->dds1parser == 0)
+    if (activeConfig->cb == hwdOld && activeConfig->dds1parser == 0)
       lpt.ResetDDS1par();//(Orig Control)//needs:control,STRBAUTO,contclear ; resets DDS1 on J5, parallel ver111-21
-    if (activeConfig->cb == 0 && activeConfig->dds1parser == 1)
+
+    if (activeConfig->cb == hwdOld && activeConfig->dds1parser == 1)
       lpt.ResetDDS1ser();//(Orig Control)//needed:control,AUTO,STRB,contclear  ; resets DDS1 on J5, into serial mode ver111-21
-    if (activeConfig->cb == 2)
+
+    if (activeConfig->cb == hwdSlim)
       lpt.ResetDDS1serSLIM(vars->phaarray[vars->thisstep][0], filtbank);//reset serial DDS1 without disturbing Filter Bank or PDM //ver111-29
-    if (activeConfig->cb == 3)
-      ResetDDS1serUSB();//reset serial DDS1 without disturbing Filter Bank or PDM  //USB:01-08-2010
+
+    if (activeConfig->cb == hwdUsbV1)
+      ResetDDS1serUSB();//reset serial DDS1 without disturbing Filter Bank or PDM
   }
   SkipHardwareInitialization();
 }
@@ -1871,15 +1781,15 @@ void hwdInterface::CommandCurrentStep(int step)
     }
     DetermineModule(step); //determine which, if any, module needs commanding.
     int cmdneeded = glitchp1 + glitchd1 + glitchp3 + glitchd3 + glitchpdm;
-    if (cmdneeded > 0 && activeConfig->cb == 0)
+    if (cmdneeded > 0 && activeConfig->cb == hwdOld)
       lpt.CommandOrigCB();//old Control (150 usec, 0 SW) //ver111-28ver111-38a
     //if cb = 1 then gosub [CommandRevB]//old Control looking like SLIM  //not created yet
-    if (cmdneeded > 0 && activeConfig->cb == 2)
+    if (cmdneeded > 0 && activeConfig->cb == hwdSlim)
     {
       lpt.CommandAllSlims(step, filtbank, vars->phaarray[step][0]*64);
       vars->lastpdmstate=vars->phaarray[step][0];
     }
-    if (cmdneeded > 0 && activeConfig->cb == 3)
+    if (cmdneeded > 0 && activeConfig->cb == hwdUsbV1)
       CommandAllSlimsUSB();
     if (cftest==1)
       CommandLO2forCavTest();
@@ -1915,7 +1825,6 @@ void hwdInterface::ReadStep()
     //Read phase even in non-phase modes unless suppressPhase=1; we just don't process it in non-phase modes
     if (vars->suppressPhase==0)
     {
-      //ver116-4r deleted           UsbAdcControl.Adcs.struct = 3 // USB: 15/08/10
       prevReadPhaseData=phadata;
       ReadPhase();
       //and return with phadata(in bits). Also installed into pharray(thisstep,3).
@@ -1958,7 +1867,7 @@ void hwdInterface::ReadStep()
     //Note InvertPDmodule will impose some wait time, but not very much in auto wait mode.
     if (vars->useAutoWait==0)
     {
-      break; //exit for
+      break;
     }
     //The rest of the loop is just for determining whether to repeat when doing auto wait
     if (repeatOnceMore)
@@ -1982,7 +1891,7 @@ void hwdInterface::ReadStep()
     int directionReversal=0; //flag for reversal of sign of change
     int lowLevelADC=0;
     int evaluateThisRead = 0;
-    if (vars->thisstep!=vars->sweepStartStep)
+    if (vars->thisstep != vars->sweepStartStep)
     {
       //For the first read, we generate the change in readings from the readings left over
       //from the previous step, but only if this is not the first step.
@@ -1991,7 +1900,10 @@ void hwdInterface::ReadStep()
     else
     {
       //Always evaluate if not first read
-      if (readStepCount>1) evaluateThisRead=1; else evaluateThisRead=0;
+      if (readStepCount>1)
+        evaluateThisRead=1;
+      else
+        evaluateThisRead=0;
     }
 
     if (evaluateThisRead)
@@ -2006,16 +1918,19 @@ void hwdInterface::ReadStep()
         {
           //For very low level signals, just repeat once more, but not if Wide filter
           //We can never expect these to be perfectly stable.
-          lowLevelADC=1; if (vars->videoFilter!="Wide") repeatOnceMore=1;
-          magIsStable=1; phaseIsStable=1; //pretend. Note phase will be no good at this level so we don't evaluate it.
+          lowLevelADC=1;
+          if (vars->videoFilter != "Wide")
+            repeatOnceMore=1;
+          magIsStable=1;
+          phaseIsStable=1; //pretend. Note phase will be no good at this level so we don't evaluate it.
         }
-        else if (magdata<vars->calLowADCofCenterSlope)
+        else if (magdata < vars->calLowADCofCenterSlope)
         {
-          maxADCChange=vars->autoWaitMaxChangeLowEndADC;
+          maxADCChange = vars->autoWaitMaxChangeLowEndADC;
         }
-        else if (magdata>vars->calHighADCofCenterSlope)
+        else if (magdata > vars->calHighADCofCenterSlope)
         {
-          maxADCChange=vars->autoWaitMaxChangeHighEndADC;
+          maxADCChange = vars->autoWaitMaxChangeHighEndADC;
         }
         else   //in center region
         {
@@ -2024,7 +1939,7 @@ void hwdInterface::ReadStep()
             //If in center on first read but headed for low end, we may end up
             //in the low end, so may want to use the minimum allowed change for center and low end
             //The low end allowed change is likely much smaller than that for center.
-            if (abs(changeMagADC)>(magdata-vars->calLowADCofCenterSlope))    //See whether another change like this gets us to low end
+            if (abs(changeMagADC)>(magdata - vars->calLowADCofCenterSlope))    //See whether another change like this gets us to low end
             {
               maxADCChange=qMin(vars->autoWaitMaxChangeCenterADC,vars->autoWaitMaxChangeLowEndADC);
             }
@@ -2039,7 +1954,8 @@ void hwdInterface::ReadStep()
           }
         }
 
-        if (abs(changeMagADC)<=maxADCChange) magIsStable=1;
+        if (abs(changeMagADC)<=maxADCChange)
+          magIsStable=1;
         if (magIsStable==0 && lowLevelADC==0 && readStepCount>1)
         {
           //Even if we don't have two close readings, we can stop when
@@ -2061,7 +1977,8 @@ void hwdInterface::ReadStep()
         {
           //In this case we have no valid phase reading. If this is likely a final reading, then just deem
           //phase to be stable.
-          if (magIsStable) phaseIsStable=1; //can//t actually evaluate low level phase
+          if (magIsStable)
+            phaseIsStable=1; //can//t actually evaluate low level phase
         }
         else
         {
@@ -2106,7 +2023,7 @@ void hwdInterface::ReadStep()
     //for possible debugging use.
     if (vars->suppressHardware)
     {
-      break;// then exit for
+      break;
     }
   }
 }
@@ -2168,7 +2085,6 @@ void hwdInterface::AutoGlitchtime()
   int whatiswate;
   QString a;
   QString b;
-  //ver111-37c
   vars->glitchtime = 10000;
   whatiswate = vars->wate;
   vars->wate = 1;
@@ -2184,12 +2100,15 @@ void hwdInterface::AutoGlitchtime()
   if (lasped == 0)
     lasped = 1;
   vars->glitchtime = vars->glitchtime/lasped * 100; //glitchtime is the value required for a 1 ms wait time
-  vars->wate = whatiswate; //change wate back to it//s original global value
-  /*vars->wate = 10;
+  /*
+  vars->wate = 10;
   a = util.time("ms");
   WaitStatement();
   b = util.time("ms");
-  lasped = b.toInt()-a.toInt();*/
+  lasped = b.toInt()-a.toInt();
+  qDebug() << "lasped" << lasped;
+  */
+  vars->wate = whatiswate; //change wate back to it's original global value
 }
 void hwdInterface::ReadMagnitude()
 {
@@ -2198,18 +2117,22 @@ void hwdInterface::ReadMagnitude()
   {
     magdata=0;
     return;
-  } //ver115-6c
-  if (activeConfig->adconv ==  8)
-    lpt.Read8Bitmag(); //and return here with magdata
-  if (activeConfig->adconv == 12)
-    lpt.Read12Bitmag(); //and return here with magdata
-  if (activeConfig->cb == 3)
-  {
-    ReadADCviaUSB(); // and return here with magdata and phadata //ver116-4r
   }
-  else if (activeConfig->cb != 3 && activeConfig->adconv == 16)
+  if (activeConfig->adconv ==  8)
   {
-    if (activeConfig->cb == 2)
+    lpt.Read8Bitmag(); //and return here with magdata
+  }
+  else if (activeConfig->adconv == 12)
+  {
+    lpt.Read12Bitmag(); //and return here with magdata
+  }
+  if (activeConfig->cb == hwdUsbV1)
+  {
+    ReadADCviaUSB(); // and return here with magdata and phadata
+  }
+  else if (activeConfig->cb != hwdUsbV1 && activeConfig->adconv == 16)
+  {
+    if (activeConfig->cb == hwdSlim)
     {
       lpt.Read16wSlimCB();
     }
@@ -2220,7 +2143,7 @@ void hwdInterface::ReadMagnitude()
     lpt.Process16Mag(magdata);
   }
     //and return here with just magdata //ver111-33b
-  else if (activeConfig->cb != 3 && activeConfig->adconv == 22)
+  else if (activeConfig->cb != hwdUsbV1 && activeConfig->adconv == 22)
   {
     lpt.ReadAD22Status();
     lpt.Process22Mag();
@@ -2245,16 +2168,16 @@ void hwdInterface::ReadPhase()
       lpt.Read12Bitpha(); //and return here with phadata only
       break;
     default:
-      if (activeConfig->cb == 3)
+      if (activeConfig->cb == hwdUsbV1)
       {
         ReadADCviaUSB();
       }
-      else if (activeConfig->cb != 3 && activeConfig->adconv == 16)
+      else if (activeConfig->cb != hwdUsbV1 && activeConfig->adconv == 16)
       {
         lpt.ReadAD16Status();
         lpt.Process16MagPha(magdata, phadata);
       }
-      else if (activeConfig->cb != 3 && activeConfig->adconv == 22)
+      else if (activeConfig->cb != hwdUsbV1 && activeConfig->adconv == 22)
       {
         lpt.ReadAD22Status();
         lpt.Process22MagPha();
@@ -2271,7 +2194,7 @@ void hwdInterface::ReadPhase()
   vars->phaarray[vars->thisstep][3] = phadata; //put raw data into array
   vars->phaarray[vars->thisstep][4] = vars->phaarray[vars->thisstep][0]; //PDM state at which this data is taken. ver112-2a
   //it is only used in Variables Windows to show state of PDM when data was collected.
-  return; //to [ReadStep]
+  return;
 
 }
 void hwdInterface::InvertPDmodule()
@@ -2368,44 +2291,12 @@ void hwdInterface::CalPDMinvdeg()
 }
 void hwdInterface::ReadADCviaUSB()
 {
-     //  USB:15/08/10
-    // the following code works fine but the structure version below is quicker
-    //    // Generic code for USB ADC input regardless of number of bits and ADC type //USB:01-08-2010
-//[Read22wSlimCBUSB] //USB:01-08-2010
-//    USBwrbuf$ = "B201040A01"
-//    goto [ReadCommonwSlimCBUSB]
-//
-//[Read16wSlimCBUSB] //USB:01-08-2010
-//    USBwrbuf$ = "B200021001"
-//    // fall through
-//[ReadCommonwSlimCBUSB] //USB:01-08-2010
-//    if USBdevice = 0 then return
-//    UsbAdcCount = 0
-//    UsbAdcResult1 = 0
-//    UsbAdcResult2 = 0
-//    CALLDLL #USB, "UsbMSADeviceReadAdcs", USBdevice as long, USBwrbuf$ as ptr, 5 as short, USBrBuf as struct, result as boolean
-//    if( result ) then
-//        UsbAdcCount = USBrBuf.numreads.struct
-//        UsbAdcResult1 = USBrBuf.magnitude.struct
-//        UsbAdcResult2 = USBrBuf.phase.struct
-//    end if
-//    return //to [ReadMagnitude]or[ReadPhase]with status words
-
-// the main code has already set up the structure that defines the ADC conversion so just go for it !
-//This is new common subroutine for reading the ADC//s with USB. //ver116-4r
-//This will read the ADC//s and return the values for magdata and phadata
-//    if USBdevice = 0 then return
-//ver116-4r deleted    UsbAdcCount = 0  //since this is not used anywhere in the SW anyway
-//ver116-4r deleted    UsbAdcResult1 = 0
- //ver116-4r deleted   UsbAdcResult2 = 0
+ // the main code has already set up the structure that defines the ADC conversion so just go for it !
+  //This is new common subroutine for reading the ADC//s with USB. //ver116-4r
+  //This will read the ADC//s and return the values for magdata and phadata
   magdata = 0;
   phadata = 0;
   unsigned long result;
-  //USBrBuf buf;
-  //char bufaaa[] = "B200021001";
- // usb->usbMSADeviceReadAdcsStruct((unsigned short*)(&buf), &result);
-  //int nnnn = 5;
-  //usb->usbMSADeviceReadAdcs(bufaaa,nnnn,&result);
 
   UsbAdcControl ctrl;
   ctrl.Adcs = 3;
@@ -2422,7 +2313,7 @@ void hwdInterface::ReadADCviaUSB()
 //    UsbAdcCount = USBrBuf.numreads.struct   //this is not used anywhere, but I will leave it here as a reference //ver116-4r
     magdata = buf.magnitude;
     phadata = buf.phase;
-    //Since the 12 bit serial ADC is read as 16 bits, throw away the last 4 bits //ver116-4r
+    //Since the 12 bit serial ADC is read as 16 bits, throw away the last 4 bits
     if (activeConfig->adconv == 22)
     {
       magdata = (int)(magdata/16);
@@ -2437,7 +2328,7 @@ void hwdInterface::ReadADCviaUSB()
     magdata = qrand() / 2;
     phadata = qrand() / 2;
   }
-  return; //to [ReadMagnitude]or[ReadPhase]with status words
+  return;
 }
 
 void hwdInterface::ProcessDataArrays()
@@ -2445,23 +2336,23 @@ void hwdInterface::ProcessDataArrays()
   //process "thisstep" data for VNA/SNA, filling S21DataArray and/or ReflectArray
   //ver115-8b separated this from ProcessAndPrint so it can be called separately.
   //Data is transferred from datatable, stored as necessary and calculations made.
-  //For reflection mode; do jig calc and/or apply OSL calibration ver115-1b
-  //But data as is if we are doing calibration. ver115-1e
+  //For reflection mode; do jig calc and/or apply OSL calibration
+  //But data as is if we are doing calibration.
   TransferToDataArrays();
   if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
   {
     if (vars->calInProgress==0 && vars->planeadj!=0)
     {
-      int phaseToExtend=vars->S21DataArray[vars->thisstep][2];  //ver116-4s
-      // fix me uExtendCalPlane(thisfreq, phaseToExtend, vars->planeadj,0);  //Do plane adjustment ver116-1b //ver116-4s
-      vars->S21DataArray[vars->thisstep][2]=phaseToExtend;  //ver116-4s
+      float phaseToExtend=vars->S21DataArray[vars->thisstep][2];
+      util.uExtendCalPlane(vars->thisfreq, phaseToExtend, vars->planeadj,0);  //Do plane adjustment
+      vars->S21DataArray[vars->thisstep][2]=phaseToExtend;
     }
   }
   else
   {
     if (vars->msaMode==modeReflection)
     {
-      ConvertRawDataToReflection(vars->thisstep);    //Apply calibration and calculate all reflection related data; apply OSL if necessary ver116-4n
+      ConvertRawDataToReflection(vars->thisstep);    //Apply calibration and calculate all reflection related data; apply OSL if necessary
     }
   }
 }
@@ -2470,9 +2361,9 @@ void hwdInterface::TransferToDataArrays()
 {
   //Transfer datatable data to transmission or reflection array for thisstep
   float thisfreq=vars->datatable[vars->thisstep][1];  //freq
-  int thisBand=vars->datatable[vars->thisstep][4];  //ver116-4s
+  int thisBand=vars->datatable[vars->thisstep][4];
   if (thisBand!=1)
-    thisfreq=ActualSignalFrequency(thisfreq,thisBand); //actual signal frequency, not equivalent 1G freq ver116-4s
+    thisfreq=ActualSignalFrequency(thisfreq,thisBand); //actual signal frequency, not equivalent 1G freq
   float thisDB=vars->datatable[vars->thisstep][2];     //mag db
   float thisAng=vars->datatable[vars->thisstep][3];  //phase
 
@@ -2507,8 +2398,6 @@ void hwdInterface::TransferToDataArrays()
 
 void hwdInterface::ConvertPhadata()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-
   //needed: phadata,PDM polarity,difPhase ; creates "phaseofpdm" and "thispointphase", the pixel value
   //retrieve phadata from array
   //convert phadata to phase, round off to .01 deg
@@ -2531,17 +2420,21 @@ void hwdInterface::ConvertPhadata()
   //The deviation in the PDM inversion from theoretical 180 deg is actually a fixed time period
   //invdeg is maintained as the actual inversion that occurs at 10.7 MHz. With a different finalfreq,
   //the deviation from 180 degrees will change.
-  float PDMinversionDeviation;
+  /*float PDMinversionDeviation;
   if (vars->phaarray[vars->thisstep][0]==1)
   {
     PDMinversionDeviation=(activeConfig->invdeg-180)*activeConfig->finalfreq/10.7;
     phase = phase - (180+PDMinversionDeviation);
+  }*/
+  if (vars->phaarray[vars->thisstep][0] == 1)
+  {
+    phase = phase - activeConfig->invdeg;
   }
   phase=phase-difPhase;    //SEW3: subtract correction for change of phase over signal level.
   int thisBand=vars->datatable[vars->thisstep][4];
   if (thisBand==3)
   {
-    phase=0-phase;    //For 3G mode, true phase is negative of measured phase, due to low side LO1 ver116-4L ver116-4s
+    phase=0-phase;    //For 3G mode, true phase is negative of measured phase, due to low side LO1
   }
   //calculate phase with calibration table factored in
   //ver114-5f Apply lineCalArray only if LineCal or BaseLineCal is active, and not when calibrating
@@ -2556,14 +2449,14 @@ void hwdInterface::ConvertPhadata()
   }
   else
   {
-    phase=((int)(phase*100-0.5))/100; //round to two decimal places ver115-2d
+    phase=((int)(phase*100-0.5))/100; //round to two decimal places
   }
   //ver115-2b moved the application of planeadj. The data in datatable() never contains that adjustment.
 
   //The phase correction is set to 180 degrees when the phase reading during initial calibration
   //is suspect. In that case, we override all the foregoing and set the final phase to 0.
   //validPhaseThreshold indicates the lowest magnitude level at which phase is valid.
-  if (magdata<vars->validPhaseThreshold)
+  if (magdata < vars->validPhaseThreshold)
   {
     phase=0;
   }
@@ -2592,7 +2485,7 @@ void hwdInterface::ConvertPhadata()
 //because we now have ConvertPhadata and ConvertMagPhaseData. But it works.
 void hwdInterface::ConvertMagPhaseData()
 {
-  //convert magnitude data bits to MSA input power(in dBm) and to pixels. ver111-39a
+  //convert magnitude data bits to MSA input power(in dBm) and to pixels.
   //needed: magarray,calibration table
   //this converts magdata to MSA input power, using
   //a Magnitude Error Correction Factor, (determined in Frequency Calibration)
@@ -2607,7 +2500,7 @@ void hwdInterface::ConvertMagPhaseData()
     magdata = vars->magarray[vars->thisstep][3];
     //Apply mag calibration to get power and phase correction
 
-    if (vars->msaMode!=modeSA && vars->msaMode!=modeScalarTrans)
+    if (vars->msaMode != modeSA && vars->msaMode != modeScalarTrans)
     {
       doPhaseCor=1;
     }
@@ -2615,18 +2508,19 @@ void hwdInterface::ConvertMagPhaseData()
     {
       doPhaseCor=0;
     }
-    calMan->calConvertMagPhase(magdata, doPhaseCor, power, difPhase);    //ver114-5n
+    calMan->calConvertMagPhase(magdata, doPhaseCor, power, difPhase);
     //int thisfreq = vars->datatable[vars->thisstep][1];
     freqerror=vars->freqCorrection[vars->thisstep]; //find freq cal adjustment SEWgraph1
     //In SA mode, if there is an active front end file, we add the front end correction factor
     if (vars->msaMode==modeSA)
     {
-      if (vars->frontEndActiveFilePath!="") freqerror=freqerror-vars->frontEndCorrection[vars->thisstep];    //ver115-9d
+      if (vars->frontEndActiveFilePath!="")
+        freqerror=freqerror-vars->frontEndCorrection[vars->thisstep];
     }
   }
   else
   {
-    if (vars->calInProgress && vars->msaMode!=modeReflection)  //ver116-4b
+    if (vars->calInProgress && vars->msaMode!=modeReflection)
     {
       //If calibrating transmission, we want to use ideal results so when we display the actual doSpecialGraph
       //it will come out the way we want.
@@ -2639,10 +2533,7 @@ void hwdInterface::ConvertMagPhaseData()
       DoSpecialGraph();
     }
   }
-  //goto [CalcMagpowerPixel]
-  //--SEW End of new routine to make calibration adjustments
 
-  //[CalcMagpowerPixel]
   power = power + freqerror;
   if (convdatapwr == 1)
   {
@@ -2655,32 +2546,17 @@ void hwdInterface::ConvertMagPhaseData()
   {
     if (vars->msaMode!=modeSA)
       magpower = magpower - vars->lineCalArray[vars->thisstep][1];
-  }  //ver116-4n  subtract reference.
+  }  // subtract reference.
+
+  //round to five decimal places
   if (magpower>=0)
     magpower=((int)(magpower*100000+0.5))/100000.0;
   else
-    magpower=((int)(magpower*100000-0.5))/100000.0; //round to five decimal places ver115-4d
+    magpower=((int)(magpower*100000-0.5))/100000.0;
 
-  //magpower = -50 + 50 * sin((float)vars->thisstep);  ////fix me debugging
   vars->datatable[vars->thisstep][2] = magpower;    //put current power measurement into the array
-  return; //to [ProcessAndPrint]
+  return;
 
-}
-
-void hwdInterface::CalcMagpowerPixel()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-    power = power + freqerror
-    if convdatapwr = 1 then gosub [ConvertDataToPower] 'ver112-2b
-    'round off MSA input power to .01 dBm, magpower, no matter which AtoD is used
-    magpower = power 'ver115-2d
-        'Note if calInProgress=1, applyCalLevel will have been set to 0 by cal installation routine
-    if applyCalLevel>0 then if (msaMode$<>modeSA) then  magpower = magpower - lineCalArray(thisstep,1)  'ver116-4n  subtract reference.
-    if magpower>=0 then magpower=int(magpower*100000+0.5)/100000 else magpower=int(magpower*100000-0.5)/100000 'round to five decimal places ver115-4d
-    datatable(thisstep,2) = magpower    'put current power measurement into the array
-    return 'to [ProcessAndPrint]
-*/
 }
 
 void hwdInterface::DoSpecialGraph()
@@ -3240,7 +3116,7 @@ void hwdInterface::SelectVideoFilter()
   vars->videoPhaseTC=10*vars->videoPhaseCap;     //Time constant in ms, based on 10k resistor and cap in uF
   vars->videoMagTC=2.7*vars->videoMagCap;     //Time constant in ms, based on 2.7k resistor and cap in uF
   int switchData=switchLatchBits(vars->freqBand);    //All bits for latch #4, with latch pulse set high ver116-4b
-  if (activeConfig->switchHasVideo && vars->suppressHardware==0)   //ver116-4b
+  if (activeConfig->switchHasVideo && vars->suppressHardware==0)   
   {
     switch(activeConfig->cb)
     {
@@ -3358,17 +3234,17 @@ void hwdInterface::SelectFilter(int &fbank)
 void hwdInterface::CommandFilter(int &fbank)
 {
   //filtbank is passed here as fbank so we can change the non-global filtbank
-  if (activeConfig->cb == 0)
+  if (activeConfig->cb == hwdOld)
   {
     fbank = vars->FiltA1*8 + vars->FiltA0*4;
     lpt.CommandFilterOrigCB(fbank);
   }
-  if (activeConfig->cb == 2)
+  if (activeConfig->cb == hwdSlim)
   {
     fbank = vars->FiltA1*64 + vars->FiltA0*32;
     lpt.CommandFilterSlimCB(fbank);
   }
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
     fbank = vars->FiltA1*64 + vars->FiltA0*32;
     CommandFilterSlimCBUSB(fbank);
@@ -3475,24 +3351,19 @@ void hwdInterface::CalculateAllStepsForLO1Synth()
     if (vars->dds1output-activeConfig->appxdds1 > activeConfig->dds1filbw/2)
     {
       util.beep();
-      error="DDS1output too high for filter";
-      vars->message=error;
-      PrintMessage();
+      PrintMessage("DDS1output too high for filter");
       RequireRestart();
       return;
     }
     if (activeConfig->appxdds1 - vars->dds1output > activeConfig->dds1filbw/2)
     {
       util.beep();
-      error="DDS1output too low for filter";
-      vars->message=error;
-      PrintMessage();
+      PrintMessage("DDS1output too low for filter");
       RequireRestart();
       return;
     }
     CreateBaseForDDSarray();//needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
     FillDDS1array(vars->thisstep);//need thisstep,sw0-sw39,w0-w4,base,ddsclock
-    //[endCalculateThisStepDDS1]
   }
   vars->thisstep = haltstep; //return to the step in the sweep, where we halted, if needed
 }
@@ -3604,9 +3475,7 @@ void hwdInterface::CalculateAllStepsForLO3Synth()
       if (vars->dds3output-activeConfig->appxdds3 > activeConfig->dds3filbw/2)
       {
         util.beep();
-        error="DDS3 output too high for filter";
-        vars->message=error;
-        PrintMessage();
+        PrintMessage("DDS3 output too high for filter");
         RequireRestart();
         return;
       }
@@ -3614,9 +3483,7 @@ void hwdInterface::CalculateAllStepsForLO3Synth()
       if (activeConfig->appxdds3-vars->dds3output > activeConfig->dds3filbw/2)
       {
         util.beep();
-        error="DDS3output too low for filter";
-        vars->message=error;
-        PrintMessage();
+        PrintMessage("DDS3output too low for filter");
         RequireRestart();
         return;
       }
@@ -3633,7 +3500,7 @@ void hwdInterface::CalculateAllStepsForLO3Synth()
 void hwdInterface::FillPLL1array(int step)
 {
   //need thisstep,N0thruN23,pdf1(40),dds1output(41),samePLL1(42)see dim PLL1array for slot info 'ver111-1
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
     unsigned long result;
     //          if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL1Array as ulong
@@ -3680,7 +3547,7 @@ void hwdInterface::FillPLL1array(int step)
 void hwdInterface::FillPLL3array(int step)
 {
 //need thisstep,N0thruN23,pdf3(40),dds3output(41),samePLL3(42)see dim PLL3array for slot info 'ver111-14
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
     unsigned long result;
   //   if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long
@@ -3727,7 +3594,7 @@ void hwdInterface::FillPLL3array(int step)
 void hwdInterface::FillDDS1array(int step)
 {
   //need thisstep,sw0-sw39,w0-w4,base,ddsclock //ver111-12
-  if (activeConfig->cb == 3)
+  if (activeConfig->cb == hwdUsbV1)
   {
     unsigned long result;
     //  if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArray", USBdevice as long, ptrSDDS1Array as ulong, Int64SW as ptr, thisstep as short, result as boolean //USB:11-08-2010
@@ -3790,7 +3657,7 @@ void hwdInterface::FillDDS3array(int step)
 {
   //qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
 
-    if (activeConfig->cb == 3)
+    if (activeConfig->cb == hwdUsbV1)
     {
       unsigned long result;
       usb->usbMSADevicePopulateDDSArray((__int64 *)usb->ptrSDDS3Array, usb->int64SW, vars->thisstep, &result);
@@ -3843,7 +3710,7 @@ void hwdInterface::CreateCmdAllArray()
   //a DDS serial command, will begin with LSB (W0), thru MSB (W31), ending with Phase bit 4 (W39)
   //a PLL serial command, will begin with MSB (N23), thru LSB (N0, the address bit)
 
-  if (activeConfig->cb != 3)
+  if (activeConfig->cb != hwdUsbV1)
   {
     for (int index = 0; index <= vars->steps; index++)
     {
@@ -3895,15 +3762,15 @@ result as boolean //USB:11-08-2010
 void hwdInterface::CommandPLL(int step)
 {
   //comes here during PLL R Initializations and PLL 2 N command ver111-28
-  if (activeConfig->cb == 0)
+  if (activeConfig->cb == hwdOld)
   {
     lpt.CommandPLLorig();
   }
-  else if (activeConfig->cb == 2)
+  else if (activeConfig->cb == hwdSlim)
   {
     lpt.CommandPLLslim(filtbank, datavalue, vars->phaarray[step][0]*64, &n, levalue);
   }
-  else if (activeConfig->cb == 3)
+  else if (activeConfig->cb == hwdUsbV1)
   {
     CommandPLLslimUSB();
   }
@@ -3913,11 +3780,9 @@ void hwdInterface::CommandPLLslimUSB()
   if (!usb->getUSBDevice())
     return;
   unsigned long result;
- // usb->usbMSADeviceWriteInt64MsbFirst((short)161, cmdForUsb, (short)24, (short)1, filtbank, datavalue, &result);
   usb->usbMSADeviceWriteInt64MsbFirst((short)161, usb->int64N, (short)24, (short)1, filtbank, datavalue, &result);
   int pdmcommand = vars->phaarray[vars->thisstep][0]*64; //do not disturb PDM state, this may be used during Spur Test
 
-  //A302001000
   QString USBwrbuf = "A30200"+util.ToHex(pdmcommand + levalue)+util.ToHex(pdmcommand);
   usb->usbMSADeviceWriteString(USBwrbuf,5);
   return;
@@ -3982,13 +3847,13 @@ void hwdInterface::DetermineModule(int step)
 void hwdInterface::CommandPDMonly()
 {
   //ver111-28
-  if (activeConfig->cb == 0)
-    lpt.CommandPDMOrigCB(); //ver111-28
-  else if (activeConfig->cb == 2)
-    lpt.CommandPDMSlimCB(); //ver111-28
-  else if (activeConfig->cb == 3)
-    CommandPDMSlimUSB();  //USB:01-08-2010
-  return; //to InvertPDmodule()
+  if (activeConfig->cb == hwdOld)
+    lpt.CommandPDMOrigCB();
+  else if (activeConfig->cb == hwdSlim)
+    lpt.CommandPDMSlimCB();
+  else if (activeConfig->cb == hwdUsbV1)
+    CommandPDMSlimUSB();
+  return;
 }
 void hwdInterface::CommandPDMSlimUSB()
 {
@@ -3998,18 +3863,11 @@ void hwdInterface::CommandPDMSlimUSB()
   usb->usbMSADeviceWriteString(USBwrbuf,6);
   vars->lastpdmstate=vars->phaarray[vars->thisstep][0];   //ver114-6c
 }
-/*
-' ****************
-'USB:05/12/2010
-' following code changed from previous USB code
-' USB: 15/08/10
-' all three of the following work. SLowest at the top, fastest at the bottom
-*/
 
 void hwdInterface::CommandAllSlimsUSB()
 {
   unsigned long result;
-  if (activeConfig->cb != 3)
+  if (activeConfig->cb != hwdUsbV1)
   {
     return;
   }
@@ -4025,7 +3883,6 @@ void hwdInterface::CommandAllSlimsUSB()
   data.pdmcommand = vars->phaarray[vars->thisstep][0];
   data.thisstep = vars->thisstep;
   usb->usbMSADeviceAllSlimsAndLoadStruct((unsigned short *)&data, &result);
-  //CALLDLL #USB, "UsbMSADeviceAllSlimsAndLoadStruct", USBdevice as long, data as struct, result as boolean // USB: 15/08/10
   vars->lastpdmstate=vars->phaarray[vars->thisstep][0];
 
 }
@@ -4055,7 +3912,7 @@ void hwdInterface::finished()
   Close #DLL.OLE //ver116-4q
   */
   // close USB interface if it was active
-  usb->usbCloseInterface(); //USB:01-08-2010
+  usb->usbCloseInterface();
   //close #handle   //close out graph window
   //ret = GlobalFree(hSAllArray) //USB:01-08-2010
   QCoreApplication::exit(0);

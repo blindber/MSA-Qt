@@ -189,7 +189,7 @@ private:
   float StepWithValue(int dataType, int startStep, int dir, int targVal);   //Return first step number (maybe fractional); with the specified value
 
 
-
+  void gMouseQuery(float x, float y);
 
 protected:
   void resizeEvent(QResizeEvent *event);
@@ -273,7 +273,7 @@ public slots:
   void delayedStart();
   void PartialRestart();
   void ProcessAndPrint();
-  void PrintMessage();
+  void PrintMessage(QString message);
 
   void Showvar();
   void updatevar(int);

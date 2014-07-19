@@ -131,7 +131,7 @@ public:
   int gGetSweepDir();
   void gUpdateGraphObject(int winWidth, int winHt, int marLeft, int marRight, int marTop, int marBot);
   void gDrawReferences();
-  void gAddReference(int N, QString t);
+  void gAddReference(int N, QColor t);
   void gAddReference(int N, float x, float y);
   void gClearReference(int N);
   void gClearAllReferences();
@@ -147,7 +147,7 @@ public:
   void gPrintTitle(int doClear);
   void gPrintAxisLabels();
   void gPrintSupplementalAxisLabels(int nSupp, int axisNum, QString col, QString lab);
-  void gPrintAxisAnnotation(int axisNum, QString annotText, QString annotFont, QString annotColor);
+  void gPrintAxisAnnotation(int axisNum, QString annotText, QString annotFont, QColor annotColor);
   void gInitGraphRange(float minX, float maxX, float minY1, float maxY1, float minY2, float maxY2);
   void gShiftRefLevel(int axisNum, int nDiv);
   void gCalcAxis(int isX, QString axisStyle, int &isLin, int &numDiv, float &axisMin
@@ -156,6 +156,7 @@ public:
   int gPixIsInGrid(int xPix, int yPix);
   void gFindClickedPoint(int xPix, int &yPix, int &pointNum, int &traceNum);
   float gPointNumOfX(int x);
+  int gPixelsPerStep();
   float gPointNumOfXPix(float xPix);
   void gConvertXToPix(float &x);
   void gConvertY1ToPix(float &y1);
@@ -190,7 +191,7 @@ public:
   void gRecreateTraces(bool doDraw);
   void PerformAutoScale();
   void DrawSetupInfo();
-  void PrintMessage();
+  void PrintMessage(QString message);
   QString gSweepContext();
   void gGetMarkerByNum(int markNum, int &pointNum, QString &ID, QString &trace, QString &style);
   void gUsePresetText(QString btn);
@@ -208,7 +209,7 @@ public:
   void CreateReferenceTransform();
   void CalcReferencesWholeStep(int stepNum, float &ref1, float &ref2);
   void CalcReferences();
-  QString CreateReferenceTraces(QString tCol, int tSize, int traceNum, QPainterPath *path);
+  QString CreateReferenceTraces(QColor tCol, int tSize, int traceNum, QPainterPath *path);
   QString PrivateCreateReferenceTrace(int traceNum, int startPoint, int endPoint, QPainterPath *path);
 
   void CalcGraphData(int currStep, float &y1, float &y2, int useWorkArray);
@@ -248,14 +249,14 @@ public:
   //These are based on whether the data type is constNoGraph, whereas, whereas gGraphY1 and gGraphY2 are based
   //on whether the display mode is off.
   int gDoY1, gDoY2;     //=1 if Y1 and Y2 data exist
-  QString referenceColor1, referenceColor2;
+  QColor referenceColor1, referenceColor2;
   QPainterPath refLine[12];
   int referenceLineType;    //Spec and type of reference line    ver114-7f
   //type: 0=none; 1=use data when ref was selected; 2=use RLC in spec; 3=use fixed value ver115-5d
   int referenceTrace;       //which ref lines, based on bits: 1 bit=do trace 1; 2 bit=do trace 2; 4 bit=do Smith trace   //ver115-6b
   int referenceWidth1;    //Reference Trace color and width
   int referenceWidth2;    //Reference Trace color and width
-  QString referenceColorSmith;
+  QColor referenceColorSmith;
   int referenceWidthSmith;     //color/width for smith chart reference line
   //The following globals determine whether we redraw various components from scratch or by a faster method.
   int refreshGridDirty;    //Forces grid (and labels, title) and setup info to redraw from scratch in RefreshGraphs
@@ -453,7 +454,8 @@ private:
 
 
   //when drawing point by point
-  QString gDraw1, gDraw2,gErase1;  //color and size combined for drawing and erasing traces
+  QString gDraw1, gDraw2;  //color and size combined for drawing and erasing traces
+  QVector<QGraphicsItem *> gErase1;
   QVector<QGraphicsItem *> gErase2;
   int gLastPointBeforePause;     //number of last point drawn (1...) in dynamic draw at time of pause
   int gWasFirstScanAtPause;  //whether we were in the first scan at time of pause
@@ -465,7 +467,7 @@ private:
   QString gMode;   //SA, ScalarTrans, VectorTrans or Reflection mode in which we are operating ver114-5L
   //global gIsTransMode     //=1 if ScalarTrans or VectorTrans Mode delver116-1b
 
-  QString gRefTrace[12]; //Trace draw commands, as one string, for reference lines, numbered 1... ver114-6g
+  QColor gRefTrace[12]; //Trace draw commands, as one string, for reference lines, numbered 1... ver114-6g
 
 
 

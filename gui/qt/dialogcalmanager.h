@@ -159,6 +159,8 @@ public:
   QString DefaultDir;
 
 
+  void resizeArrays(int newSize);
+
 private:
   Ui::dialogCalManager *ui;
   msaUtilities util;
@@ -169,8 +171,6 @@ private:
   QStringList calManFileList;
   bool teTextChanged;
   int calManFileReload();
-
-public slots:
 
 private slots:
   void on_Reload_clicked();

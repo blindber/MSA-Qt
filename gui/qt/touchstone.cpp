@@ -107,7 +107,7 @@ void touchStone::touchWriteOnePortParameters(QStringList &fHndl, int dataMode)
           end if
       end if
 
-      for i=0 to VNADataNumSteps   //ver116-4b
+      for i=0 to VNADataNumSteps   
           f=VNAData(i,0) //true freq
           db=VNAData(i,constGraphS11DB)   //dB ver116-1b
           ang=VNAData(i,constGraphS11Ang)    //deg  ver116-1b

@@ -58,7 +58,6 @@ QString msaUtilities::uGetLine(QString inStr, int &startPos)
 QString msaUtilities::Word(QString strExp, int n)
 {
   strExp = strExp.trimmed();
-  //strExp = "12        13";
   QStringList list;
   list = strExp.split(QRegExp("\\s+"));
 
@@ -80,15 +79,12 @@ QString msaUtilities::uExtractTextItem(QString &data, QString delim)
           //delimiter from data$. If delim$ is more than one character, the entire sequence is
           //considered to be the required delimiter. Leading/trailing blanks are not removed.
   int dataLen = data.length();
-  //int pos=1;
   int delimLen;
-  //QString delimChar = delim.left(1);
   delimLen=delim.length();
 
   if (dataLen<delimLen)
   {
     data="";
-    //uExtractTextItem$="": exit function
     return "";
   }
   else
@@ -489,7 +485,7 @@ QString msaUtilities::uFormatted(double v, QString form)
   {
     uScaleWithMultiplier(v, mult);    //Returns multiplier and scales v
     mult=" "+mult;   //prepend space to multiplier character, even if there is none
-    if ((upperForm.indexOf("SUPPRESSMILLI")>-1) && mult==" m")    //ver115-4e
+    if ((upperForm.indexOf("SUPPRESSMILLI")>-1) && mult==" m")    
     {
           //If SuppressMilli, we don't want to use the "m" prefix, but instead print in the
           //format 0.xxx, with however many decimal places are allowed
@@ -2429,6 +2425,34 @@ QString msaUtilities::fixColor(QString col)
     else
     {
       return QColor(items.at(0).toInt(), items.at(1).toInt(), items.at(2).toInt()).name();
+    }
+  }
+  // assume color is a name eg black, white
+  return col;
+}
+
+QColor msaUtilities::fixColor1(QString col)
+{
+  QColor color;
+  col = col.trimmed();
+  if (col.indexOf("#") == 0)
+  {
+    //assume it's correct as there is a # at the start of the line
+    return col;
+  }
+  else if (col.indexOf(" ") != -1)
+  {
+    QStringList items;
+    items = col.split(QRegExp("\\s+"));
+    if (items.count() != 3)
+    {
+      // wrong number of items so set to magenta
+      return QColor(Qt::magenta);
+    }
+    else
+    {
+      color.setRgb(items.at(0).toInt(), items.at(1).toInt(), items.at(2).toInt());
+      return color;
     }
   }
   // assume color is a name eg black, white

@@ -151,7 +151,7 @@ void dialogConfigMan::load()
                   //Control Board
 
   QStringList configControlBoards;
-  configControlBoards << "0(Old)" << "1(Old, new harness)" << "2(SLIM original)" <<  "3(USB V1.0)"; //USB;01-08-2010
+  configControlBoards << "0(Old)" << "1(Old, new harness)" << "2(SLIM original)" <<  "3(USB V1.0)";
   ui->cb->clear();
   ui->cb->addItems(configControlBoards);
 
@@ -305,7 +305,7 @@ void dialogConfigMan::configGetDisplayData()
   tempConfig.TGtop = ui->TGtop->currentIndex();
   tempConfig.cb = ui->cb->currentIndex();
   //Original control board can only handle the RBW switch.
-  if (tempConfig.cb==0)
+  if (tempConfig.cb == hwdOld)
   {
     tempConfig.switchHasVideo=0;
     tempConfig.switchHasBand=0;
@@ -964,7 +964,7 @@ void dialogConfigMan::configInitializeDefaults(msaConfig *tConfig)
 {
   tConfig->masterclock = 64;
   tConfig->adconv = 16;
-  tConfig->cb = 2;
+  tConfig->cb = hwdUsbV1;
   tConfig->dds1parser = 1;
   tConfig->appxdds1 = 10.7;
   tConfig->dds1filbw = .015;

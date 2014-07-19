@@ -19,6 +19,7 @@
 
 #include <QtCore>
 #include <QVector>
+#include <QColor>
 
 template <class T>
 class Q2DVector : public QVector< QVector<T> >
@@ -77,7 +78,7 @@ public:
       int PLL;
       int doingPDMCal;  //=1 when PDM cal in progress to determine invdeg ver114-5L
       float CalInvDeg;    //set to value of invdeg determined by cal ver114-5L
-      int cftest;       //=1 when doing cavity filter sweep test (Special Tests window)  //ver116-4b
+      int cftest;       //=1 when doing cavity filter sweep test (Special Tests window)  
   //--SEW End of variables initialized from configuration file
 
   //--SEW2 added the following global declarations to make these available to true subroutines
@@ -210,7 +211,7 @@ public:
       float offset;  //TG offset frequency  moved ver115-5f
       QString path;    //Currently active filter path (1...); a number as a string in form "Path N" ver114-1d
       int FiltA0, FiltA1;   //low and high bits of RBW filter address //ver116-4j
-      QString message;         //Message to print in graph window
+      //QString message;         //Message to print in graph window
       //int varwindow;        //=1 if variables window is open ver115-1a
       int suppressPDMInversion; //=1 to suppress inversion in [ReadStep] ver115-1a
       int leftstep;     //Used to hold a marker step number for [preupdatevar] ver115-1a
@@ -264,7 +265,7 @@ public:
       QFile *restoreFileHndl;
       int restoreIsValidation;
       QString restoreErr;
-      int restoreLastLineNum; //ver115-8c
+      int restoreLastLineNum; 
 
           //There can be 1 to four video filter settings, with different capacitor values.   //ver116-1b
           //They each have a name. Mag and phase capacitors can be different, but the names and number
@@ -310,7 +311,7 @@ public:
       //Functions may need to redo the sweep with new parameters. The following are used to save/restore the
       //pre-existing parameters, using SaveAndChangeSweepParameters and [RestoreSweepParameters] ver115-5c
       int functSaveAlternate,functSaveSweepDir,functSavePlaneAdj,functSaveWate;
-      QString functSaveVideoFilter;  //ver116-4b
+      QString functSaveVideoFilter;  
 
       int functSaveAutoWait;
       QString functSaveAutoWaitPrecision;  //ver116-1b
@@ -467,7 +468,8 @@ public:
       double reference;
 
       int bUseUsb;
-      QString refHeadingColor1,refHeadingColor2;
+      QColor refHeadingColor1;
+      QColor refHeadingColor2;
       int calfigModuleVersion;
 
 

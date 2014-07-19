@@ -408,9 +408,9 @@ void referenceDialog::load()
   ui->width1->setCurrentIndex(settings.referenceWidth1 - 1);
   ui->width2->setCurrentIndex(settings.referenceWidth2 - 1);
   ui->widthSmith->setCurrentIndex(settings.referenceWidthSmith + 1);
-  ui->color1->setStyleSheet( QString("background: %1;").arg(settings.referenceColor1) );
-  ui->color2->setStyleSheet( QString("background: %1;").arg(settings.referenceColor2) );
-  ui->colorSmith->setStyleSheet( QString("background: %1;").arg(settings.referenceColorSmith) );
+  ui->color1->setStyleSheet( QString("background: %1;").arg(settings.referenceColor1.name()) );
+  ui->color2->setStyleSheet( QString("background: %1;").arg(settings.referenceColor2.name()) );
+  ui->colorSmith->setStyleSheet( QString("background: %1;").arg(settings.referenceColorSmith.name()) );
 
   if (settings.referenceLineType==0) settings.referenceTrace=0;
   if (settings.msaMode == modeSA) ui->UseRLC->setVisible(false); //Can't do RLC in SA mode
@@ -640,7 +640,7 @@ void referenceDialog::on_color1_clicked(const QModelIndex &index)
   if (color.isValid())
   {
     settings.referenceColor1 = color.name();
-    ui->color1->setStyleSheet( QString("background: %1;").arg(settings.referenceColor1) );
+    ui->color1->setStyleSheet( QString("background: %1;").arg(settings.referenceColor1.name()) );
   }
   ui->color1->setCurrentRow(-1);
 }
@@ -652,7 +652,7 @@ void referenceDialog::on_color2_clicked(const QModelIndex &index)
   if (color.isValid())
   {
     settings.referenceColor2 = color.name();
-    ui->color2->setStyleSheet( QString("background: %1;").arg(settings.referenceColor2) );
+    ui->color2->setStyleSheet( QString("background: %1;").arg(settings.referenceColor2.name()) );
   }
   ui->color2->setCurrentRow(-1);
 }
@@ -664,7 +664,7 @@ void referenceDialog::on_colorSmith_clicked(const QModelIndex &index)
   if (color.isValid())
   {
     settings.referenceColorSmith = color.name();
-    ui->colorSmith->setStyleSheet( QString("background: %1;").arg(settings.referenceColorSmith) );
+    ui->colorSmith->setStyleSheet( QString("background: %1;").arg(settings.referenceColorSmith.name()) );
   }
   ui->colorSmith->setCurrentRow(-1);
 }

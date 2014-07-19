@@ -43,10 +43,7 @@ dialogCalManager::dialogCalManager(QWidget *parent) :
   connect(this, SIGNAL(RequireRestart()), parent, SLOT(RequireRestart()));
   connect(this, SIGNAL(PartialRestart()), parent, SLOT(PartialRestart()));
 
-  calMagTable.mresize(802,3);
-  calFreqTable.mresize(802,2);
-  calMagCoeffTable.mresize(802,8);
-  calFreqCoeffTable.mresize(802,4);
+  resizeArrays(802);
 
   calFileVersion = 0;
   calFreqPoints = 0;
@@ -63,6 +60,15 @@ dialogCalManager::~dialogCalManager()
   delete ui;
 }
 
+void dialogCalManager::resizeArrays(int newSize)
+{
+  calMagTable.mresize(newSize,3);
+  calFreqTable.mresize(newSize,2);
+  calMagCoeffTable.mresize(newSize,8);
+  calFreqCoeffTable.mresize(newSize,4);
+
+
+}
 void dialogCalManager::setMsaConfig(msaConfig *config)
 {
   activeConfig = config;
@@ -827,7 +833,6 @@ void dialogCalManager::calCreateMagCubicCoeff()
   }
   if (slopeErr==1)
   {
-    //ver116-4b deleted irritating error message
     vars->calCanUseAutoWait=0;
     return;
   }
@@ -1244,7 +1249,7 @@ void dialogCalManager::calCreateDefaults(int pathNum, QString editor, int doPoin
         if (activeConfig->adconv==8) maxADC=(int)(255/2);            //8 bit ADC
         if (activeConfig->adconv==12 || activeConfig->adconv==22) { maxADC=4095 ; maxADCval=10;}   //12 bit ADC ver115-4e
         list.append("0        -120");
-        list.append(QString::number(maxADC) + "      " +QString::number(maxADCval)); //ver115-4e
+        list.append(QString::number(maxADC) + "      " +QString::number(maxADCval)); 
     }
   }
   //For now, we don't use the EndCalFile tag, and don't require it on input either
@@ -1815,7 +1820,7 @@ int dialogCalManager::calManFileReload()
   if (calEditorPathNum==0)
   {
     //Before loading the frequency file we must be sure that the mag cal
-    //data is valid for the MSA//s active filter
+    //data is valid for the MSA's active filter
     int match=0;
     for (int i=1; i <= activeConfig->MSANumFilters; i++)
     {
@@ -1824,7 +1829,7 @@ int dialogCalManager::calManFileReload()
       if (f == activeConfig->finalfreq && bw == activeConfig->finalbw)
       {
         match=i;
-        break; //exit for
+        break;
       }
     }
     if (match==0)

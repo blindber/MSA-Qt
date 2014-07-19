@@ -22,22 +22,11 @@ usbFunctions::usbFunctions()
 {
   usbLib = NULL;
   USBDevice = NULL;
-
-  /*
-  UsbAdcControl.Adcs = 3; //ver116-4r
-  UsbAdcControl.Clocking = 1; //ver116-4r
-  UsbAdcControl.Delay = 4; //ver116-4r
-  UsbAdcControl.Bits = 16; //ver116-4r
-  UsbAdcControl.Average = 1; //ver116-4r
-  */
 }
 
 usbFunctions::~usbFunctions()
 {
-  /*
-  if (usbLib->isLoaded())
-    usbLib->unload();
-    */
+  usbCloseInterface();
 }
 
 int usbFunctions::usbMSAGetVersions()
@@ -83,8 +72,8 @@ bool usbFunctions::usbInterfaceOpen(QString fileName)
   //needs to be more complex - this flag uses USB if it is available
   //do not set it if bUsbAvailable is not set
   //create a memory block for holding dds data (akin to cmdallarray[][] but accessible within dll)
-  AllArrayBlockSize = 2002*40; //USB:01-08-2010
-  DeviceArrayBlockSize = 2002 * 8; //USB:06-08-2010
+  AllArrayBlockSize = 2002*40;
+  DeviceArrayBlockSize = 2002 * 8;
   hSAllArray = GlobalAlloc(GMEM_MOVEABLE, AllArrayBlockSize );
   ptrSAllArray = GlobalLock(hSAllArray );
   hSDDS1Array = GlobalAlloc(GMEM_MOVEABLE, DeviceArrayBlockSize);
@@ -97,8 +86,7 @@ bool usbFunctions::usbInterfaceOpen(QString fileName)
   ptrSPLL3Array = GlobalLock(hSPLL3Array );
 #endif
   unsigned long result = 0;
-  usbMSADeviceSetAllArrayPtr(ptrSAllArray,2002,40, &result); //USB:01-08-2010
-
+  usbMSADeviceSetAllArrayPtr(ptrSAllArray,2002,40, &result);
   return usbLib->isLoaded();
 }
 
@@ -108,7 +96,7 @@ void usbFunctions::usbCloseInterface()
     return;
   if (usbLib->isLoaded())
   {
-    //GlobalFree(hSAllArray);
+    GlobalFree(hSAllArray);
     UsbMSARelease(USBDevice);
     USBDevice = NULL;
     usbLib->unload();

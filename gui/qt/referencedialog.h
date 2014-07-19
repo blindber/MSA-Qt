@@ -29,13 +29,13 @@ class referenceDialog;
 
 struct referDialog
 {
-  QString referenceColor1;
+  QColor referenceColor1;
   int referenceWidth1;
 
-  QString referenceColor2;
+  QColor referenceColor2;
   int referenceWidth2;
 
-  QString referenceColorSmith;
+  QColor referenceColorSmith;
   int referenceWidthSmith;
 
 

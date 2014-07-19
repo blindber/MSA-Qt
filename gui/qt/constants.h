@@ -56,7 +56,6 @@ enum hardwareConstants
   constBase = 6,
   constGraphData = 7,
   constModeData = 8
-
 };
 
 enum lptConstants
@@ -72,7 +71,7 @@ enum lptConstants
 
 enum initMemorySizes
 {
-  initMemSize = 802
+  initMemSize = 8020
 };
 
 enum twoPortConstants
@@ -112,5 +111,12 @@ enum msaModes
   modeReflection = 3
 };
 
+enum hardwareTypes
+{
+  hwdOld = 0,
+  hwdOldNewHarness = 1,
+  hwdSlim = 2,
+  hwdUsbV1 = 3
+};
 
 #endif // CONSTANTS_H

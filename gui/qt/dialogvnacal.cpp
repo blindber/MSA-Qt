@@ -417,7 +417,7 @@ end function
 void dialogVNACal::SignalNoCalInstalled()
 {
 
-  //Clear time stamps and num of steps for installed cal to show none is installed  //ver116-4b
+  //Clear time stamps and num of steps for installed cal to show none is installed  
   //We don't have to clear the cal data itself.
   applyCalLevel=0;
   installedBandLineTimeStamp="";
@@ -806,7 +806,7 @@ void dialogVNACal::InstallSelectedLineCal(Q2DfloatVector &GraphVal, int MaxPoint
   if (vars->calInProgress)    //ver115-1e
   {
         //Here we want no type of cal, so signal nothing is installed but don't clear the actual data
-    SignalNoCalInstalled();   //ver116-4b
+    SignalNoCalInstalled();   
     return;
   }
 
@@ -895,7 +895,7 @@ void dialogVNACal::InstallSelectedLineCal(Q2DfloatVector &GraphVal, int MaxPoint
   }  //end of applying baseLine cal
 
   //Here we want no type of line cal
-  SignalNoCalInstalled();   //ver116-4b
+  SignalNoCalInstalled();   
 }
 
 

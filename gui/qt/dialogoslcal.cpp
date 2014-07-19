@@ -81,7 +81,7 @@ void dialogOSLCal::InstallSelectedOSLCal()
 
     if calInProgress then    //ver115-1e
             //Here we want no type of cal
-        call SignalNoCalInstalled   //ver116-4b
+        call SignalNoCalInstalled   
         exit sub
     end if
 
@@ -107,8 +107,8 @@ void dialogOSLCal::InstallSelectedOSLCal()
 
     if applyCalLevel=0 then    //ver115-1e
             //Here we want no type of OSL cal
-        call SignalNoCalInstalled   //ver116-4b
-        exit sub    //ver116-4b
+        call SignalNoCalInstalled   
+        exit sub    
     end if
 
         //Note that OSLBandRef and OSLBaseRef hold data from updating the cal. Freq is set and data is cleared whenever full cal is done.
