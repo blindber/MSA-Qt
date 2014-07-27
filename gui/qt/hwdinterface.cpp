@@ -5,7 +5,11 @@
 
 hwdInterface::hwdInterface(QWidget *parent)
 {
+#ifdef USELIBUSB
+  usb = new libUsbFunctions;
+#else
   usb = new usbFunctions;
+#endif
   calMan = new dialogCalManager(parent);
 
   // connect up the signals so we can tell the main windows what to do
@@ -3777,8 +3781,6 @@ void hwdInterface::CommandPLL(int step)
 }
 void hwdInterface::CommandPLLslimUSB()
 {
-  if (!usb->getUSBDevice())
-    return;
   unsigned long result;
   usb->usbMSADeviceWriteInt64MsbFirst((short)161, usb->int64N, (short)24, (short)1, filtbank, datavalue, &result);
   int pdmcommand = vars->phaarray[vars->thisstep][0]*64; //do not disturb PDM state, this may be used during Spur Test

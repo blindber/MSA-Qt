@@ -33,17 +33,6 @@ struct USBrBuf
   unsigned long phase;
 };
 
-struct Int64N
-{
-  unsigned long msLong;
-  unsigned long lsLong;
-};
-
-struct Int64SW
-{
-  unsigned long msLong;
-  unsigned long lsLong;
-};
 
 struct UsbAllSlimsAndLoadData
 {
@@ -103,29 +92,17 @@ public:
   bool usbInterfaceOpen(QString fileName);
   void usbCloseInterface();
 
-
-  void *getUSBDevice();
-
-  int AllArrayBlockSize; // current size of memory block allocated for AllArrays
-  int DeviceArrayBlockSize;
-  void * hSAllArray; // handle for memory block
-  void * ptrSAllArray; // pointer to memory block
-
-  void * hSDDS1Array;
-  void * ptrSDDS1Array;
-  void * hSDDS3Array;
-  void * ptrSDDS3Array;
-  void * hSPLL1Array;
-  void * ptrSPLL1Array;
-  void * hSPLL3Array;
-  void * ptrSPLL3Array;
-
   unsigned long int64SW[2];
   unsigned long int64N[2];
+  void * ptrSDDS1Array;
+  void * ptrSPLL1Array;
+  void * ptrSPLL3Array;
+  void * ptrSDDS3Array;
 
 private:
   QLibrary *usbLib;
   void *USBDevice;
+  void *getUSBDevice();
 
   typedef int (*_UsbMSAGetVersions)(void *MSAData);
   typedef void * (*_UsbMSAInitialise)();
@@ -172,6 +149,16 @@ private:
   _UsbMSADeviceAllSlims UsbMSADeviceAllSlims;
   _UsbMSADeviceAllSlimsAndLoad UsbMSADeviceAllSlimsAndLoad;
   _UsbMSADeviceAllSlimsAndLoadStruct UsbMSADeviceAllSlimsAndLoadStruct;
+
+  int AllArrayBlockSize; // current size of memory block allocated for AllArrays
+  int DeviceArrayBlockSize;
+  void * hSAllArray; // handle for memory block
+  void * ptrSAllArray; // pointer to memory block
+
+  void * hSDDS1Array;
+  void * hSDDS3Array;
+  void * hSPLL1Array;
+  void * hSPLL3Array;
 
 
 };

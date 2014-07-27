@@ -29,7 +29,9 @@ int lptFunctions::init(int libraryType, int port)
   this->port = port;
   status = port + 1;
   control = port + 2;
-
+#ifndef __WIN32__
+  return false;
+#endif
   this->libraryType = libraryType;
   if (libraryType == inpoutLib)
   {

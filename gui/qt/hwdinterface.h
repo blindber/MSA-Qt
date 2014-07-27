@@ -13,7 +13,10 @@
 #include "dialogvnacal.h"
 #include "dialogoslcal.h"
 #include "interpolation.h"
+#include "libusbfunctions.h"
+#include "usbfunc.h"
 
+#define USELIBUSB 1
 
 //(0-39)sw0-sw39,(40-44)w0-w4,(45)base,(46)actualdds1output
 class cDDS
@@ -51,7 +54,8 @@ public:
   void resizeArrays(int newSize);
   void initVars();
 
-  usbFunctions *usb;
+  //usbFunctions *usb;
+  usbFunc *usb;
   touchStone touch;
   dialogCalManager *calMan;
   coaxAnalysis coax;
@@ -302,7 +306,6 @@ private:
   QString DefaultDir;
   float enterPLL2phasefreq;
   float difPhase;
-  //Int64N
 
   float ddsoutput;
   float ddsclock;

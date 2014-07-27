@@ -29,7 +29,6 @@
 #include <QGraphicsScene>
 
 #include "dialogconfigman.h"
-//#include "usbfunctions.h"
 #include "globalvars.h"
 #include "referencedialog.h"
 #include "msautilities.h"
@@ -60,7 +59,6 @@ private:
   Ui::MainWindow *ui;
   QGraphicsScene scenePleaseWait;
   dialogConfigMan *winConfigMan;
-//  usbFunctions *usb;
   globalVars *vars;
   msaUtilities util;
   cWorkArray uWork;

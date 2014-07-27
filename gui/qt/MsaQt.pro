@@ -70,7 +70,9 @@ SOURCES += main.cpp\
     dialogshowvars.cpp \
     smithdialog.cpp \
     scanthread.cpp \
-    marker.cpp
+    marker.cpp \
+    libusbfunctions.cpp \
+    usbfunc.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -99,7 +101,9 @@ HEADERS  += mainwindow.h \
     dialogshowvars.h \
     smithdialog.h \
     scanthread.h \
-    marker.h
+    marker.h \
+    libusbfunctions.h \
+    usbfunc.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \
@@ -122,3 +126,6 @@ win32:RC_FILE = resource.rc
 OTHER_FILES += \
     resource.rc \
     readme.txt
+
+win32:INCLUDEPATH += "../../../../../lib/libusb/include/libusb-1.0"
+win32:LIBS += -L"../../../../../lib/libusb/MinGW32/static" -llibusb-1.0
