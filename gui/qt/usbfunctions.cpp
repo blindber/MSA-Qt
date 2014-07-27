@@ -174,7 +174,7 @@ int usbFunctions::usbMSADeviceReadAdcsStruct(unsigned short *pData, unsigned lon
   return UsbMSADeviceReadAdcsStruct(USBDevice, pData, pResults);
 }
 
-int usbFunctions::usbMSADevicePopulateDDSArrayBitReverse(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults)
+int usbFunctions::usbMSADevicePopulateDDSArrayBitReverse(qint64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults)
 {
   int retVal;
   if (!USBDevice) return 0;
@@ -182,13 +182,13 @@ int usbFunctions::usbMSADevicePopulateDDSArrayBitReverse(__int64 *pArray, unsign
   return retVal;
 }
 
-int usbFunctions::usbMSADevicePopulateDDSArray(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults)
+int usbFunctions::usbMSADevicePopulateDDSArray(qint64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults)
 {
   if (!USBDevice) return 0;
   return UsbMSADevicePopulateDDSArray(USBDevice, pArray, pData, step, pResults);
 }
 
-int usbFunctions::usbMSADevicePopulateAllArray(unsigned short Steps, unsigned short bits, __int64 *pBit0Array, __int64 *pBit1Array, __int64 *pBit2Array, __int64 *pBit3Array, __int64 *pBit4Array, __int64 *pBit5Array, __int64 *pBit6Array, __int64 *pBit7Array, unsigned long *pResults)
+int usbFunctions::usbMSADevicePopulateAllArray(unsigned short Steps, unsigned short bits, qint64 *pBit0Array, qint64 *pBit1Array, qint64 *pBit2Array, qint64 *pBit3Array, qint64 *pBit4Array, qint64 *pBit5Array, qint64 *pBit6Array, qint64 *pBit7Array, unsigned long *pResults)
 {
   if (!USBDevice) return 0;
   return UsbMSADevicePopulateAllArray(USBDevice, Steps, bits, pBit0Array, pBit1Array, pBit2Array, pBit3Array, pBit4Array, pBit5Array, pBit6Array, pBit7Array, pResults);

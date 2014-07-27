@@ -160,14 +160,14 @@ void MainWindow::delayedStart()
     vars->suppressHardware=1; //may change when we have cb info
 
   bool bUsbAvailable;
-  if (util.uVerifyDLL("msadllqt"))
+  if (util.uVerifyDLL("msadll"))
     bUsbAvailable = true;
   else
     bUsbAvailable = false;
 
   if (bUsbAvailable)
   {
-    if (hwdIf->usb->usbInterfaceOpen(QApplication::applicationDirPath() + "/msadllqt.dll"))
+    if (hwdIf->usb->usbInterfaceOpen(QApplication::applicationDirPath() + "/msadll.dll"))
     {
       int rev = hwdIf->usb->usbMSAGetVersions();
       if (rev / 256 < 2)

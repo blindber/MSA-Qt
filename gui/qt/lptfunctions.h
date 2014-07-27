@@ -133,8 +133,8 @@ private:
 //--------------inpout-------------------------
   typedef void	(*lpOut32)(short, short);
   typedef short	(*lpInp32)(short);
-  typedef BOOL	(*lpIsInpOutDriverOpen)(void);
-  typedef BOOL	(*lpIsXP64Bit)(void);
+  typedef bool	(*lpIsInpOutDriverOpen)(void);
+  typedef bool	(*lpIsXP64Bit)(void);
 
   lpOut32 lpoutport;
   lpInp32 lpinport;
@@ -142,33 +142,37 @@ private:
   lpIsXP64Bit is64Bit;
 //---------------------------------------------
 
-  //WORD  Inp(WORD PortNum);
-  typedef void (APIENTRY *Outp)(WORD, WORD);
-  typedef void (APIENTRY *Outpw)(WORD PortNum, WORD Data);
-  typedef void (APIENTRY *Outpd)(WORD PortNum, DWORD Data);
-  typedef void (APIENTRY *Outport)(WORD PortNum, WORD Data);
-  typedef void (APIENTRY *OutportW)(WORD PortNum, WORD Data);
-  typedef void (APIENTRY *OutportD)(WORD PortNum, DWORD Data);
-  typedef void (APIENTRY *LicenseInfo)(LPSTR sUserName, DWORD lKey);
-  typedef void (APIENTRY *EnablePorts)(WORD PortStart, WORD PortStop);
-  typedef void (APIENTRY *DisablePorts)(WORD PortStart, WORD PortStop);
-  typedef BOOL (APIENTRY *GetFastMode)();
-  typedef int (APIENTRY *GetLastState)(char *sStatus);
-  typedef WORD (APIENTRY *GetLPTPortAddress)(WORD portID);
-  typedef WORD (APIENTRY *GetNTPortVersion)();
-  typedef BOOL (APIENTRY *IsWin64)();
-  typedef BOOL (APIENTRY *IsWinNT)();
-  typedef WORD (APIENTRY *Inp)(WORD PortNum);
-  typedef WORD (APIENTRY *Inpw)(WORD PortNum);
-  typedef DWORD (APIENTRY *Inpd)(WORD PortNum);
-  typedef WORD (APIENTRY *Inport)(WORD PortNum);
-  typedef WORD (APIENTRY *InportW)(WORD PortNum);
-  typedef DWORD (APIENTRY *InportD)(WORD PortNum);
+#ifdef __WIN32__
+  //unsigned short  Inp(unsigned short PortNum);
+  typedef void (APIENTRY *Outp)(unsigned short, unsigned short);
+  //typedef void (APIENTRY *Outpw)(unsigned short PortNum, unsigned short Data);
+  //typedef void (APIENTRY *Outpd)(unsigned short PortNum, unsigned long Data);
+  //typedef void (APIENTRY *Outport)(unsigned short PortNum, unsigned short Data);
+  //typedef void (APIENTRY *OutportW)(unsigned short PortNum, unsigned short Data);
+  //typedef void (APIENTRY *OutportD)(unsigned short PortNum, unsigned long Data);
+  //typedef void (APIENTRY *LicenseInfo)(LPSTR sUserName, unsigned long lKey);
+  //typedef void (APIENTRY *EnablePorts)(unsigned short PortStart, unsigned short PortStop);
+  //typedef void (APIENTRY *DisablePorts)(unsigned short PortStart, unsigned short PortStop);
+  //typedef bool (APIENTRY *GetFastMode)();
+  //typedef int (APIENTRY *GetLastState)(char *sStatus);
+  //typedef unsigned short (APIENTRY *GetLPTPortAddress)(unsigned short portID);
+  //typedef unsigned short (APIENTRY *GetNTPortVersion)();
+  //typedef bool (APIENTRY *IsWin64)();
+  //typedef bool (APIENTRY *IsWinNT)();
+  typedef unsigned short (APIENTRY *Inp)(unsigned short PortNum);
+  //typedef unsigned short (APIENTRY *Inpw)(unsigned short PortNum);
+  //typedef unsigned long (APIENTRY *Inpd)(unsigned short PortNum);
+  //typedef unsigned short (APIENTRY *Inport)(unsigned short PortNum);
+  //typedef unsigned short (APIENTRY *InportW)(unsigned short PortNum);
+  //typedef unsigned long (APIENTRY *InportD)(unsigned short PortNum);
+#else
+  typedef void ( *Outp)(unsigned short, unsigned short);
+  typedef unsigned short ( *Inp)(unsigned short PortNum);
+#endif
 
 
 
-
-  //typedef DWORD (APIENTRY *GetFileVersionInfoSizeProtoType)(LPCTSTR, LPDWORD);
+  //typedef unsigned long (APIENTRY *GetFileVersionInfoSizeProtoType)(LPCTSTR, LPunsigned long);
   Outp ntoutport;
   Inp ntinport;
 

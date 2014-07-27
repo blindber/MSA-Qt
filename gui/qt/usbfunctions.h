@@ -17,13 +17,15 @@
 #ifndef USBFUNCTIONS_H
 #define USBFUNCTIONS_H
 
+#include "usbfunc.h"
+
 #include <QtCore>
 #ifdef __WIN32__
 #include <windows.h>
 #endif
 
 #ifndef __WIN32__
-//#define __int64 qint64
+//#define qint64 qint64
 #endif
 
 struct USBrBuf
@@ -55,7 +57,7 @@ struct UsbAdcControl
 };
 
 
-class usbFunctions
+class usbFunctions : public usbFunc
 {
 public:
   usbFunctions();
@@ -69,17 +71,17 @@ public:
   int usbMSADeviceWriteString(QString data, int message_size );
   int usbMSADeviceReadAdcs(char *data, int message_size, unsigned long *pResults );
   int usbMSADeviceReadAdcsStruct(unsigned short *pData, unsigned long *pResults );
-  int usbMSADevicePopulateDDSArrayBitReverse(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults );
-  int usbMSADevicePopulateDDSArray(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults );
+  int usbMSADevicePopulateDDSArrayBitReverse(qint64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults );
+  int usbMSADevicePopulateDDSArray(qint64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults );
   int usbMSADevicePopulateAllArray(unsigned short Steps, unsigned short bits,
-                                __int64 *pBit0Array,
-                                __int64 *pBit1Array,
-                                __int64 *pBit2Array,
-                                __int64 *pBit3Array,
-                                __int64 *pBit4Array,
-                                __int64 *pBit5Array,
-                                __int64 *pBit6Array,
-                                __int64 *pBit7Array,
+                                qint64 *pBit0Array,
+                                qint64 *pBit1Array,
+                                qint64 *pBit2Array,
+                                qint64 *pBit3Array,
+                                qint64 *pBit4Array,
+                                qint64 *pBit5Array,
+                                qint64 *pBit6Array,
+                                qint64 *pBit7Array,
                                 unsigned long *pResults );
   int usbMSADeviceWriteInt64MsbFirst(short nUsbCommandByte, unsigned long *pData,
                                   short nBits, short clock, short fixeddata, short vardata,
@@ -113,17 +115,17 @@ private:
   typedef int (*_UsbMSADeviceWriteString)( void *pMSAData, char *data, int message_size );
   typedef int (*_UsbMSADeviceReadAdcs)( void *pMSAData, char *data, int message_size, unsigned long *pResults );
   typedef int (*_UsbMSADeviceReadAdcsStruct)( void *pMSAData, unsigned short *pData, unsigned long *pResults );
-  typedef int (*_UsbMSADevicePopulateDDSArrayBitReverse)( void *pMSAData, __int64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults );
-  typedef int (*_UsbMSADevicePopulateDDSArray)( void *pMSAData, __int64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults );
+  typedef int (*_UsbMSADevicePopulateDDSArrayBitReverse)( void *pMSAData, qint64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults );
+  typedef int (*_UsbMSADevicePopulateDDSArray)( void *pMSAData, qint64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults );
   typedef int (*_UsbMSADevicePopulateAllArray)( void *pMSAData, unsigned short Steps, unsigned short bits,
-                                __int64 *pBit0Array,
-                                __int64 *pBit1Array,
-                                __int64 *pBit2Array,
-                                __int64 *pBit3Array,
-                                __int64 *pBit4Array,
-                                __int64 *pBit5Array,
-                                __int64 *pBit6Array,
-                                __int64 *pBit7Array,
+                                qint64 *pBit0Array,
+                                qint64 *pBit1Array,
+                                qint64 *pBit2Array,
+                                qint64 *pBit3Array,
+                                qint64 *pBit4Array,
+                                qint64 *pBit5Array,
+                                qint64 *pBit6Array,
+                                qint64 *pBit7Array,
                                 unsigned long *pResults );
   typedef int (*_UsbMSADeviceWriteInt64MsbFirst)( void *pMSAData, short nUsbCommandByte, unsigned long *pData,
                                   short nBits, short clock, short fixeddata, short vardata,

@@ -99,19 +99,19 @@ public:
    * */
   int usbMSADeviceReadAdcsStruct(unsigned short *pData, unsigned long *pResults );
 
-  int usbMSADevicePopulateDDSArrayBitReverse(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults );
+  int usbMSADevicePopulateDDSArrayBitReverse(qint64 *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults );
 
-  int usbMSADevicePopulateDDSArray(__int64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults );
+  int usbMSADevicePopulateDDSArray(qint64 *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults );
 
   int usbMSADevicePopulateAllArray(unsigned short Steps, unsigned short bits,
-                                __int64 *pBit0Array,
-                                __int64 *pBit1Array,
-                                __int64 *pBit2Array,
-                                __int64 *pBit3Array,
-                                __int64 *pBit4Array,
-                                __int64 *pBit5Array,
-                                __int64 *pBit6Array,
-                                __int64 *pBit7Array,
+                                qint64 *pBit0Array,
+                                qint64 *pBit1Array,
+                                qint64 *pBit2Array,
+                                qint64 *pBit3Array,
+                                qint64 *pBit4Array,
+                                qint64 *pBit5Array,
+                                qint64 *pBit6Array,
+                                qint64 *pBit7Array,
                                 unsigned long *pResults );
 
   int usbMSADeviceWriteInt64MsbFirst(short nUsbCommandByte, unsigned long *pData,
@@ -135,7 +135,7 @@ private:
 
   bool Write(MSA_TXBUFFER * writebuf, int message_size);
   bool Read(MSA_RXBUFFER * readbuf);
-  inline void ProcessBitArray( unsigned char *pVal, int bits, __int64 x, int bit );
+  inline void ProcessBitArray( unsigned char *pVal, int bits, qint64 x, int bit );
 
 
   int nArrayCols;

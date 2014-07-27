@@ -3509,7 +3509,7 @@ void hwdInterface::FillPLL1array(int step)
     unsigned long result;
     //          if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long, ptrSPLL1Array as ulong
     //                  , Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
-    usb->usbMSADevicePopulateDDSArrayBitReverse((__int64 *)usb->ptrSPLL1Array, usb->int64N, vars->thisstep, 40, &result);
+    usb->usbMSADevicePopulateDDSArrayBitReverse((qint64 *)usb->ptrSPLL1Array, usb->int64N, vars->thisstep, 40, &result);
   }
   else
   {
@@ -3556,7 +3556,7 @@ void hwdInterface::FillPLL3array(int step)
     unsigned long result;
   //   if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArrayBitReverse", USBdevice as long
     //, ptrSPLL3Array as ulong, Int64N as ptr, thisstep as short, 40 as short, result as boolean 'USB:11-08-2010
-    usb->usbMSADevicePopulateDDSArrayBitReverse((__int64 *)usb->ptrSPLL3Array, usb->int64N, vars->thisstep, 40, &result);
+    usb->usbMSADevicePopulateDDSArrayBitReverse((qint64 *)usb->ptrSPLL3Array, usb->int64N, vars->thisstep, 40, &result);
   }
   else
   {
@@ -3602,7 +3602,7 @@ void hwdInterface::FillDDS1array(int step)
   {
     unsigned long result;
     //  if USBdevice <> 0 then CALLDLL #USB, "UsbMSADevicePopulateDDSArray", USBdevice as long, ptrSDDS1Array as ulong, Int64SW as ptr, thisstep as short, result as boolean //USB:11-08-2010
-    usb->usbMSADevicePopulateDDSArray((__int64 *)usb->ptrSDDS1Array, usb->int64SW, vars->thisstep, &result);
+    usb->usbMSADevicePopulateDDSArray((qint64 *)usb->ptrSDDS1Array, usb->int64SW, vars->thisstep, &result);
 
   }
   else
@@ -3664,7 +3664,7 @@ void hwdInterface::FillDDS3array(int step)
     if (activeConfig->cb == hwdUsbV1)
     {
       unsigned long result;
-      usb->usbMSADevicePopulateDDSArray((__int64 *)usb->ptrSDDS3Array, usb->int64SW, vars->thisstep, &result);
+      usb->usbMSADevicePopulateDDSArray((qint64 *)usb->ptrSDDS3Array, usb->int64SW, vars->thisstep, &result);
     }
 /*
     else 'USB:05/12/2010
@@ -3753,10 +3753,10 @@ result as boolean //USB:11-08-2010
     usb->usbMSADevicePopulateAllArray(vars->steps,
                                       40,
                                       0,
-                                      (__int64 *)usb->ptrSPLL1Array,
-                                      (__int64 *)usb->ptrSDDS1Array,
-                                      (__int64 *)usb->ptrSPLL3Array,
-                                      (__int64 *)usb->ptrSDDS3Array,
+                                      (qint64 *)usb->ptrSPLL1Array,
+                                      (qint64 *)usb->ptrSDDS1Array,
+                                      (qint64 *)usb->ptrSPLL3Array,
+                                      (qint64 *)usb->ptrSDDS3Array,
                                       0,
                                       0,
                                       0,

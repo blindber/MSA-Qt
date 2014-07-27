@@ -5,6 +5,7 @@
 
 libUsbFunctions::libUsbFunctions()
 {
+  device = NULL;
   int r;
   r = libusb_init(NULL);
   if (r < 0)
@@ -143,8 +144,8 @@ int libUsbFunctions::usbMSADeviceReadAdcsStruct(unsigned short *pData, unsigned 
 
 int libUsbFunctions::usbMSADevicePopulateDDSArrayBitReverse(long long *pArray, unsigned long *pData, unsigned short step, unsigned short bits, unsigned long *pResults)
 {
-  __int64 y = 0;
-  __int64 x = (((__int64)(pData[0])) <<32)+pData[1];
+  qint64 y = 0;
+  qint64 x = (((qint64)(pData[0])) <<32)+pData[1];
   for (int i = 0; i < bits; ++i)
   {
     y <<= 1;
@@ -158,7 +159,7 @@ int libUsbFunctions::usbMSADevicePopulateDDSArrayBitReverse(long long *pArray, u
 
 int libUsbFunctions::usbMSADevicePopulateDDSArray(long long *pArray, unsigned long *pData, unsigned short step, unsigned long *pResults)
 {
-  __int64 llData = (((__int64)(pData[0])) <<32)+pData[1];
+  qint64 llData = (((qint64)(pData[0])) <<32)+pData[1];
   pArray[step] = llData;
   return 1;
 }
@@ -208,8 +209,8 @@ int libUsbFunctions::usbMSADeviceWriteInt64MsbFirst(short nUsbCommandByte, unsig
 
   MSA_TXBUFFER writebuf;
   unsigned char nByte;
-  __int64 x = (((__int64)(pData[0])) <<32)+pData[1];
-  __int64 nBitMask = 1<<(nBits-1);
+  qint64 x = (((qint64)(pData[0])) <<32)+pData[1];
+  qint64 nBitMask = 1<<(nBits-1);
 
   writebuf.set.command_code = nUsbCommandByte & 0xff;
   writebuf.set.length = nBits & 0xff;
@@ -304,6 +305,10 @@ bool libUsbFunctions::usbInterfaceOpen(QString fileName)
     if (status == 0)
       qDebug() << "USB device claimed";
   }
+  else
+  {
+    device = NULL;
+  }
   libusb_free_device_list (devs, 1);
   return devFound;
 }
@@ -314,6 +319,7 @@ void libUsbFunctions::usbCloseInterface()
   libusb_release_interface (device,  0);
   //all tasks done close the device handle
   libusb_close (device);
+  device = NULL;
 }
 
 bool libUsbFunctions::Write(MSA_TXBUFFER *writebuf, int message_size)
@@ -321,6 +327,9 @@ bool libUsbFunctions::Write(MSA_TXBUFFER *writebuf, int message_size)
   //LONG len = message_size;
   int sent;
   unsigned char *wbuf = (unsigned char *)writebuf;
+
+  if (device == NULL)
+    return false;
 
   int err = libusb_bulk_transfer(device, 2, wbuf, message_size, &sent, 100);
   if (err != 0)
@@ -335,6 +344,10 @@ bool libUsbFunctions::Read(MSA_RXBUFFER *readbuf)
   int received;
   int len = 255;
   unsigned char *rbuf = (unsigned char *)readbuf;
+
+  if (device == NULL)
+    return false;
+
   int err = libusb_bulk_transfer ( device, 0x86, rbuf, len, &received, 100);
   if (err != 0)
   {
@@ -345,7 +358,7 @@ bool libUsbFunctions::Read(MSA_RXBUFFER *readbuf)
 
 void libUsbFunctions::ProcessBitArray(unsigned char *pVal, int bits, long long x, int bit)
 {
-  __int64 mask = 1;
+  qint64 mask = 1;
   for( int j=0; j<bits; j++, mask <<=1)
   {
     if( x & mask )

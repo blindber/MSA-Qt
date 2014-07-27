@@ -1262,7 +1262,7 @@ void lptFunctions::output(short port, short value)
   }
   else if (libraryType == ntPortLin)
   {
-    ntoutport((WORD)port, (WORD)value);
+    ntoutport((unsigned short)port, (unsigned short)value);
   }
   else if (libraryType == userPortLib)
   {
