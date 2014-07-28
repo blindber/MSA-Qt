@@ -96,7 +96,7 @@ void usbFunctions::usbCloseInterface()
     return;
   if (usbLib->isLoaded())
   {
-    GlobalFree(hSAllArray);
+    //GlobalFree(hSAllArray);
     UsbMSARelease(USBDevice);
     USBDevice = NULL;
     usbLib->unload();

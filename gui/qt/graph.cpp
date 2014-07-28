@@ -127,6 +127,11 @@ msagraph::msagraph(QWidget *parent)
   displaySweepTime = 0;
   interpolateMarkerClicks = 0;
   componConst = 0;
+  gEraseLead = 0;
+  y1IsPhase = 0;
+  y2IsPhase = 0;
+
+  gClearMarkers();
 
   haltMarker = NULL;
 
@@ -2933,7 +2938,8 @@ void msagraph::gClearMarkers()
   //point number of -1 indicates that marker is absent
   for (int i=0; i < 20; i++)
   {
-    gMarkerPoints[i][0]=-1; gMarkerPoints[i][1]=0-util.uTenPower(9);
+    gMarkerPoints[i][0] = -1;
+    gMarkerPoints[i][1] = 0 - util.uTenPower(9);
   }
 }
 
@@ -2949,7 +2955,8 @@ int msagraph::gValidMarkerCount()
   int count=0;
   for (int i=1; i <= gNumMarkers; i++)
   {
-      if (gMarkerPoints[i][0]>=0) count=count+1;
+      if (gMarkerPoints[i][0] >= 0)
+          count=count+1;
   }
   return count;
 }

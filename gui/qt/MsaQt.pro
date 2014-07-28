@@ -129,3 +129,6 @@ OTHER_FILES += \
 
 win32:INCLUDEPATH += "../../../../../lib/libusb/include/libusb-1.0"
 win32:LIBS += -L"../../../../../lib/libusb/MinGW32/static" -llibusb-1.0
+
+unix:INCLUDEPATH += /usr/include/libusb-1.0
+unix:LIBS += -L"/usr/lib/i386-linux-gnu/" -lusb-1.0

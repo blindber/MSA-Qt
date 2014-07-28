@@ -5,7 +5,7 @@
 
 sweepStruct::sweepStruct()
 {
-  msaMode = 0;
+  msaMode = modeSA;
   gentrk = 0;
   calCanUseAutoWait = 0;
   useAutoWait = 0;

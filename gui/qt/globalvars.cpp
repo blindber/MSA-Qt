@@ -53,6 +53,9 @@ globalVars::globalVars()
   steps = 400;
   globalSteps = 400;
 
+  msaMode = modeSA;
+  menuMode = modeSA;
+
 }
 int globalVars::DataTypeIsAngle(int dataType)
 {

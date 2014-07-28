@@ -140,13 +140,19 @@ MainWindow::~MainWindow()
   }
   //delete timerStart;
   //delete timerStart2;
+  delete gridappearance;
+  delete graph;
+  hwdIf->finished();
   delete hwdIf->usb;
+  delete hwdIf;
   delete ui;
   if (winConfigMan)
   {
     delete winConfigMan;
   }
   delete vars;
+
+
 }
 
 void MainWindow::delayedStart()
@@ -164,6 +170,10 @@ void MainWindow::delayedStart()
     bUsbAvailable = true;
   else
     bUsbAvailable = false;
+
+#ifdef __linux__
+  bUsbAvailable = true;
+#endif
 
   if (bUsbAvailable)
   {

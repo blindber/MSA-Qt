@@ -24,6 +24,7 @@ dialogVNACal::dialogVNACal(QWidget *parent) :
   ui(new Ui::dialogVNACal)
 {
   ui->setupUi(this);
+  desiredCalLevel = 0;
 }
 
 dialogVNACal::~dialogVNACal()

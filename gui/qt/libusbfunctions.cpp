@@ -34,6 +34,11 @@ libUsbFunctions::libUsbFunctions()
 libUsbFunctions::~libUsbFunctions()
 {
   libusb_exit(NULL);
+  free (ptrSAllArray);
+  free (ptrSDDS1Array);
+  free (ptrSDDS3Array);
+  free (ptrSPLL1Array);
+  free (ptrSPLL3Array);
 }
 
 int libUsbFunctions::usbMSAGetVersions()
@@ -299,7 +304,13 @@ bool libUsbFunctions::usbInterfaceOpen(QString fileName)
   if (devFound)
   {
     int status = libusb_open(dev, &device);
+    if (status != 0)
+      qDebug() << "USB lib load failed";
+    else
+      qDebug() << "USB lib load ok";
     status = libusb_get_config_descriptor (dev, 0, &config);
+    if (status != 0)
+      qDebug() << "USB get config descriptor failed";
 
     status = libusb_claim_interface(device, 0);
     if (status == 0)
