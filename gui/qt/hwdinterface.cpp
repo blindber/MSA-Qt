@@ -2,7 +2,7 @@
 #include <QtCore>
 #include <QString>
 #include "constants.h"
-#include "ComplexMaths.h"
+#include "complexmaths.h"
 
 hwdInterface::hwdInterface(QWidget *parent)
 {

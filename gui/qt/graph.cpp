@@ -2384,19 +2384,19 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
   if (gIsFirstDynamicScan==0 && eraseInBounds)
   {
     //1. Erase a segment on each trace
-    if (gErase1[thisErasePoint] != 0)
+    if (gErase1[thisErasePoint])
     {
       QGraphicsItem *temp = gErase1[thisErasePoint];
       graphScene->removeItem(temp);
       delete temp;
-      gErase1[thisErasePoint] = 0;
+      gErase1[thisErasePoint] = NULL;
     }
-    if (gErase2[thisErasePoint] != 0)
+    if (gErase2[thisErasePoint])
     {
       QGraphicsItem *temp = gErase2[thisErasePoint];
       graphScene->removeItem(temp);
       delete temp;
-      gErase2[thisErasePoint] = 0;
+      gErase2[thisErasePoint] = NULL;
     }
   }  //End Erase
 

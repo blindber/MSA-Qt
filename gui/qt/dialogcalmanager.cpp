@@ -1590,6 +1590,7 @@ QString dialogCalManager::calLoadFromFile(int pathNum)
   int startLine=1; int isFile=1;
   retVal = calReadFile(calIn, NULL, isFile, pathNum, startLine);
   calIn->close();
+  delete calIn;
   if (pathNum!=0)
   {
     activeConfig->finalfreq=activeConfig->MSAFilters[pathNum][0];

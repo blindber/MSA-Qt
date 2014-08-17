@@ -3982,6 +3982,8 @@ void MainWindow::LoadPreferenceFile(QString fileName)
   graph->RememberState();  //So we can see what changed
   LoadBasicContextsFromFile();   //Load preferences from restoreFileHndl$
   vars->restoreFileHndl->close();
+  delete vars->restoreFileHndl;
+  vars->restoreFileHndl = NULL;
   if (vars->restoreErr!="" && vars->doingInitialization==0)
     QMessageBox::critical(0,"Error", "Error loading preference file: "+vars->restoreErr);
   DetectFullChanges();
