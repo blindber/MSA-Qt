@@ -2,6 +2,7 @@
 #include <QtCore>
 #include <QString>
 #include "constants.h"
+#include "ComplexMaths.h"
 
 hwdInterface::hwdInterface(QWidget *parent)
 {
@@ -11,6 +12,8 @@ hwdInterface::hwdInterface(QWidget *parent)
   usb = new usbFunctions;
 #endif
   calMan = new dialogCalManager(parent);
+  specTests = new dialogSpecialTests(this, parent);
+
 
   // connect up the signals so we can tell the main windows what to do
   connect(this, SIGNAL(DisplayButtonsForHalted()), parent, SLOT(DisplayButtonsForHalted()));
@@ -107,7 +110,9 @@ hwdInterface::hwdInterface(QWidget *parent)
 
 hwdInterface::~hwdInterface()
 {
-
+  delete specTests;
+  delete calMan;
+  delete usb;
 }
 void hwdInterface::setActiveConfig(msaConfig *newActiveConfig)
 {
@@ -1864,7 +1869,7 @@ void hwdInterface::ReadStep()
         if (magdata>=vars->validPhaseThreshold)
         {
           readStepDidInvert=1;
-          InvertPDmodule();
+          InvertPDmodule(vars->thisstep);
         }
       }
     }
@@ -2033,19 +2038,24 @@ void hwdInterface::ReadStep()
 }
 void hwdInterface::ProcessAndPrintLastStep()
 {
-  int rememberstep = vars->thisstep; //remember where we were when entering this routine //ver111-19
+  int rememberstep = vars->thisstep; //remember where we were when entering this routine
   //since we are processing and printing the previous step, use raw data in array(thisstep - sweepDir,data)
 
-  if (vars->thisstep==vars->sweepStartStep)
+  if (vars->thisstep == vars->sweepStartStep)
   {
-    vars->thisstep=vars->sweepEndStep;   //back up one and wrap around
+    vars->thisstep = vars->sweepEndStep;   //back up one and wrap around
   }
   else
   {
-    vars->thisstep=vars->thisstep-vars->sweepDir;  //Back up one step; no wraparound to worry about
+    vars->thisstep = vars->thisstep - vars->sweepDir;  //Back up one step; no wraparound to worry about
   }
-  ProcessAndPrint();//get raw data, process, print to the computer monitor ver111-22
+  ProcessAndPrint();//get raw data, process, print to the computer monitor
   vars->thisstep = rememberstep;
+}
+
+void hwdInterface::specTestToggleVisible()
+{
+  specTests->setVisible(!specTests->isVisible());
 }
 
 void hwdInterface::WaitStatement()
@@ -2201,34 +2211,38 @@ void hwdInterface::ReadPhase()
   return;
 
 }
-void hwdInterface::InvertPDmodule()
+void hwdInterface::InvertPDmodule(int step)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[InvertPDmodule]//this will change the state of the PDM for this step and future steps //ver111-28
-    //entered from [ReadStep], where it was determined that phadata was in, or close to "dead zone"
-    //this subroutine will re-command PDM, and return to [ReadStep] and read the phase again,
-      //but not test for dead zone again, just assumes data to be viable
-    //determine what the pdmstate was when entering, and "flip" it
-    if suppressHardware then return //ver115-6c
-    if phaarray(thisstep,0) = 0 then newpdmstate = 1 //ver112-2a
-    if phaarray(thisstep,0) = 1 then newpdmstate = 0 //ver112-2a
+  //qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+
+  //this will change the state of the PDM for this step and future steps //ver111-28
+  //entered from [ReadStep], where it was determined that phadata was in, or close to "dead zone"
+  //this subroutine will re-command PDM, and return to [ReadStep] and read the phase again,
+  //but not test for dead zone again, just assumes data to be viable
+  //determine what the pdmstate was when entering, and "flip" it
+  int newpdmstate;
+    if (vars->suppressHardware)
+      return;
+    if (vars->phaarray[step][0] == 0)
+      newpdmstate = 1;
+    if (vars->phaarray[step][0] == 1)
+      newpdmstate = 0;
     //change the pdm state for thisstep to the newpdmstate
-    phaarray(thisstep,0) = newpdmstate
+    vars->phaarray[step][0] = newpdmstate;
     //now, go and command the PDM to the new state (Command PDM only!)
-    gosub [CommandPDMonly] //command just the PDM ver111-28
+    CommandPDMonly(); //command just the PDM ver111-28
     //this has just created a large glitch in the PDM output, so while it is settling down,
     //change future PDM commands for all subsequent steps to end of sweep.
-    for i = thisstep to sweepEndStep step sweepDir //ver114-5a
-        phaarray(i,0) = newpdmstate //inverts pdmcmd for thisstep and subsequent steps to end of sweep. ver111-28
-    next i
+    for (int i = step; i <= vars->sweepEndStep; i = i + vars->sweepDir)
+    {
+        vars->phaarray[i][0] = newpdmstate; //inverts pdmcmd for thisstep and subsequent steps to end of sweep. ver111-28
+    }
     //add appropriate wait time before reading the phase again
-    gosub [VideoGlitchPDM]//calculates glitchpdm, depending on Video Selection and auto wait state
-    gosub [WaitStatement] //and use the new glitchpdm value
+    VideoGlitchPDM();//calculates glitchpdm, depending on Video Selection and auto wait state
+    WaitStatement(); //and use the new glitchpdm value
     //now, go and read Phase, again. Use its "return" to return to [ReadStep]
-    goto [ReadPhase] //re-read the phase and return to [ReadStep]
+    ReadPhase(); //re-read the phase and return to [ReadStep]
     //when back in [ReadStep], it will not test for dead zone again. Assumes valid Phase.
-*/
 }
 void hwdInterface::VideoGlitchPDM()
 {
@@ -2335,70 +2349,7 @@ void hwdInterface::ReadADCviaUSB()
   return;
 }
 
-void hwdInterface::ProcessDataArrays()
-{
-  //process "thisstep" data for VNA/SNA, filling S21DataArray and/or ReflectArray
-  //ver115-8b separated this from ProcessAndPrint so it can be called separately.
-  //Data is transferred from datatable, stored as necessary and calculations made.
-  //For reflection mode; do jig calc and/or apply OSL calibration
-  //But data as is if we are doing calibration.
-  TransferToDataArrays();
-  if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
-  {
-    if (vars->calInProgress==0 && vars->planeadj!=0)
-    {
-      float phaseToExtend=vars->S21DataArray[vars->thisstep][2];
-      util.uExtendCalPlane(vars->thisfreq, phaseToExtend, vars->planeadj,0);  //Do plane adjustment
-      vars->S21DataArray[vars->thisstep][2]=phaseToExtend;
-    }
-  }
-  else
-  {
-    if (vars->msaMode==modeReflection)
-    {
-      ConvertRawDataToReflection(vars->thisstep);    //Apply calibration and calculate all reflection related data; apply OSL if necessary
-    }
-  }
-}
 
-void hwdInterface::TransferToDataArrays()
-{
-  //Transfer datatable data to transmission or reflection array for thisstep
-  float thisfreq=vars->datatable[vars->thisstep][1];  //freq
-  int thisBand=vars->datatable[vars->thisstep][4];
-  if (thisBand!=1)
-    thisfreq=ActualSignalFrequency(thisfreq,thisBand); //actual signal frequency, not equivalent 1G freq
-  float thisDB=vars->datatable[vars->thisstep][2];     //mag db
-  float thisAng=vars->datatable[vars->thisstep][3];  //phase
-
-  //We save data in S21DataArray for VectorTrans and ScalarTrans modes
-  //We save data in ReflectArray for Reflection Mode.
-  //Note that the actual signal frequency, not equivalent 1G freq, gets saved in these arrays
-  //as part of the restart process, but we repeat that here in case we are called outside the normal
-  //scanning process.
-  //Note data in datatable has no adjustment for planeadj, but these other arrays do
-
-  if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
-  {
-    vars->S21DataArray[vars->thisstep][0]=thisfreq;   //actual signal freq
-    vars->S21DataArray[vars->thisstep][1]=thisDB;   //mag
-    vars->S21DataArray[vars->thisstep][2]=thisAng;  //phase--may be changed by plane extension
-    vars->S21DataArray[vars->thisstep][3]=thisAng;  //phase before plane extension ver116-1b
-  }
-  if (vars->msaMode==modeReflection)
-  {
-    for (int i=1; i <= 16; i++)
-    {
-      vars->ReflectArray[vars->thisstep][i]=0;
-    } //Clear all reflection data (except freq) for this point
-    vars->ReflectArray[vars->thisstep][0]=thisfreq;   //actual signal freq
-    //The following may be changed by applying OSL
-    vars->ReflectArray[vars->thisstep][constGraphS11DB]=thisDB;   //Save raw data in array that will hold reflection related data
-    vars->ReflectArray[vars->thisstep][constGraphS11Ang]=thisAng;
-    vars->ReflectArray[vars->thisstep][constIntermedS11DB]=thisDB;    //ConvertRawDataToReflection may override these intermed values
-    vars->ReflectArray[vars->thisstep][constIntermedS11Ang]=thisAng;
-  }
-}
 
 void hwdInterface::ConvertPhadata()
 {
@@ -2497,7 +2448,7 @@ void hwdInterface::ConvertMagPhaseData()
   //by magdata, and put it into difPhase, to be subtracted from phase later.
 
   float magdata, doPhaseCor, power, difPhase;
-  int freqerror;
+  //int freqerror;
   if (vars->doSpecialGraph==0)
   {
     //Normal scan. Apply the calibration
@@ -2513,7 +2464,7 @@ void hwdInterface::ConvertMagPhaseData()
       doPhaseCor=0;
     }
     calMan->calConvertMagPhase(magdata, doPhaseCor, power, difPhase);
-    //int thisfreq = vars->datatable[vars->thisstep][1];
+    vars->thisfreq = vars->datatable[vars->thisstep][1];
     freqerror=vars->freqCorrection[vars->thisstep]; //find freq cal adjustment SEWgraph1
     //In SA mode, if there is an active front end file, we add the front end correction factor
     if (vars->msaMode==modeSA)
@@ -2534,7 +2485,7 @@ void hwdInterface::ConvertMagPhaseData()
     }
     else
     {
-      DoSpecialGraph();
+      DoSpecialGraph(power);
     }
   }
 
@@ -2563,223 +2514,165 @@ void hwdInterface::ConvertMagPhaseData()
 
 }
 
-void hwdInterface::DoSpecialGraph()
+void hwdInterface::DoSpecialGraph(float &power)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-difPhase=0 : freqerror=0  'ver114-7e
-    if doSpecialGraph=1 then
-        'Graph mag calibration table. Find the min and max ADC values
-        'and make magdata run linearly from the minimum to the maximum.
-        'Any non-linearities in the graph then reflect the calibration
-        'We do nothing with phase
-        call calGetMagPoint 1,minADC, calMag, calPhase    'ignore calMag and calPhase
-        call calGetMagPoint calNumMagPoints(),maxADC, calMag, calPhase
-        testSlope=(maxADC-minADC)/steps
-        magdata=minADC+testSlope*thisstep
-        'Apply mag calibration to get power, but forget phase correction
-        call calConvertMagPhase magdata, 0, power, dum
-        'skip freq cal
-        return
-    end if
-    if doSpecialGraph=2 then
-        'Force power to 0 dbm and then find the frequency compensation.
-        'The resulting graph will show the shape of the frequency compensation
-        'curve.
-        power=0
-        thisfreq = datatable(thisstep,1)
-        freqerror=freqCorrection(thisstep) 'find freq cal adjustment SEWgraph1
-        return
-    end if
-    if doSpecialGraph=3 then
-        'Generate random values for magdata superimposed on a sine wave centered midway in ADC
-        'Make Transmission values a little higher.
-        call calGetMagPoint 1,minADC, calMag, calPhase    'ignore calMag and calPhase
-        call calGetMagPoint calNumMagPoints(),maxADC, calMag, calPhase
-        magdata=3*(1+RND(1)/20)*(maxADC)/4 +  3000*sin(10*datatable(thisstep,1)) 'ver114-7b
-        if msaMode$=modeVectorTrans or msaMode$=modeScalarTrans then magdata=1.1*magdata    'Increase transmission values ver116-1b
-        'Note: without being connected to MSA, which is when DoSpecialGraph is useful,
-        'phase will bounce between 0 and 180 and thus will show some graph action.
-        call calConvertMagPhase magdata, 1, power, difPhase 'ver114-5n
-        thisfreq = datatable(thisstep,1)
-        freqerror=freqCorrection(thisstep) 'find freq cal adjustment SEWgraph1
-        phase=180-10*datatable(thisstep,1)  'linear change over frequency
-        datatable(thisstep,3) = phase   'ver116-4h
-        return
-    end if
-    if doSpecialGraph=4 then
-        'Generate a peak near 1 MHz
-        currXVal=gGetPointXVal(thisstep+1)-1
-        'Upside down parabola centered  near MHz ver 114-3g
-        power=max(-6-((3000+doSpecialRandom*2000)*(currXVal+0.025-doSpecialRandom/20)^2),-100)
-        phase=270-300*datatable(thisstep,1) 'ver115-1b
-        datatable(thisstep,3) = phase   'ver116-4h
-        return
-    end if
-    if doSpecialGraph=5 then
-            'doSpecialGraph=5
-            'For SA mode, do response of a 1 MHz square wave.
-            'For VNA modes, Calc response of an RLC circuit with optional transmission line 'ver114-7e
-       if msaMode$=modeSA then    'ver115-4c added the 1 MHz square wave for SA mode
-            currXVal=gGetPointXVal(thisstep+1)
-            specialWholeFreq=int(currXVal+0.5) : specialFractFreq=currXVal-specialWholeFreq 'fract may be -0.5 to +0.5
-            specialNoise=(1e-11)*finalbw*(1+4*Rnd(0))
-            if specialWholeFreq=2*int(specialWholeFreq/2) then
-                power=10*uSafeLog10(specialNoise)
-            else
-                '1 MHz square wave at odd multiples of 1 MHz has power of 1/N mw, where N is the multiple.
-                'It tapers off per a parabola, which is wider for higher RBW.
-                power=10*uSafeLog10(specialNoise+(1/specialWholeFreq^2)*max(0,(1-(1400*specialFractFreq/finalbw)^2)))
-            end if
-            phase=0 : datatable(thisstep,3) = 0
-        else    'VNA modes
-            uWorkNumPoints=1 : uWorkArray(1,0)=gGetPointXVal(thisstep+1) 'ver115-1c  'set up for uRLCComboResponse
-            uWorkArray(1,1)=0:uWorkArray(1,2)=0 'Default in case of error
-            'Calc response in whatever S11 or S21 setup the user has chosen
-            if msaMode$=modeReflection then
-                doSpecialR0=S11BridgeR0 : doSpecialJig$="S11"   'ver115-4a
-            else
-                doSpecialR0=S21JigR0
-                if S21JigAttach$="Series" then doSpecialJig$="S21Series" else doSpecialJig$="S21Shunt"
-            end if
-                'Note we only have one point in uWorkArray for uRLCComboResponse to process
-                'Note calibration will not be applied for doSpecialGraph=5, so uRLCComboResponse
-                'calculates the actual final response. e.g. S21JigShuntDelay is not taken into account, because
-                'it would be removed by a perfect calibration.
-            isErr=uRLCComboResponse(doSpecialRLCSpec$, doSpecialR0, doSpecialJig$)  'ver115-4a
-            power=uWorkArray(1,1)   'get results of uRLCComboResponse
-            phase=uWorkArray(1,2)
-            datatable(thisstep,3) = phase
-        end if
-        return
-    end if
-    'doSpecialGraph=6  There is currently no such thing
-    power=0 : phase=0 : datatable(thisstep,3) = phase
-    return
-*/
-}
-void hwdInterface::ConvertRawDataToReflection(int currStep)
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  //For the current step in reflection mode, calculate S11, referenced to S11GraphR0 ver115-5f mod by ver116-4n
-  //Calculate reflection in db, angle format and puts results in ReflectArray, which already contains the raw data.
-  //Also calculates the various items in ReflectArray() from the final reflection value.
-  //We need to adjust the data for calibration
-  //      Reference calibration
-  //The simplest reflection calibration is to use the Open or Short as a reference. In that case, we still calculate
-  //OSL coefficients as though we did full OSL, using Ideal results for the missing data.
-  //    Full OSL
-  //More extensive calibration would include the Open, Short and Load, from which we calculated the a, b, c OSL
-  //coefficients during calibration. If we have full OSL coefficients, we apply them here.
-  //We identify the type of jig used with S11JigType$, which the user sets during calibration.
-  //S11JigType$ is always set to "Reflect" when doing full OSL, since we don't even know the nature of the actual jig.
-  //In addition, S21JigR0 is set to S11BridgeR0.
-  //Note that S21 or S11 are now referenced to the S21JigR0 or S11BridgeR0, not the graph R0. We do the
-  //conversion here. But we also save S11 as an intermediate value before applying the R0 coversion or plane extension
-  //(but after applying cal) to make recalculations easier. It is saved with constIntermedS11DB and constIntermedS11Ang.
 
-      //First get the raw reflection data. This is the measured data, adjusted by subtracting the reference.
-      //planeadj has not been applied; it is applied after applying calibration
-      //S21JigShuntDelay has not yet been applied. It will be applied here via the OSL coefficients.
-  /*
-  trueFreq=ReflectArray(currStep,0)*1000000
-  db=ReflectArray(currStep,constGraphS11DB) : ang=ReflectArray(currStep,constGraphS11Ang)
-  if calInProgress then   //If calibrating we don't adjust anything here, or calculate anything other than S11
-      ReflectArray(currStep, constIntermedS11DB)=db  //ver115-2d
-      ReflectArray(currStep, constIntermedS11Ang)=ang  //ver115-2d
-      exit sub
-  end if
+  difPhase=0;
+  freqerror=0;
+  float minADC, maxADC, calMag, calPhase, dum;
+  float testSlope;
+  float phase;
+  float magData;
+  float currXVal;
+  double part1, part2;
+  double specialWholeFreq;
+  double specialFractFreq;
+  double specialNoise;
 
-  rho=uTenPower(db/20)    //mag made linear
-      //db, rho, and ang (degrees) now have the raw reflection data
-      //If necessary, we apply full OSL to the reflection data, whether it was derived
-      //from a reflection bridge or a transmission jig.
-      //If doing OSL cal, then we don't want to apply whatever coefficients we happen to have now.
-      //If doSpecialGraph<>0 we don't want to mess with the internally generated data
-  if doSpecialGraph=0 and applyCalLevel<>0 then   //ver115-5f
-      rads=ang*uRadsPerDegree()   //angle in radians
-      mR=rho*cos(rads) : mI=rho*sin(rads)     //measured S11, real and imaginary
-      aR=OSLa(currStep,0) : aI=OSLa(currStep,1)   //coefficient a, real and imaginary
-      bR=OSLb(currStep,0) : bI=OSLb(currStep,1)   //coefficient b, real and imaginary
-      cR=OSLc(currStep,0) : cI=OSLc(currStep,1)   //coefficient c, real and imaginary
 
-      //calculate adjusted db, ang via OSL. Note OSL must be referenced to S11BridgeR0
-      calcMethod=1    //For debugging, we have two different methods
-      if calcMethod=1 then
-              //The first method uses  the following formula, and corresponds to CalcOSLCoeff
-              //       S = (M ? b) / (ac*M)
-              //where S is the actual reflection coefficient and M is the measured reflection coefficient.
-              //S and M are in rectangular form in this equation.
-          RealCM=cR*mR-cI*mI : ImagCM=cR*mI+cI*mR     //c*M, real and imaginary
-          call cxDivide mR-bR, mI-bI, aR-RealCM,aI-ImagCM,refR, refI   //Divide M-b by a-c*M
+  switch(vars->doSpecialGraph)
+  {
+  case 1:
+    //Graph mag calibration table. Find the min and max ADC values
+    //and make magdata run linearly from the minimum to the maximum.
+    //Any non-linearities in the graph then reflect the calibration
+    //We do nothing with phase
+    calMan->calGetMagPoint(1, minADC, calMag, calPhase);    //ignore calMag and calPhase
+    calMan->calGetMagPoint(calMan->calNumMagPoints(), maxADC, calMag, calPhase);
+    testSlope=(maxADC-minADC)/vars->steps;
+    magData=minADC+testSlope*vars->thisstep;
+    //Apply mag calibration to get power, but forget phase correction
+    calMan->calConvertMagPhase(magData, 0, power, dum);
+    //skip freq cal
+    break;
+
+  case 2:
+    //Force power to 0 dbm and then find the frequency compensation.
+    //The resulting graph will show the shape of the frequency compensation
+    //curve.
+    power=0;
+    vars->thisfreq = vars->datatable[vars->thisstep][1];
+    freqerror=vars->freqCorrection[vars->thisstep]; //find freq cal adjustment SEWgraph1
+    break;
+  case 3:
+    //Generate random values for magdata superimposed on a sine wave centered midway in ADC
+    //Make Transmission values a little higher.
+    calMan->calGetMagPoint(1,minADC, calMag, calPhase);    //ignore calMag and calPhase
+    calMan->calGetMagPoint(calMan->calNumMagPoints(),maxADC, calMag, calPhase);
+    //ran = rand() % 100 / 100.0;
+    //noise = 3*(1+ rand() % 100 / 100.0 / 20.0) * (maxADC)/4;
+    magData= (3*(1+ rand() % 100 / 100.0 / 20.0) * (maxADC)/4) +  3000*sin(10*vars->datatable[vars->thisstep][1]);
+    if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
+    {
+      magData=1.1*magData;    //Increase transmission values
+    }
+    //Note: without being connected to MSA, which is when DoSpecialGraph is useful,
+    //phase will bounce between 0 and 180 and thus will show some graph action.
+    calMan->calConvertMagPhase(magData, 1, power, difPhase);
+    vars->thisfreq = vars->datatable[vars->thisstep][1];
+    freqerror=vars->freqCorrection[vars->thisstep]; //find freq cal adjustment SEWgraph1
+    phase=180-10*vars->datatable[vars->thisstep][1];  //linear change over frequency
+    vars->datatable[vars->thisstep][3] = phase;
+    break;
+
+  case 4:
+    //Generate a peak near 1 MHz
+    currXVal=gGetPointXVal(vars->gGraphVal, vars->gMaxPoints,  vars->thisstep+1) - 1;
+    //Upside down parabola centered  near MHz
+    power=qMax(-6-(3000+vars->doSpecialRandom*2000) * pow((currXVal+0.025-vars->doSpecialRandom/20),2.0),-100.0);
+    phase=270-300*vars->datatable[vars->thisstep][1];
+    vars->datatable[vars->thisstep][3] = phase;
+    break;
+
+  case 5:
+    //For SA mode, do response of a 1 MHz square wave.
+    //For VNA modes, Calc response of an RLC circuit with optional transmission line //ver114-7e
+    if (vars->msaMode==modeSA)   //added the 1 MHz square wave for SA mode
+    {
+      currXVal=gGetPointXVal(vars->gGraphVal, vars->gMaxPoints,  vars->thisstep+1);
+      specialWholeFreq=ceil(currXVal);
+      specialFractFreq=currXVal-specialWholeFreq; //fract may be -0.5 to +0.5
+      specialNoise=(1e-11)*activeConfig->finalbw*(1+4*(rand() % 100 / 100.0));
+      if (specialWholeFreq == 2*int(specialWholeFreq/2))
+      {
+        power=10*util.uSafeLog10(specialNoise);
+      }
       else
-              //The second method uses  the following formula, and corresponds to CalcOSLCoeff1
-              //       S = (a - cM)/(bM - 1)
-              //where S is the actual reflection coefficient and M is the measured reflection coefficient.
-              //S and M are in rectangular form in this equation.
+      {
+        //1 MHz square wave at odd multiples of 1 MHz has power of 1/N mw, where N is the multiple.
+        //It tapers off per a parabola, which is wider for higher RBW.
+        part1 = 1/pow(specialWholeFreq,2.0);
+        part2 = part1 * qMax(0.0, (1-pow((1400*specialFractFreq/activeConfig->finalbw),2) ));
+        power=10 * util.uSafeLog10(specialNoise + part2);
+      }
+      phase=0;
+      vars->datatable[vars->thisstep][3] = 0;
+    }
+    else    //VNA modes
+    {
+      qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+      uWork->uWorkNumPoints=1;
+      uWork->uWorkArray[1][0]=gGetPointXVal(vars->gGraphVal, vars->gMaxPoints,  vars->thisstep+1);//set up for uRLCComboResponse
+      uWork->uWorkArray[1][1]=0;
+      uWork->uWorkArray[1][2]=0; //Default in case of error
+      //Calc response in whatever S11 or S21 setup the user has chosen
+      /*
+      if (vars->msaMode==modeReflection)
+      {
+        doSpecialR0=S11BridgeR0;
+        doSpecialJig$="S11";
+      }
+      else
+      {
+        doSpecialR0=S21JigR0;
+        if (S21JigAttach$=="Series")
+          doSpecialJig$="S21Series";
+        else
+          doSpecialJig$="S21Shunt";
 
-          RealCM=cR*mR-cI*mI : ImagCM=cR*mI+cI*mR     //c*M, real and imaginary
-          RealBM=bR*mR-bI*mI : ImagBM=bR*mI+bI*mR     //b*M, real and imaginary
-          numR=aR-RealCM : numI=aI-ImagCM             //numerator, real and imaginary
-          denR=RealBM-1 :denI=ImagBM                  //denominator, real and imaginary
-          call cxDivide numR, numI, denR, denI, refR, refI     //Divide numerator by denominator; result is reflection coeff.
-      end if
-       separated the following common calculations from the above if...else block
-      magSquared=refR^2+refI^2        //mag of S, squared
-      db=10*uSafeLog10(magSquared)    //S mag in db; multiply by 10 not 20 because mag is squared
-      if db>0 then db=0   //Shouldn//t happen
-      ang=uATan2(refR, refI)      //angle of S in degrees
-          //db, ang (degrees) now have S11 data produced by applying OSL calibration.
-  end if
+      }
 
-  //Save the angle prior to applying plane extension or Z0 transform, to make it easier to recalculate with a new values
-  ReflectArray(currStep, constIntermedS11DB)=db  //ver115-2d
-  ReflectArray(currStep, constIntermedS11Ang)=ang  //ver115-2d
-      //Note we do apply plane extension even when doSpecialGraph<>0
-  if planeadj<>0 or S11BridgeR0<>S11GraphR0 then call ApplyExtensionAndTransformR0 ReflectArray(currStep,0), db, ang //ver115-2d
-
-      //Note we do not put the reflection data in datatable, which retains the original raw data
-  ReflectArray(currStep,constGraphS11DB)=db   //Save final S11 in db, angle format (in Graph R0, after plane ext)
-  while ang>180 : ang=ang-360 : wend
-  while ang<=-180 : ang=ang+360 : wend
-  ReflectArray(currStep,constGraphS11Ang)=ang
-  //We now compute the various items in ReflectArray() from S11, but if we are doing calibration we don't need this
-  //other data, and it probably doesn//t make sense anyway.
-  if calInProgress=0 then call CalcReflectDerivedData currStep  //Calc other ReflectArray() data from S11.
-  */
+      //Note we only have one point in uWorkArray for uRLCComboResponse to process
+      //Note calibration will not be applied for doSpecialGraph=5, so uRLCComboResponse
+      //calculates the actual final response. e.g. S21JigShuntDelay is not taken into account, because
+      //it would be removed by a perfect calibration.
+      isErr=uRLCComboResponse(doSpecialRLCSpec$, doSpecialR0, doSpecialJig$);
+      power=uWork->uWorkArray[1][1];   //get results of uRLCComboResponse
+      phase=uWork->uWorkArray[1][2];
+      vars->datatable[vars->thisstep][3] = phase;
+      */
+    }
+    break;
+  default:
+    power=0;
+    phase=0;
+    vars->datatable[vars->thisstep][3] = phase;
+    qDebug() << "Unhandled doSpecial";
+  }
 }
 
-void hwdInterface::ApplyExtensionAndTransformR0(float freq, float &db, float &ang)
+float hwdInterface::gGetPointXVal(Q2DfloatVector &GraphVal, int MaxPoints, float N)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
- /*
-//ver115-2d created ApplyExtensionAndR0Transform so it can be called from a couple of places
-sub ApplyExtensionAndTransformR0 freq, byref db, byref ang   //Apply reflection mode plane extension and transform from bridge R0 to graph R0 for reflection
-    //freq is in MHz
-    //apply plane extension. We do this after applying calibration.
-    //For reflection mode with S21 series jig, plane extension makes no sense, so we don//t do it
-    //For Transmission mode, we don//t get here.
-    //We don//t do the adjustment when calibrating,
-    //because plane extension is used to extend the plane after calibration, and we don//t need to do S11GraphR0
-    //ver115-2b modified this procedure
-
-    if calInProgress=1 then exit sub
-    if planeadj<>0 then
-        //Do the extension, but not if series fixtures is used
-        if S11JigType$="Reflect" or S21JigAttach$="Shunt" then call uExtendCalPlane freq, ang, planeadj,1  //1 means reflection mode  ver116-4j
-    end if
-
-    //Convert into new R0 if necessary   //ver115-1e moved this here from CalcReflectDerivedData
-    //We don//t convert if calibrating
-    if S11BridgeR0<>S11GraphR0 then  //ver115-1e
-            //Transform to graph reference impedance
-        call uS11DBToImpedance S11BridgeR0, db, ang, impR, impX       //calc impedance : R, X
-        call uImpedanceToRefco S11GraphR0, impR, impX, rho, ang   //calc S11
-        db=20*uSafeLog10(rho) //put S11 in db form   ver115-1b fixed typo
-    end if
-    refLastGraphR0=S11GraphR0   //ver116-1b
-end sub
-*/
+  float x;
+  //Return x for specified point (1...)
+  //We don't verify that N is in bounds, because its value may have been created with gGenerateXValues
+  //and the actual point data may not have been added yet.
+  //N may have a fractional part, so we do linear interpolation
+  if (N>0 && N<=MaxPoints)
+  {
+    int whole=int(N);
+    float fract=N-whole;
+    x=GraphVal[whole][0];
+    if (fract>0)
+    {
+      x=x+fract*(GraphVal[whole+1][0]-x);
+    }
+  }
+  else
+  {
+    x=-1;
+  }
+  return x;
 }
 void hwdInterface::FunctChangeAndSaveSweepParams()
 {
@@ -3151,21 +3044,21 @@ void hwdInterface::SelectLatchedSwitches(int desiredFreqBand)
   //For speed reasons, port is not global so here we have to use globalPort to identify the parallel port
   //Likewise, control is not global, so we have to recreate it here
   if (desiredFreqBand==0)
-    desiredFreqBand=vars->lastSetBand;   //don't change if auto mode and actual band not yet determined  ver116-4s
+    desiredFreqBand=vars->lastSetBand;   //don't change if auto mode and actual band not yet determined
   vars->lastSetBand=desiredFreqBand;
   if (vars->suppressHardware) return;
   if (activeConfig->switchHasBand==0 && activeConfig->switchHasTR==0 && activeConfig->switchHasFR==0)
     return;    //No physical latched switches
   //int control=vars->globalPort+2;
-  int switchData=switchLatchBits(desiredFreqBand);    //All bits, with latch pulse set high ver116-4s
+  int switchData=switchLatchBits(desiredFreqBand);    //All bits, with latch pulse set high
     //We output the required bits with the latch pulse high, then briefly bring the latch
     //pulse low. Hopefully the pulse lasts somewhere between 2 and 200 us.
   switch(activeConfig->cb)
   {
-    case 1:  //Original
+    case hwdOld:  //Original
         //Can't do these switches on original control board
         break;
-    case 2:  //SLIM
+    case hwdSlim:  //SLIM
 
         //We output the required bits with the latch pulse high, then briefly bring the latch
         //pulse low. Hopefully the pulse lasts somewhere between 2 and 200 us.
@@ -3183,13 +3076,8 @@ void hwdInterface::SelectLatchedSwitches(int desiredFreqBand)
         out globalPort, 0   //zeroes parallel port data bits
             */
             break;
-      case 3:
-        QString USBwrbuf = "A20100"+util.ToHex(switchData);
-        QString USBwrbuf2 = "A20100"+util.ToHex(switchData-128);
-
-        usb->usbMSADeviceWriteString(USBwrbuf, 4 );
-        usb->usbMSADeviceWriteString(USBwrbuf2, 4 );
-        usb->usbMSADeviceWriteString(USBwrbuf, 4 );
+      case hwdUsbV1:
+        setSwitches(switchData);
         break;
 
     //There is substantial delay in the DLL calls so the pulse will likely be at least 100 us.
@@ -3202,9 +3090,20 @@ void hwdInterface::SelectLatchedSwitches(int desiredFreqBand)
   util.uSleep(250);
 
 }
+void hwdInterface::setSwitches(int switchData)
+{
+  QString USBwrbuf = "A20100"+util.ToHex(switchData);
+  QString USBwrbuf2 = "A20100"+util.ToHex(switchData-128);
+
+  usb->usbMSADeviceWriteString(USBwrbuf, 4 );
+  usb->usbMSADeviceWriteString(USBwrbuf2, 4 );
+  usb->usbMSADeviceWriteString(USBwrbuf, 4 );
+
+}
+
 int hwdInterface::switchLatchBits(int desiredFreqBand)
 {
-  //Returns value for setting Latch U4 on SLIM control board //ver116-1b    //ver116-4s
+  //Returns value for setting Latch U4 on SLIM control board
   //bit 0    VS0   Video Filter Address, low order bit
   //bit 1    VS1   Video Filter Address, high order bit
   //bit 2    BS0   Band Selection, low order bit
@@ -3243,22 +3142,55 @@ void hwdInterface::CommandFilter(int &fbank)
     fbank = vars->FiltA1*8 + vars->FiltA0*4;
     lpt.CommandFilterOrigCB(fbank);
   }
-  if (activeConfig->cb == hwdSlim)
+  else if (activeConfig->cb == hwdSlim)
   {
     fbank = vars->FiltA1*64 + vars->FiltA0*32;
     lpt.CommandFilterSlimCB(fbank);
   }
-  if (activeConfig->cb == hwdUsbV1)
+  else if (activeConfig->cb == hwdUsbV1)
   {
     fbank = vars->FiltA1*64 + vars->FiltA0*32;
     CommandFilterSlimCBUSB(fbank);
   }
 }
-void hwdInterface::CommandFilterSlimCBUSB(int &fbank)//  //USB:01-08-2010 ver116-4j made this a subroutine
+void hwdInterface::CommandFilterSlimCBUSB(int fbank)
 {
   //fbank should be the non-global filtbank
   QString USBwrbuf = "A10300"+util.ToHex(fbank)+util.ToHex(fbank+128)+util.ToHex(fbank);
   usb->usbMSADeviceWriteString(USBwrbuf, 6);
+}
+
+void hwdInterface::setDDS1(double freq)
+{
+  /*
+  //this will recalculate DDS1, using the values in the Command DDS 1 Box, and "with DDS Clock at" Box.
+  //it will insert the new DDS 1 frequency into the command arrays for all steps, leaving others alone
+  //it will initiate a re-command at thisstep (where the sweep was halted)
+    //if Original Control Board is used, only the DDS 1 is re-commanded. ver113-4a
+    //if SLIM Control Board is used, all 4 modules will be re-commanded. ver113-4a
+  //using One Step or Continue will retain the new DDS1 frequency.
+  //PLO1 will be non-functional until [Restart] button is clicked. PLL1 will break lock and "slam" to extreme.
+  //[Restart] will reset arrays and begin sweeping at step 0. Special Tests Window will not be updated.
+  //Signal Generator or Tracking Generator output will not be effected.
+  //caution, do not enter a frequency that is higher than 1/2 the masterclock frequency (ddsclock)
+  print #special.dds1out, "!contents? dds1out$";   //grab contents of Command DDS 1 Box
+  ddsoutput = val(dds1out$) //intended output frequency of DDS 1
+  print #special.masclkf, "!contents? msclk$";   //grab contents of "with DDS Clock at" box
+  msclk = val(msclk$) //if "with DDS Clock at" box was not changed, this is the real MasterClock frequency
+  ddsclock = msclk
+  //caution: if ddsoutput >= to .5 ddsclock, the program will error out
+  gosub [CreateBaseForDDSarray]//needed:ddsoutput,ddsclock ; creates: base,sw0thrusw39,w0thruw4
+  remember = thisstep //remember where we were when entering this subroutine
+  for thisstep = 0 to steps //ver112-2a
+  gosub [FillDDS1array]//need thisstep,sw0-sw39,w0-w4,base,ddsclock
+  next thisstep //ver112-2a
+  thisstep = remember //ver112-2a
+  gosub [CreateCmdAllArray] //ver112-2a
+  if cb = 0 then gosub [CommandDDS1OrigCB]//will command DDS 1, only
+//delver113-4a    if cb = 2 then gosub [CommandDDS1SlimCB]//will command DDS 1, only
+  if cb = 2 then gosub [CommandAllSlims]//will command all 4 modules. ver113-4a
+  if cb = 3 then gosub [CommandAllSlimsUSB]//will command all 4 modules. ver113-4a //USB:01-08-2010
+    */
 }
 void hwdInterface::ClearAuxData()
 {
@@ -3917,7 +3849,7 @@ void hwdInterface::finished()
   usb->usbCloseInterface();
   //close #handle   //close out graph window
   //ret = GlobalFree(hSAllArray) //USB:01-08-2010
-  QCoreApplication::exit(0);
+  //QCoreApplication::exit(0);
 }
 
 void hwdInterface::SpecialTests()
@@ -4019,371 +3951,6 @@ return
 */
 }
 
-void hwdInterface::OpenDataWindow()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[OpenDataWindow]'ver113-5a
-if haltsweep = 1 then gosub [FinishSweeping] 'ver114-6f
-    'if the "Array Data Window" is already open, close it.
-        if datawindow = 1 then close #datawin:datawindow = 0
-    'create window called, Data Window, to display all data for each step
-
-    WindowWidth = 425   'ver115-4h
-    WindowHeight = 300
-    UpperLeftX = DisplayWidth-WindowWidth-20    'ver114-6f
-    UpperLeftY = 20    'ver114-6f
-    BackgroundColor$ = "white"
-    ForegroundColor$ = "black"
-    open "Data Window" for text as #datawin
-    datawindow = 1
-    #datawin, "!font Courier_New 9"  'ver115-2d
-    return
-*/
-}
-
-void hwdInterface::CloseDataWindow(QString hndl)
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub CloseDataWindow hndl$    'ver115-1b changed to sub. Note this is never used anyway
-    close #datawin:datawindow = 0
-end sub
-*/
-}
-
-void hwdInterface::MSAinputData()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[MSAinputData]  'renamed ver115-5d
-    if msaMode$<>modeSA and msaMode$<>modeScalarTrans then goto [MagnitudePhaseMSAinput]    'Do phase if we have it
-    gosub [OpenDataWindow]
-    print #datawin," Step           Calc Mag  Mag AtoD Freq Cal"
-    print #datawin," Num   Freq(MHz)  Input   Bit Val   Factor"
-    validSteps=gPointCount()-1  'Number of completed steps  'ver116-1b
-    for i = 0 to validSteps  'ver116-1b
-        freq$=using("####.######",gGetPointXVal(i+1))   'freq in MHz
-        data1$=using("####.###", datatable(i,2))    'calculated mag input
-        data2$=using("######", magarray(i,3))       'Raw ADC bits
-        data3$=using("####.###", freqCorrection(i)) 'Freq correction
-        print #datawin, uAlignDecimalInString$(str$(i),4,4); _
-                    uAlignDecimalInString$(freq$,12,5); _
-                    uAlignDecimalInString$(data1$,9,5); _
-                    uAlignDecimalInString$(data2$,8,7); _
-                    uAlignDecimalInString$(data3$,11,5)
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-
-void hwdInterface::MagnitudePhaseMSAinput()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[MagnitudePhaseMSAinput]'ver115-4d
-    gosub [OpenDataWindow]
-    print #datawin," Step           Calc Mag  Mag A/D  Freq Cal Pha A/D Processed"
-    print #datawin," Num   Freq(MHz)  Input   Bit Val   Factor  Bit Val    Phase"
-    validSteps=gPointCount()-1  'Number of completed steps  'ver116-1b
-    for i = 0 to validSteps  'ver116-1b
-        freq$=using("####.######",gGetPointXVal(i+1))   'freq in MHz
-        data1$=using("####.###", datatable(i,2))    'calculated mag input
-        data2$=using("######", magarray(i,3))       'Raw ADC bits
-        data3$=using("####.###", freqCorrection(i)) 'Freq correction
-        data4$=using("######",phaarray(i,3)) 'Phase A/D. Bits ver115-5d
-        data5$=using("####.##",datatable(i,3)) 'Phase Processed ver115-5d
-        print #datawin, uAlignDecimalInString$(str$(i),4,4); _
-                    uAlignDecimalInString$(freq$,12,5); _
-                    uAlignDecimalInString$(data1$,9,5); _
-                    uAlignDecimalInString$(data2$,8,7); _
-                    uAlignDecimalInString$(data3$,11,5); _
-                    uAlignDecimalInString$(data4$,8,7); _
-                    uAlignDecimalInString$(data5$,10,5)
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-void hwdInterface::MagPhaS21()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*'ver113-5b
-    gosub void hwdInterface::OpenDataWindow()
-    xclm$="!"
-    print #datawin, gGetTitleLine$(1)   'ver115-6a put title in header
-    print #datawin,"!select 1 1"
-    print #datawin,"!insert xclm$"
-    print #datawin, gGetTitleLine$(2)
-    print #datawin,"!select 1 2"
-    print #datawin,"!insert xclm$"
-    print #datawin, gGetTitleLine$(3)
-    print #datawin,"!select 1 3"
-    print #datawin,"!insert xclm$"
-    print #datawin, "# MHZ S DB R ";S21JigR0
-    print #datawin, "  MHz       S21_Mag   S21_Ang"
-    print #datawin,"!select 1 5"
-    print #datawin,"!insert xclm$"
-    validSteps=gPointCount()-1  'Number of completed steps  'ver116-1b
-    for i = 0 to validSteps  'ver116-1b
-        freq$=using("####.######",S21DataArray(i,0))
-        data1$=using("####.#####",S21DataArray(i,1)) 'ver115-4d
-        data2$=using("####.##",S21DataArray(i,2))
-        print #datawin, uAlignDecimalInString$(freq$,11,4); _
-                    uAlignDecimalInString$(data1$,9,5); _
-                    uAlignDecimalInString$(data2$,8,5)
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-void hwdInterface::MagPhaS11()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*' ver115-2d
-    gosub void hwdInterface::OpenDataWindow()
-    xclm$="!"
-    print #datawin, gGetTitleLine$(1)   'ver115-6a put title in header
-    print #datawin,"!select 1 1"
-    print #datawin,"!insert xclm$"
-    print #datawin, gGetTitleLine$(2)
-    print #datawin,"!select 1 2"
-    print #datawin,"!insert xclm$"
-    print #datawin, gGetTitleLine$(3)
-    print #datawin,"!select 1 3"
-    print #datawin,"!insert xclm$"
-    print #datawin, "# MHZ S DB R ";S11GraphR0
-    print #datawin, " MHz       S11_Mag   S11_Ang"
-    print #datawin,"!select 1 5"
-    print #datawin,"!insert xclm$ +"
-    validSteps=gPointCount()-1  'Number of completed steps  'ver116-1b
-    for i = 0 to validSteps  'ver116-1b
-        freq$=using("####.######",ReflectArray(i,0))
-        data1$=using("####.#####",ReflectArray(i,1))  'ver115-4d
-        data2$=using("####.##",ReflectArray(i,2))
-        print #datawin, uAlignDecimalInString$(freq$,11,4); _
-                    uAlignDecimalInString$(data1$,9,5); _
-                    uAlignDecimalInString$(data2$,8,5)
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-void hwdInterface::DataWin_GraphData()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*'Display data for current graph(s) ver115-4h
-    gosub void hwdInterface::OpenDataWindow()
-    xclm$="!"
-    print #datawin, gGetTitleLine$(1)   'ver115-6a put title in header
-    print #datawin,"!select 1 1"
-    print #datawin,"!insert xclm$"
-    print #datawin, gGetTitleLine$(2)
-    print #datawin,"!select 1 2"
-    print #datawin,"!insert xclm$"
-    print #datawin, gGetTitleLine$(3)
-    print #datawin,"!select 1 3"
-    print #datawin,"!insert xclm$"
-    #datawin,"Graph Data"
-    print #datawin,"!select 1 4"
-    print #datawin,"!insert xclm$"
-    s$="Freq(MHZ)"
-    if Y1DataType<>constNoGraph then
-        call DetermineGraphDataFormat Y1DataType, y1AxisLabel$, dum1$,dum2,dum3$
-        s$=s$;"      ";y1AxisLabel$
-    end if
-    if Y2DataType<>constNoGraph then
-        call DetermineGraphDataFormat Y2DataType, y2AxisLabel$, dum$,dum2,dum3$
-        s$=s$;"        ";y2AxisLabel$
-    end if
-    print #datawin, s$      'Data heading
-    print #datawin,"!select 1 5"
-    print #datawin,"!insert xclm$"
-    validSteps=gPointCount()-1  'Number of completed steps  'ver116-1b
-    for i = 0 to validSteps  'ver116-1b
-        freq$=using("####.######",gGetPointXVal(i+1))
-        call CalcGraphData i, y1Val, y2Val, 0 'Get Y1 and Y2 values
-        if Y1DataType=constNoGraph then
-            data1$=""
-        else
-            aVal=abs(y1Val)
-            select case
-                case aVal>=1000000
-                    data1$=uScientificNotation$(y1Val, 6, 1) '6 decimals with zero padding
-                case aVal>=1000
-                    data1$=using("########.###",y1Val)
-                case aVal>=0.000001
-                    data1$=using("#####.######",y1Val)
-                case else   'small values
-                    data1$=uScientificNotation$(y1Val, 6, 1) '6 decimals with zero padding
-            end select
-        end if
-        if Y2DataType=constNoGraph then
-            data2$=""
-        else
-            aVal=abs(y2Val)
-            select case
-                case aVal>=1000000
-                    data2$=uScientificNotation$(y2Val, 6, 1) '6 decimals with zero padding
-                case aVal>=1000
-                    data2$=using("########.###",y2Val)
-                case aVal>=0.000001
-                    data2$=using("#####.######",y2Val)
-                case else   'small values
-                    data2$=uScientificNotation$(y2Val, 6, 1) '6 decimals with zero padding
-            end select
-        end if
-        if Y1DataType=constNoGraph then 'skip data1 if nonexistent ver115-9d
-            print #datawin, uAlignDecimalInString$(freq$,11,4); _
-                        uAlignDecimalInString$(data2$,22,8)
-        else
-            if Y2DataType=constNoGraph then
-                print #datawin, uAlignDecimalInString$(freq$,11,4); _
-                            uAlignDecimalInString$(data1$,22,8)
-            else
-                print #datawin, uAlignDecimalInString$(freq$,11,4); _
-                            uAlignDecimalInString$(data1$,22,8); _
-                            uAlignDecimalInString$(data2$,22,8)
-            end if
-        end if
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-void hwdInterface::LineCalArray()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*'ver115-2d
-    gosub void hwdInterface::OpenDataWindow()
-    xclm$="!"
-    if msaMode$=modeReflection then print #datawin,"Cal Reference" else print #datawin,"Line Calibration" 'ver115-4d
-    print #datawin,"!select 1 1"
-    print #datawin,"!insert xclm$ +"
-    print #datawin, " Freq(MHz)   Cal_Mag Cal_Ang"
-    print #datawin,"!select 1 2"
-    print #datawin,"!insert xclm$ +"
-    for i = 0 to steps
-        freq$=using("####.######",gGetPointXVal(i+1))
-        data1$=using("####.###",lineCalArray(i,1))
-        data2$=using("####.##",lineCalArray(i,2))
-        print #datawin, uAlignDecimalInString$(freq$,11,4); _
-                    uAlignDecimalInString$(data1$,9,5); _
-                    uAlignDecimalInString$(data2$,10,5)
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-
-void hwdInterface::DataWin_OSL()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[DataWin_OSL]'ver115-4a  'OSL calibration standards and coefficients
-    gosub [OpenDataWindow]
-    print #datawin," Freq(MHz)  Open_Real  Open_Imag    Short_Real    Short_Imag   Load_Real    Load_Imag   OSL_A_Real   OSL_A_Imag   OSL_B_Real   OSL_B_Imag   OSL_C_Real   OSL_C_Imag"
-    for i = 0 to steps
-        freq$=using("####.######",gGetPointXVal(i+1)) : OSLdataMin=1e-7
-        if abs(OSLstdOpen(i,0))<OSLdataMin then Or$="0" else Or$=uScientificNotation$(OSLstdOpen(i,0), 5,0) 'ver116-4n
-        if abs(OSLstdOpen(i,1))<OSLdataMin then Oi$="0" else Oi$=uScientificNotation$(OSLstdOpen(i,1), 5,0)
-        if abs(OSLstdShort(i,0))<OSLdataMin then Sr$="0" else Sr$=uScientificNotation$(OSLstdShort(i,0), 5,0)
-        if abs(OSLstdShort(i,1))<OSLdataMin then Si$="0" else Si$=uScientificNotation$(OSLstdShort(i,1), 5,0)
-        if abs(OSLstdLoad(i,0))<OSLdataMin then Lr$="0" else Lr$=uScientificNotation$(OSLstdLoad(i,0), 5,0)
-        if abs(OSLstdLoad(i,1))<OSLdataMin then Li$="0" else Li$=uScientificNotation$(OSLstdLoad(i,1), 5,0)
-        if abs(OSLa(i,0))<OSLdataMin then Ar$="0" else Ar$=uScientificNotation$(OSLa(i,0), 5,0)
-        if abs(OSLa(i,1))<OSLdataMin then Ai$="0" else Ai$=uScientificNotation$(OSLa(i,1), 5,0)
-        if abs(OSLb(i,0))<OSLdataMin then Br$="0" else Br$=uScientificNotation$(OSLb(i,0), 5,0)
-        if abs(OSLb(i,1))<OSLdataMin then Bi$="0" else Bi$=uScientificNotation$(OSLb(i,1), 5,0)
-        if abs(OSLc(i,0))<OSLdataMin then Cr$="0" else Cr$=uScientificNotation$(OSLc(i,0), 5,0)
-        if abs(OSLc(i,1))<OSLdataMin then Ci$="0" else Ci$=uScientificNotation$(OSLc(i,1), 5,0)
-        print #datawin, uAlignDecimalInString$(freq$,11,4);" "; _
-                    uAlignDecimalInString$(Or$,13,3); _
-                    uAlignDecimalInString$(Oi$,13,3); _
-                    uAlignDecimalInString$(Sr$,13,3); _
-                    uAlignDecimalInString$(Si$,13,3); _
-                    uAlignDecimalInString$(Lr$,13,3); _
-                    uAlignDecimalInString$(Li$,13,3); _
-                    uAlignDecimalInString$(Ar$,13,3); _
-                    uAlignDecimalInString$(Ai$,13,3); _
-                    uAlignDecimalInString$(Br$,13,3); _
-                    uAlignDecimalInString$(Bi$,13,3); _
-                    uAlignDecimalInString$(Cr$,13,3); _
-                    uAlignDecimalInString$(Ci$,13,3)
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-
-void hwdInterface::ReflectDerivedData()
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[ReflectDerivedData]
-    gosub [OpenDataWindow]
-    print #datawin,"   Freq      S11_DB   S11_Ang  Rho    Z_Mag   Z_Ang     Rs       Xs       Cs       Ls      Rp       Xp      Lp      Cp     VSWR     RL    %RefPwr    Q"
-    validSteps=gPointCount()-1  'Number of completed steps  'ver116-1b
-    for i = 0 to validSteps  'ver116-1b
-         print #datawin, AlignedReflectData$(i)
-    next i
-    #datawin, "!origin 1 1"
-    wait
-*/
-}
-
-QString hwdInterface::AlignedReflectData(int currStep)
-{
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-function AlignedReflectData$(currStep)  'Return string of formatted ReflectArray data
-        aForm$="3,3,4//UseMultiplier//DoCompact"
-        resForm$="3,3,4//UseMultiplier//SuppressMilli//DoCompact" 'ver115-4e
-        freq$=using("####.######",ReflectArray(currStep,0))
-        db$=using("####.#####",ReflectArray(currStep,constGraphS11DB))
-        ang$=using("####.##",ReflectArray(currStep,constGraphS11Ang))
-        rho$=using("#.###",ReflectArray(currStep,constRho))
-        ZMag$=uFormatted$(ReflectArray(currStep,constImpedMag), resForm$)  'ver115-4e
-        ZAng$=using("####.##",ReflectArray(currStep,constImpedAng))
-        serR$=uFormatted$(ReflectArray(currStep,constSerR), resForm$)  'ver115-4e
-        serReact$=uFormatted$(ReflectArray(currStep,constSerReact), resForm$)  'ver115-4e
-        serC$=uFormatted$(ReflectArray(currStep,constSerC), aForm$)
-        serL$=uFormatted$(ReflectArray(currStep,constSerL), aForm$)
-        parR$=uFormatted$(ReflectArray(currStep,constParR), resForm$)  'ver115-4e
-        parReact$=uFormatted$(ReflectArray(currStep,constParReact), resForm$)  'ver115-4e
-        parC$=uFormatted$(ReflectArray(currStep,constParC), aForm$)
-        parL$=uFormatted$(ReflectArray(currStep,constParL), aForm$)
-        swr$=uFormatted$(min(9999,ReflectArray(currStep,constSWR)),"4,2,4") 'ver115-5d
-        RL$=using("###.###",0-ReflectArray(currStep,constGraphS11DB))
-        RefPow$=using("###.###",100*ReflectArray(currStep,constRho)^2)
-        X=ReflectArray(currStep,constSerReact) : R=ReflectArray(currStep,constSerR)
-        if R=0 then Q$="9999" else Q$=using("####.#",abs(X)/R) 'Q=X/R works for single L or C only
-
-        AlignedReflectData$=uAlignDecimalInString$(freq$,11,4); _
-                    uAlignDecimalInString$(db$,11,5); _
-                    uAlignDecimalInString$(ang$,8,5); _
-                    uAlignDecimalInString$(rho$,6,2); _
-                    uAlignDecimalInString$(ZMag$,9,5); _
-                    uAlignDecimalInString$(ZAng$,8,5); _
-                    uAlignDecimalInString$(serR$,9,5); _
-                    uAlignDecimalInString$(serReact$,9,5); _
-                    uAlignDecimalInString$(serC$,8,5); _
-                    uAlignDecimalInString$(serL$,8,5); _
-                    uAlignDecimalInString$(parR$,9,5); _
-                    uAlignDecimalInString$(parReact$,9,5); _
-                    uAlignDecimalInString$(parC$,8,5); _
-                    uAlignDecimalInString$(parL$,8,5); _
-                    uAlignDecimalInString$(swr$,8,5); _
-                    uAlignDecimalInString$(RL$,8,4); _
-                    uAlignDecimalInString$(RefPow$,8,4); _
-                    uAlignDecimalInString$(Q$,7,5)
-end function
-
-
-*/
-  return "fix me";
-}
 
 //===================START CONTEXTS MODULE=======================
 

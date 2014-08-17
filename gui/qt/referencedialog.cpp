@@ -24,6 +24,9 @@ referenceDialog::referenceDialog(QWidget *parent) :
   ui(new Ui::referenceDialog)
 {
   ui->setupUi(this);
+  ui->val1->setValidator(new QDoubleValidator(this));
+  ui->val2->setValidator(new QDoubleValidator(this));
+
   allowClose = false;
   QStringList traceWidths;
   traceWidths << "1" << "2" << "3";

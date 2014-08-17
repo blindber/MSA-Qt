@@ -90,7 +90,7 @@ public:
       //int varwindow,
       int datawindow;    //=1 when indicated window is open   //ver115-1b
 
-      float doSpecialGraph; //=0 for normal operation; for other values see [doSpecialGraph]
+      int doSpecialGraph; //=0 for normal operation; for other values see [doSpecialGraph]
       float doSpecialRandom;  //Random number generated at start of each sweep, for doSpecialGraph ver 114-3g
       QString doSpecialRLCSpec;//$ //RLC spec for doSpecialGraph
       QString doSpecialCoaxName;//$ //Name of coax last used in RLC spec ver115-4b
@@ -154,7 +154,7 @@ public:
                               // Xp(9), Cs(10), Ls(11), Cp(12), Lp(13), SWR(14),
                               //intermedDB(), intermedAng(15) (intermed= w/o R0 transform or plane ext) //ver115-2d
 
-      float uWorkReflectData[17]; //Same data as ReflectArray, but for only one entry  //ver115-1b //ver115-2d
+      double uWorkReflectData[17]; //Same data as ReflectArray, but for only one entry  //ver115-1b //ver115-2d
 
       Q2DfloatVector  S21DataArray;//Frequency (actual input freq) (0), mag(1), phase(2) and intermed phase(3) for VectorTrans and ScalarTrans modes. ver116-1b
                               //Intermed phase is phase before plane extension, saved in case of recalculation
@@ -305,6 +305,7 @@ public:
       int prevS21JigR0;   //Source and load impedances of Transmission
       int prevS21JigShuntDelay;     //Delay of shunt fixture connector
       int prevS11BridgeR0, prevS11GraphR0;   //Bridge reference and graph reference for S11   //ver114-6k
+      double S11BridgeR0, S11GraphR0;
       QString prevS11JigType;      //Jig previously used for reflection mode  ver115-1b
       int prevSwitchFR;     //Previous setting of forward/reverse switch ver116-1b
 
@@ -473,6 +474,10 @@ public:
       int calfigModuleVersion;
 
 
+      Q2DfloatVector gGraphVal;      //Can be used to hold graph. frequency(0), Y1(1), Y2(2)
+      int gMaxPoints;       //Max number of points allowed. Starts at 1200
+
+      bool smithWindowVisible;
 
 };
 

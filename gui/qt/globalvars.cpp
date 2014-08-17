@@ -28,11 +28,11 @@ globalVars::globalVars()
   //The following constant values are used to specify graph data,
   //and assigned in such a way that the first ones can be
   //used as the index into ReflectArray(), which holds a bunch of pre-calculated values for reflection mode.
-  //Note if these are changed, FilterDataType may have to be changed. //ver115-1b altered these
+  //Note if these are changed, FilterDataType may have to be changed.
   //We start with 1, because entry 0 of ReflectArray is frequency
 
-  maxNumSteps=40000;       //ver114-3e
-  maxPointExtraLines=100;  //ver116-4k
+  maxNumSteps=40000;
+  maxPointExtraLines=100;
 
 
   doCycleTraceColors = 0;
@@ -76,7 +76,7 @@ int globalVars::DataTypeIsAngle(int dataType)
           || dataType == constAux4
           || dataType == constAux5)
   {
-    retVal=auxGraphDataInfo[dataType-constAux0][0];    //This has info on auxiliary data ver116-1b
+    retVal=auxGraphDataInfo[dataType-constAux0][0];    //This has info on auxiliary data
   }
   else //non-angles
   {
@@ -293,7 +293,6 @@ void globalVars::zeroVars()
   doCycleTraceColors = 0;
   cycleNumber = 0;
   calInProgress = 0;
-  constMaxValue = 0;
   frontEndCalNumPoints = 0;
   suppressHardware = 0;
   suppressHardwareInitOnRestart = 0;
@@ -303,19 +302,23 @@ void globalVars::zeroVars()
   multiscanInProgress = 0;
   multiscanHaltAtEnd = 0;
   multiscanSaveRefreshEachScan = 0;
+  gMaxPoints = 0;
+
+  smithWindowVisible = false;
 
 }
 
 void globalVars::resizeArrays(int newSize)
 {
-  datatable.mresize(newSize,5);    //added element for band ver116-4s
+  datatable.mresize(newSize,5);    //added element for band
   magarray.mresize(newSize,4);
   phaarray.mresize(newSize,5);
   lineCalArray.mresize(newSize,3);
+  gGraphVal.mresize(805,3);
 
 
 
-  datatable.mresize(newSize,5);    //added element for band ver116-4s
+  datatable.mresize(newSize,5);    //added element for band
   magarray.mresize(newSize,4);
   phaarray.mresize(newSize,5);
   lineCalArray.mresize(newSize,3);
@@ -327,21 +330,21 @@ void globalVars::resizeArrays(int newSize)
 
 
   freqCorrection.resize(newSize);    //SEWgraph1
-  frontEndCorrection.resize(newSize); //ver115-9c
-  ReflectArray.mresize(newSize,17);   //ver115-2d
-  S21DataArray.mresize(newSize, 4);  //ver116-1b
-  bandLineCal.mresize(newSize, 3);  //ver114-5f
-  OSLa.mresize(newSize, 2);  //ver115-1b
-  OSLb.mresize(newSize, 2);  //ver115-1b
-  OSLc.mresize(newSize, 2);  //ver115-1b
-  OSLstdOpen.mresize(newSize,2);  //ver115-1b
-  OSLstdLoad.mresize(newSize,2);  //ver115-1b
-  OSLcalOpen.mresize(newSize,2);  //ver115-1b
-  OSLcalLoad.mresize(newSize,2);  //ver115-1b
-  OSLcalShort.mresize(newSize,2);  //ver115-1b
-  OSLBandA.mresize(newSize,2); OSLBandB.mresize(800,1); OSLBandC.mresize(800,1);       //ver115-4a
-  OSLBandRef.mresize(newSize,3);        //ver115-4a
-  auxGraphData.mresize(newSize, 6);    //ver115-4a
+  frontEndCorrection.resize(newSize);
+  ReflectArray.mresize(newSize,17);
+  S21DataArray.mresize(newSize, 4);
+  bandLineCal.mresize(newSize, 3);
+  OSLa.mresize(newSize, 2);
+  OSLb.mresize(newSize, 2);
+  OSLc.mresize(newSize, 2);
+  OSLstdOpen.mresize(newSize,2);
+  OSLstdLoad.mresize(newSize,2);
+  OSLcalOpen.mresize(newSize,2);
+  OSLcalLoad.mresize(newSize,2);
+  OSLcalShort.mresize(newSize,2);
+  OSLBandA.mresize(newSize,2); OSLBandB.mresize(800,1); OSLBandC.mresize(800,1);
+  OSLBandRef.mresize(newSize,3);
+  auxGraphData.mresize(newSize, 6);
 
   frontEndCorrection.reserve(newSize);
 

@@ -387,7 +387,7 @@ Setups</string>
    </widget>
    <widget class="QMenu" name="menuData">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="title">
      <string>Data</string>
@@ -403,7 +403,7 @@ Setups</string>
    </widget>
    <widget class="QMenu" name="menuFunctions">
     <property name="enabled">
-     <bool>false</bool>
+     <bool>true</bool>
     </property>
     <property name="title">
      <string>Functions</string>
@@ -521,7 +521,7 @@ Setups</string>
   </action>
   <action name="actionSpecial_Tests">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Special Tests</string>
@@ -568,7 +568,7 @@ Setups</string>
   </action>
   <action name="actionSmith_Chart">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Smith Chart</string>
@@ -583,6 +583,9 @@ Setups</string>
    </property>
   </action>
   <action name="actionGraph_Data">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Graph Data</string>
    </property>
@@ -685,7 +688,7 @@ Setups</string>
   </action>
   <action name="actionVNA_Reflection">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>VNA Reflection</string>

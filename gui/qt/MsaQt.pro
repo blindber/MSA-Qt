@@ -72,7 +72,9 @@ SOURCES += main.cpp\
     scanthread.cpp \
     marker.cpp \
     libusbfunctions.cpp \
-    usbfunc.cpp
+    usbfunc.cpp \
+    dialogspecialtests.cpp \
+    dialogdatawindow.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -103,7 +105,9 @@ HEADERS  += mainwindow.h \
     scanthread.h \
     marker.h \
     libusbfunctions.h \
-    usbfunc.h
+    usbfunc.h \
+    dialogspecialtests.h \
+    dialogdatawindow.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \
@@ -116,7 +120,9 @@ FORMS    += mainwindow.ui \
     dialogchooseprimaryaxis.ui \
     dialogFreqAxisPreference.ui \
     dialogshowvars.ui \
-    smithdialog.ui
+    smithdialog.ui \
+    dialogspecialtests.ui \
+    dialogdatawindow.ui
 
 RESOURCES += \
     resource.qrc

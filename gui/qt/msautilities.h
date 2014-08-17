@@ -63,9 +63,9 @@ public:
   int uRoundDownToMultiple(float X, int mult);
   float uRoundUpToPower(float X, float base);
   float uRoundDownToPower(float x, float base);
-  float uTenPower(float pow);
+  double uTenPower(double pow);
   float uPower(float x, float pow);
-  float uATan2(float r, float i);
+  float uATan2(double r, double i);
   float uNormalizeDegrees(float deg);
 
   QString uAlignDecimalInString(QString v, int lenInDigits, int nLeft);
@@ -77,7 +77,7 @@ public:
   void uAdjustS21ForConnectorDelay(float freq, float &S21DB, float &S21Ang);
   void uSeriesJigImpedance(float R0, float S21DB, float S21Deg, float &Res, float &React);
   void uS11DBToImpedance(float R0, float S11DB, float S11Deg, float &Res, float &React);
-  void uRefcoToImpedance(float R0, float rho, float theta, float &Res, float &React);
+  void uRefcoToImpedance(double R0, double rho, double theta, double &Res, double &React);
   void uImpedanceToRefco(float R0, float R, float I, float &rho, float &theta);
   void uImpedanceToRefcoRI(float R0, float R, float I, float &GR, float &GI);
   void uSeriesImpedanceToS21DB(float R0, float R, float I, float &db, float &deg);
@@ -111,8 +111,8 @@ public:
   void uTransformShuntJigRefResist(int origRef, int S21DB, int S21Deg, int newRef, int &newS21DB, int &newS21Deg);
   void uTransformSeriesJigRefResist(int origRef, int S21DB, int S21Deg, int newRef, int &newS21DB, int &newS21Deg);
   void uEquivParallelRLC(int freq, int serR, int serReact, int &parR, int &parL, int &parC);
-  void uEquivSeriesLC(int freq, int serR, int serReact,  int &serL, int &serC);
-  void uEquivParallelImped(int sR, int sX, int &pR, int &pX);
+  void uEquivSeriesLC(double freq, double serR, double serReact,  double &serL, double &serC);
+  void uEquivParallelImped(double sR, double sX, double &pR, double &pX);
 
   float NormalizePhase(float p);
 
@@ -121,7 +121,7 @@ public:
   void uArrayFromString(QString s, int startN, int &startPos, int nPerLine);   //get points from string into uWorkArray();
   void uHighlightText(int handle);  //handle$ is handle variable for the target text box to highlight
   void uSleep(int ms);
-  void uTickCount();   //Return windows tick count ver116-1b
+  void uTickCount();   //Return windows tick count
   void uParsePath(QString fullPath, QString &folder, QString &file); //Parse full path name of file into the file name and folder name (no slash at end);
   int uConfirmSave(QString fullPath); //if file fullPath$ exists, then ask user to confirm saving file. Return 1 if save, 0 if cancel.
   QString uAddExtension(QString name, QString exten);    //Add extension to path or file name if there is no extension

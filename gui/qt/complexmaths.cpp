@@ -1,4 +1,5 @@
 #include "complexmaths.h"
+#include <math.h>
 
 ComplexMaths::ComplexMaths()
 {
@@ -18,30 +19,56 @@ sub cxPolarRadToRect  m,ang, byref R, byref I   'Convert polar(rad) coordinates 
     R=m*cos(ang)   'Trig is done in radians
     I=m*sin(ang)
 end sub
+*/
+void ComplexMaths::cxInvert(double R, double I, double &Rres, double &Ires)     //Invert complex number R + jI; put into Rres, Ires
+{
+  //1/(R+jI)=(R-jI)/(R^2+I^2)
+  double D=pow(R,2)+pow(I,2);
+  if (D==0)
+  {
+    Rres=1e12;  //constMaxValue;
+    Ires=0;
+    return;
+  }
+  Rres=R/D;
+  Ires=0-I/D;
+}
 
-sub cxInvert R, I, byref Rres, byref Ires     'Invert complex number R + jI; put into Rres, Ires
-    '1/(R+jI)=(R-jI)/(R^2+I^2)
-    D=R^2+I^2
-    if D=0 then Rres=constMaxValue : Ires=0 : exit sub
-    Rres=R/D : Ires=0-I/D
-end sub
-
-sub cxDivide Rnum, Inum, Rden, Iden, byref Rres, byref Ires     'Divide (Rnum + jInum)/(Rden + jIden); put into Rres, Ires
-    if Rnum=0 and Inum=0 then Rres=0: Ires=0 : exit sub   '0 numerator means zero result; we do this even if denominator=0
-    on error goto [MathErr] 'ver115-4d
-    'First invert the denominator
-    D=Rden^2+Iden^2
-    if D=0 then Rres=constMaxValue : Ires=0: exit sub
-    Rinv=Rden/D : Iinv=0-Iden/D
-    'Now multiply Rnum+jInum times Rinv+jIinv
-    Rres=Rnum*Rinv-Inum*Iinv
-    Ires=Rnum*Iinv+Inum*Rinv
-    exit sub
-[MathErr]
-    notice "Division Error"
-    Rres=constMaxValue : Ires=0
-end sub
-
+void ComplexMaths::cxDivide(double Rnum, double Inum, double Rden, double Iden, double &Rres, double &Ires)     //Divide (Rnum + jInum)/(Rden + jIden); put into Rres, Ires
+{
+  if (Rnum==0 && Inum==0)    //0 numerator means zero result; we do this even if denominator=0
+  {
+    Rres=0;
+    Ires=0;
+    return;
+  }
+  //on error goto [MathErr]
+  try
+  {
+    //First invert the denominator
+    double D=pow(Rden,2)+pow(Iden,2);
+    if (D==0)
+    {
+      Rres= 1e12; //constMaxValue;
+      Ires=0;
+      return;
+    }
+    double Rinv=Rden/D;
+    double Iinv=0-Iden/D;
+    //Now multiply Rnum+jInum times Rinv+jIinv
+    Rres=Rnum*Rinv-Inum*Iinv;
+    Ires=Rnum*Iinv+Inum*Rinv;
+    return;
+  }
+  catch(...)
+  {
+    //[MathErr]
+    //notice "Division Error"
+    Rres=1e12; //constMaxValue;
+    Ires=0;
+  }
+}
+/*
 'ver115-4e renamed cxMultiply
 sub cxMultiply R1, I1, R2, I2, byref Rres, byref Ires     'Multiply (R1 + jI1)*(R2 + jI2); put into Rres, Ires
     on error goto [MathErr]  'ver115-4d

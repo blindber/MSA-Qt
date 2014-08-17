@@ -326,11 +326,14 @@ bool libUsbFunctions::usbInterfaceOpen(QString fileName)
 
 void libUsbFunctions::usbCloseInterface()
 {
-  //release the interface claimed earlier
-  libusb_release_interface (device,  0);
-  //all tasks done close the device handle
-  libusb_close (device);
-  device = NULL;
+  if (device)
+  {
+    //release the interface claimed earlier
+    libusb_release_interface (device,  0);
+    //all tasks done close the device handle
+    libusb_close (device);
+    device = NULL;
+  }
 }
 
 bool libUsbFunctions::Write(MSA_TXBUFFER *writebuf, int message_size)

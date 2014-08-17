@@ -15,6 +15,7 @@
 #include "interpolation.h"
 #include "libusbfunctions.h"
 #include "usbfunc.h"
+#include "dialogspecialtests.h"
 
 #define USELIBUSB 1
 
@@ -71,17 +72,6 @@ public:
   void CloseSpecial();
   void CavityFilterTest();
   void CloseCavityFilterTest();
-  void OpenDataWindow();
-  void CloseDataWindow(QString hndl);
-  void MSAinputData();
-  void MagnitudePhaseMSAinput();
-  void MagPhaS21();
-  void MagPhaS11();
-  void DataWin_GraphData();
-  void LineCalArray();
-  void DataWin_OSL();
-  void ReflectDerivedData();
-  QString AlignedReflectData(int currStep);
   void FindPeakSteps(int dataType, int startStep, int endStep, int &minNum, int &maxNum, int &minY, int &maxY);    //find positive and negative peak
 
 
@@ -106,10 +96,10 @@ public:
   int switchLatchBits(int desiredFreqBand);
   void SelectFilter(int &fbank);
   void CommandFilter(int &fbank);
-  void CommandFilterSlimCBUSB(int &fbank);
+
   void AutoGlitchtime();
   void ReadMagnitude();
-  void InvertPDmodule();
+  void InvertPDmodule(int step);
   void VideoGlitchPDM();
   void CalPDMinvdeg();
   void ReadADCviaUSB();
@@ -130,18 +120,21 @@ public:
   void CommandPDMonly();
   void CommandPDMSlimUSB() ;
   void CommandAllSlimsUSB() ;
-  void ProcessDataArrays();
-  void TransferToDataArrays();
+
+
   void ConvertPhadata();
   void ConvertMagPhaseData();
-  void DoSpecialGraph();
-  void ConvertRawDataToReflection(int currStep);
-  void ApplyExtensionAndTransformR0(float freq, float &db, float &ang);
+  void DoSpecialGraph(float &power);
+  float gGetPointXVal(Q2DfloatVector &GraphVal, int MaxPoints, float N);
+
+
   void frontEndInterpolateToScan();
   void CopyModeDataToVNAData(int doIntermed);
   void autoWaitPrecalculate();
   void ReadStep();
   void ProcessAndPrintLastStep();
+
+  void specTestToggleVisible();
 
 
 
@@ -156,7 +149,7 @@ public:
 
   int pdmlowlim, pdmhighlim;
   int bUseUsb;
-  int glitch, glitchp1, glitchd1, glitchp3, glitchd3, glitchpdm, glitchhlt; //ver111-27
+  int glitch, glitchp1, glitchd1, glitchp3, glitchd3, glitchpdm, glitchhlt;
 
   int haltWasAtEnd;
   int syncsweep;
@@ -255,6 +248,8 @@ private:
   cWorkArray *uWork;
   lptFunctions lpt;
   dialogVNACal *vnaCal;
+  dialogSpecialTests *specTests;
+
 
   interpolation inter;
 
@@ -306,6 +301,7 @@ private:
   QString DefaultDir;
   float enterPLL2phasefreq;
   float difPhase;
+  float freqerror;
 
   float ddsoutput;
   float ddsclock;
@@ -387,7 +383,11 @@ private:
   int le1, le2,le3,fqud1,fqud3;
 
 
+
 public slots:
+  void setSwitches(int );
+  void CommandFilterSlimCBUSB(int);
+  void setDDS1(double );
 
 
 signals:

@@ -21,7 +21,6 @@
 #include "dialogchooseprimaryaxis.h"
 #include "dialogFreqAxisPreference.h"
 #include <qwaitcondition.h>
-#include "smithdialog.h"
 
 QStateMachine wew;
 
@@ -41,6 +40,7 @@ MainWindow::MainWindow(QWidget *parent) :
   winConfigMan = NULL;
   vars = NULL;
   showVars = NULL;
+  dataWindow = NULL;
   ui->setupUi(this);
   qApp->installEventFilter(this);
 
@@ -62,11 +62,6 @@ MainWindow::MainWindow(QWidget *parent) :
   graph = new msagraph(this);
   hwdIf = new hwdInterface(this);
   gridappearance = new dialogGridappearance(this);
-
-  //smithDialog *smith = new smithDialog(this);
-  //smith->exec();
-  //QApplication::exit(0);
-  //return;
 
   vnaCal.setUwork(&uWork);
   vnaCal.setGlobalVars(vars);
@@ -119,16 +114,9 @@ MainWindow::MainWindow(QWidget *parent) :
 
   CreateGraphWindow();
 
-  //timerStart = new QTimer(this);
-  //connect(timerStart, SIGNAL(timeout()), this, SLOT(updateView()));
-  //timerStart->setSingleShot(true);
+  smith = new smithDialog(this);
+  smith->setGlobalVars(vars);
 
-  // use a timer to trigger the initilization so that
-  // we can start displaying feedback to the user
-  //timerStart2 = new QTimer(this);
-  //connect(timerStart2, SIGNAL(timeout()), this, SLOT(delayedStart()));
-  //timerStart2->setSingleShot(true);
-  //timerStart2->start(50);
   QTimer::singleShot(0, this, SLOT(delayedStart()));
 }
 
@@ -138,12 +126,9 @@ MainWindow::~MainWindow()
   {
     delete showVars;
   }
-  //delete timerStart;
-  //delete timerStart2;
   delete gridappearance;
   delete graph;
   hwdIf->finished();
-  delete hwdIf->usb;
   delete hwdIf;
   delete ui;
   if (winConfigMan)
@@ -151,14 +136,10 @@ MainWindow::~MainWindow()
     delete winConfigMan;
   }
   delete vars;
-
-
 }
 
 void MainWindow::delayedStart()
 {
-  //timerStart2->stop();
-
   //Suppress parallel port if we don't have the DLLs
   if (util.uVerifyDLL("ntport"))
     vars->suppressHardware=0;
@@ -166,13 +147,13 @@ void MainWindow::delayedStart()
     vars->suppressHardware=1; //may change when we have cb info
 
   bool bUsbAvailable;
+#ifdef USELIBUSB
+  bUsbAvailable = true;
+#else
   if (util.uVerifyDLL("msadll"))
     bUsbAvailable = true;
   else
     bUsbAvailable = false;
-
-#ifdef __linux__
-  bUsbAvailable = true;
 #endif
 
   if (bUsbAvailable)
@@ -349,13 +330,15 @@ void MainWindow::delayedStart()
   //ChangeMode(); //create Graph Window in mode of msaMode$
   vnaCal.desiredCalLevel=0;   //Desire no cal
   vnaCal.SignalNoCalInstalled();
-  vnaCal.bandLineNumSteps=-1;   //Indicate cal does not exist ver114-5f; baseLine cal was handled above ver114-5mb
+  vnaCal.bandLineNumSteps=-1;   //Indicate cal does not exist ; baseLine cal was handled above
   vars->OSLBandNumSteps=-1;  //ver115-1b
   vars->OSLBaseNumSteps=-1;  //ver115-1b
 
-  vars->OSLLastSelectedCalSet=0;  //Indicates there was no prior selection ver115-7a
-  vars->OSLOpenSpec="" ; vars->OSLShortSpec="" ; vars->OSLLoadSpec="";    //ver116-4i
-  //vars->OSLS11JigType="Reflect";   //ver115-1b
+  vars->OSLLastSelectedCalSet=0;  //Indicates there was no prior selection
+  vars->OSLOpenSpec="";
+  vars->OSLShortSpec="";
+  vars->OSLLoadSpec="";
+  //vars->OSLS11JigType="Reflect";
   //Defaults are now in place. Read the preferences file and save it. If there is no preference file
   //this has the effect of creating one with the default values. If there is one, saving it updates a
   //possibly old preferences file to the current format.
@@ -364,7 +347,7 @@ void MainWindow::delayedStart()
 
   ChangeMode(); //create Graph Window in mode of msaMode$
 
-  //call uSleep 500     //Loading Preferences may re-latch switches; allow some recharge time ver116-1b delver116-4d
+  //call uSleep 500     //Loading Preferences may re-latch switches; allow some recharge time
   if (graph->gGetXIsLinear())
   {
     vars->userFreqPref=0;
@@ -372,26 +355,22 @@ void MainWindow::delayedStart()
   else
   {
     vars->userFreqPref=1;
-  }      //Start with Center/Span for linear, Start/Stop for log //ver115-1d
+  }      //Start with Center/Span for linear, Start/Stop for log
   graph->mClearMarkers();   //Clear all graph markers
 
   //4.measure computer speed and update global, glitchtime
-  //Determine speed of computer //ver111-37c
+  //Determine speed of computer
   if (vars->glitchtime == 0)
   {
     vars->glitchtime = 1;
     // fix me need to test the glitch time once there is hardware
-    hwdIf->AutoGlitchtime();//ver111-37c
+    hwdIf->AutoGlitchtime();
   }
   //return with glitchtime, number approximates 1 millisecond of computer processing speed with Liberty Basic
   //this is a "coarse" calculation.
 
   //5.Command Filter Bank
   hwdIf->InitializeHardware();
-
-  //timerStart->start(50);
-  //connect(timerStart, SIGNAL(timeout()), this, SLOT(updateView()));
-//  QTimer::singleShot(0, this, SLOT(updateView()));
 }
 
 void MainWindow::FindClientOffsets()
@@ -540,9 +519,13 @@ void MainWindow::ConformMenusToMode()
   {
     if (vars->gentrk==0) modeTitle="Spectrum Analyzer Mode"; else modeTitle="Spectrum Analyzer with TG Mode";
   }
-  if (vars->msaMode==modeScalarTrans) modeTitle="Tracking Generator Mode";
-  if (vars->msaMode==modeVectorTrans) modeTitle="VNA Transmission Mode";
-  if (vars->msaMode==modeReflection) modeTitle="VNA Reflection Mode";
+  if (vars->msaMode==modeScalarTrans)
+    modeTitle="Tracking Generator Mode";
+  if (vars->msaMode==modeVectorTrans)
+    modeTitle="VNA Transmission Mode";
+  if (vars->msaMode==modeReflection)
+    modeTitle="VNA Reflection Mode";
+
   QString ver="Ver " + QCoreApplication::applicationVersion();
   setWindowTitle("MSA-Qt Graph Window for "+modeTitle+ "; "+ ver);
 
@@ -551,25 +534,34 @@ void MainWindow::ConformMenusToMode()
 
   int wasTransMode = (vars->menuMode==modeScalarTrans || vars->menuMode==modeVectorTrans);  //whether prior mode was transmission
   int isTransMode= (vars->msaMode==modeScalarTrans || vars->msaMode==modeVectorTrans); //whether current mode is transmission
-  if (wasTransMode && isTransMode) {vars->menuMode=vars->msaMode; return; }   //Nothing needs changing
-/*
+  if (wasTransMode && isTransMode)
+  {
+    vars->menuMode=vars->msaMode;
+    return;
+  }   //Nothing needs changing
+
     //Hide every menu item that is ever to be hidden, then show what we want.
-  menuOK=uHideCommandItem(hDataMenu, menuDataS21ID)
-  menuOK=uHideCommandItem(hDataMenu, menuDataLineCalID)
-  menuOK=uHideCommandItem(hDataMenu, menuDataS11ID)
-  menuOK=uHideCommandItem(hDataMenu, menuDataS11DerivedID)
-  menuOK=uHideCommandItem(hDataMenu, menuDataLineCalRefID)
-  menuOK=uHideCommandItem(hDataMenu, menuDataLineCalOSLID)
+  ui->actionS21_Parameters->setVisible(false);
+  ui->actionInstalled_Line_Cal->setVisible(false);
+  ui->actionS11_Parameters->setVisible(false);
+  ui->actionS11_Derived_Data->setVisible(false);
+  ui->actionCal_Reference->setVisible(false);
+  ui->actionOSL_Info->setVisible(false);
 
-  if menuOptionsSmithID>0 then menuOK=uHideCommandItem(hOptionsMenu, menuOptionsSmithID)
+  if (vars->menuMode == modeReflection)
+    ui->actionSmith_Chart->setVisible(true);
+  else
+    ui->actionSmith_Chart->setVisible(false);
 
-  menuOK=uHideCommandItem(hFunctionsMenu, menuFunctionsFilterID)
-  menuOK=uHideCommandItem(hFunctionsMenu, menuFunctionsCrystalID)
-  menuOK=uHideCommandItem(hFunctionsMenu, menuFunctionsGroupDelayID)  //ver115-8b
-  menuOK=uHideCommandItem(hFunctionsMenu, menuFunctionsMeterID)
-  menuOK=uHideCommandItem(hFunctionsMenu, menuFunctionsRLCID)
-  menuOK=uHideCommandItem(hFunctionsMenu, menuFunctionsCoaxID)
-  menuOK=uHideCommandItem(hFunctionsMenu, menuFunctionsGenerateS21ID)
+  ui->actionFilter_Analysis->setVisible(false);
+  ui->actionComponent_Meter->setVisible(false);
+  ui->actionRLC_Analysis->setVisible(false);
+  ui->actionCrystal_Analysis->setVisible(false);
+  ui->actionGroup_Delay->setVisible(false);
+  ui->actionCoax_Parameters->setVisible(false);
+  ui->actionGenerate_S21->setVisible(false);
+
+
 
   //Full menu would look like this:
   //File  Edit  Setup  Options  Data  Functions  OperatingCal  Mode  Multiscan  Two-Port
@@ -578,21 +570,25 @@ void MainWindow::ConformMenusToMode()
   //in which case their flag menuXXXShowing equals zero.
 
   //Hide Two-Port, Multiscan and Operating Cal, but start at right side
-  //so hiding one doesn//t change the position of another.
-  */
+  //so hiding one doesn't change the position of another.
+
   //if (vars->menuTwoPortShowing) menuOK=uHideSubMenu(hGraphMenuBar, menuTwoPortPosition);   //ver116-1b
   vars->menuTwoPortShowing=0;
-  //if (vars->menuMultiscanShowing) menuOK=uHideSubMenu(hGraphMenuBar, menuMultiscanPosition);   //ver116-1b
+  ui->actionRun_Multiscan->setVisible(false);
   vars->menuMultiscanShowing=0;
     //If we have operating cal menu, hide it
   if (vars->menuOperatingCalShowing)
   {
    // menuOK=uHideSubMenu(hGraphMenuBar, menuOperatingCalPosition)
+   //fix me
     vars->menuOperatingCalShowing=0;
   }
     //Multiscan will only be shown for SA without TG, so Operating cal will not be shown.
     //This will move Multiscan left one position.
-  if (vars->menuModePosition==0) vars->menuMultiscanPosition=6; else vars->menuMultiscanPosition=7;
+  if (vars->menuModePosition==0)
+    vars->menuMultiscanPosition=6;
+  else
+    vars->menuMultiscanPosition=7;
 
     //Two-Port will only be shown for full VNA modes, so Operating cal and Mode will be shown and
     //Multiscan will not. This puts Two-Port after Mode.
@@ -600,50 +596,51 @@ void MainWindow::ConformMenusToMode()
 
     //We now have bare minimum of menus.
     //Make adjustments from here
-  //if (vars->msaMode!=modeRefelection) menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsFilterID,0, "Filter Analysis", 0);
-  //frontEndID=uMenuItemID(hFileMenu,5);    // "Load Front End" menu is sixth in File menu, which is position 5
+  if (vars->msaMode!= modeReflection)
+    ui->actionFilter_Analysis->setVisible(true);
+
   if (vars->msaMode!=modeSA)
   {
-        //menuOK=uGrayMenu(hFileMenu, frontEndID) //Disable Load Front End   //ver115-9d
-        //menuOK=uShowMenuItem(hGraphMenuBar, -1, hOperatingCalMenu, "Operating Cal", menuOperatingCalPosition)      //Operating Cal menu
-        vars->menuOperatingCalShowing=1;
-        //menuOK=uShowMenuItem(hGraphMenuBar, -1, hTwoPortMenu, "Two-Port", menuTwoPortPosition)
-        vars->menuTwoPortShowing=1;
+    //fix me fixme
+    ui->actionLoad_Front_End->setEnabled(false);    //Disable Load Front End
+    //menuOK=uShowMenuItem(hGraphMenuBar, -1, hOperatingCalMenu, "Operating Cal", menuOperatingCalPosition)      //Operating Cal menu
+    vars->menuOperatingCalShowing=1;
+    //menuOK=uShowMenuItem(hGraphMenuBar, -1, hTwoPortMenu, "Two-Port", menuTwoPortPosition)
+    vars->menuTwoPortShowing=1;
     if (vars->msaMode==modeReflection)
     {
-      /*
         //Reflection Mode
-        menuOK=uShowMenuItem(hDataMenu, menuDataS11ID, 0,"S11 Parameters", 2)  //S11 is third in Data menu
-        menuOK=uShowMenuItem(hDataMenu, menuDataS11DerivedID, 0,"S11 Derived Data", 3)
-        menuOK=uShowMenuItem(hDataMenu, menuDataLineCalRefID, 0, "Cal Reference", 4)
-        menuOK=uShowMenuItem(hDataMenu, menuDataLineCalOSLID, 0, "OSL Info",5)
-        menuOK=uShowMenuItem(hOptionsMenu, menuOptionsSmithID, 0, "Smith Chart", 5)    //Smith chart is 6th in Options list
-        menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsMeterID, 0,"Component Meter",0)    //Component meter is first on Functions list
-        menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsRLCID, 0,"RLC Analysis",1)
-        menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsCoaxID, 0, "Coax Parameters", 2)   //Coax is 3rd on Functions list
-        menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsGenerateS21ID, 0, "Generate S21", 3)
-            */
+      ui->actionS11_Parameters->setVisible(true);
+      ui->actionS11_Derived_Data->setVisible(true);
+      ui->actionCal_Reference->setVisible(true);
+      ui->actionOSL_Info->setVisible(true);
+
+      ui->actionSmith_Chart->setVisible(true);
+
+      ui->actionComponent_Meter->setVisible(true);
+      ui->actionRLC_Analysis->setVisible(true);
+      ui->actionCoax_Parameters->setVisible(true);
+      ui->actionGenerate_S21->setVisible(true);
     }
     else
     {
-      /*
         //Transmission Mode--Scalar or Vector
-        menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsMeterID, 0,"Component Meter",1)    //Component meter is second on Functions list
-        menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsRLCID, 0,"RLC Analysis",2)
-        menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsCrystalID, 0, "Crystal Analysis", 3) //Crystal is 4th on Functions list
-        if msaMode$=modeVectorTrans then menuOK=uShowMenuItem(hFunctionsMenu, menuFunctionsGroupDelayID, 0, "Group Delay", 4) //ver115-8b
-        menuOK=uShowMenuItem(hDataMenu, menuDataS21ID, 0,"S21 Parameters", 2)    //S21 is third in Data menu
-        menuOK=uShowMenuItem(hDataMenu, menuDataLineCalID, 0, "Installed Line Cal", 3)
-            */
+      ui->actionComponent_Meter->setVisible(true);
+      ui->actionRLC_Analysis->setVisible(true);
+      ui->actionCrystal_Analysis->setVisible(true);
+      if (vars->msaMode == modeVectorTrans)
+        ui->actionGroup_Delay->setVisible(true);
+      ui->actionS21_Parameters->setVisible(true);
+      ui->actionInstalled_Line_Cal->setVisible(true);
     }
   }
   if (vars->msaMode==modeSA)
   {
-    //menuOK=uEnableMenu(hFileMenu, frontEndID) //Enable Load Front End   //ver115-9d
+    ui->actionLoad_Front_End->setEnabled(true);
   }
   if (vars->msaMode==modeSA && vars->gentrk==0)   //Display Multiscan window only when in SA mode without TG
   {
-    //menuOK=uShowMenuItem(hGraphMenuBar, 0, hMultiscanMenu, "Multiscan", menuMultiscanPosition)
+    ui->actionRun_Multiscan->setVisible(true);
     vars->menuMultiscanShowing=1;
     //showID=uMenuItemID(hMultiscanMenu,1)    // "Show Multiscan" menu
     //quitID=uMenuItemID(hMultiscanMenu,2)    // "Quit Multiscan" menu
@@ -825,22 +822,21 @@ void MainWindow::RestartReflectionMode()
   vars->normrev = 0;
   vars->offset = 0;  //turn on tracking generator, normal, zero offset //ver111-17
 
-  graph->referenceLineSpec=""; graph->referenceLineType=0;
+  graph->referenceLineSpec="";
+  graph->referenceLineType=0;
 
   //Switching between VectorTrans and Reflection modes is specially handled, to preserve the data and Y-axis
   //settings that were last in effect for the new mode. This special treatment is done for menu-driven change
   //or by certain internally generated changes that call [ToggleTransmissionReflection], but not for changes
-  //resulting from loading of preference files.   ver116-1b
-  //if graphBox$<>"" and menuMode$=modeVectorTrans and refLastSteps<>0 then
+  //resulting from loading of preference files.
   if (vars->menuMode==modeVectorTrans && vars->refLastSteps!=0)
   {
     setCursor(Qt::WaitCursor);
     graph->ToggleTransmissionReflection();
     setCursor(Qt::ArrowCursor);
-
-    return; // : wait
+    return;
   }
-  vars->msaMode=modeReflection; //ver115-2a
+  vars->msaMode=modeReflection;
   graph->SetDefaultGraphData();    //clears autoscale, sets Y1 and Y2 data types and range, and sets Y2DisplayMode and Y1DisplayMode ver115-3b
   vnaCal.S11JigType="Reflect";   //Start using bridge ver115-5a
   ChangeMode();
@@ -848,17 +844,16 @@ void MainWindow::RestartReflectionMode()
 }
 void MainWindow::GoReflectionMode()
 {
-
   //Switch to Reflection mode and return; Get here only from [ChangeMode]
-  //We don't initialize variables here because they may have been set by loading Preferences ver115-2a
+  //We don't initialize variables here because they may have been set by loading Preferences
   vars->spurcheck = 0; //this assures Spur Test is OFF. ver116-1b
   vars->switchTR=1;
-  hwdIf->SelectLatchedSwitches(vars->freqBand); //Set transmission/reflection switch to reflection //ver116-1b ver116-4s
-  //if graphBox$="" then //See if window is created yet ver115-5d
+  hwdIf->SelectLatchedSwitches(vars->freqBand); //Set transmission/reflection switch to reflection
+  //if graphBox$="" then //See if window is created yet
   //        gosub [CreateGraphWindow]   //Note msaMode$ is new mode; menuMode$ is old mode
   //    else
   int smoothModeChange=0;
-  if (vars->menuMode==modeVectorTrans)  //menuMode$ has prior mode ver116-1b
+  if (vars->menuMode==modeVectorTrans)
   {
     //If changing from vector transmission mode and sweep frequencies are the same, we preserve some settings
     if (vars->refLastSteps!=0 && vars->refLastSteps==vars->steps
@@ -881,14 +876,17 @@ void MainWindow::GoReflectionMode()
   //    end if
   //S21JigR0 is sometimes referenced if we explicitly use the series or shunt jig. But it causes problems
   //in reflection mode if it can have a different value from S11BridgeR0.
-  vnaCal.S21JigR0=vnaCal.S11BridgeR0;    //ver116-4j
-  vars->suppressPhase=0; //Reflection always needs phase, even if not displayed ver116-1b
-  // fix me smithOpenChart(); //Create smith chart
+  vnaCal.S21JigR0=vnaCal.S11BridgeR0;
+  vars->suppressPhase=0; //Reflection always needs phase, even if not displayed
+  smithOpenChart(); //Create smith chart
 }
 
-
-
-
+void MainWindow::smithOpenChart()
+{
+  smithCopyParams();
+  vars->smithWindowVisible = true;
+  smith->doit();
+}
 void MainWindow::LeftButDouble()
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
@@ -1881,7 +1879,7 @@ void MainWindow::RestoreVNAData()
   {
     //Plot this point the same as though we just gathered it.
     if (vars->msaMode!=modeSA)
-      hwdIf->TransferToDataArrays();   //Enter data into S21DataArray or ReflectArray
+      TransferToDataArrays();   //Enter data into S21DataArray or ReflectArray
     if (vars->VNARestoreDoR0AndPlaneExt)  //If user so specified, perform R0 conversion and plane extension
     {
         if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
@@ -1902,10 +1900,10 @@ void MainWindow::RestoreVNAData()
             {
                 if (vars->planeadj!=0 || vnaCal.S11BridgeR0!=vnaCal.S11GraphR0)
                 {
-                    float f=vars->VNAData[vars->thisstep][0];
-                    float db=vars->VNAData[vars->thisstep][1];
-                    float ang=vars->VNAData[vars->thisstep][2];
-                    hwdIf->ApplyExtensionAndTransformR0(f, db, ang);
+                    double f=vars->VNAData[vars->thisstep][0];
+                    double db=vars->VNAData[vars->thisstep][1];
+                    double ang=vars->VNAData[vars->thisstep][2];
+                    graph->ApplyExtensionAndTransformR0(f, db, ang);
                     vars->ReflectArray[vars->thisstep][constGraphS11DB]=db;   //Save final S11 in db, angle format (in Graph R0, after plane ext)
                     while (ang>180)
                     {
@@ -2135,13 +2133,8 @@ void MainWindow::gChangeTextSpecs(QString btn, QString &newTxt)
 
 void MainWindow::smithFinished(QString)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub smithFinished btn$  //Window is closing
-    if smithHndl$<>"" then close #smith : smithHndl$=""    //Note smithHndl$ is the graphic box, not the window
-    if smithHasChartBmp then unloadBmp "smithChartBmp" : smithHasChartBmp=0
-end sub
-*/
+  smith->close();
+  vars->smithWindowVisible = false;
 }
 
 void MainWindow::updateView()
@@ -2422,6 +2415,105 @@ void MainWindow::gMouseQuery(float x, float y) //Display info at mouse location
         if calInProgress=0 then call smithDisplayReflectInfo queryPointNum  //Data is garbage during cal
     end if */
 }
+
+void MainWindow::OpenDataWindow()
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  if (!dataWindow)
+  {
+    dataWindow = new dialogDataWindow(this);
+  }
+  else
+  {
+    dataWindow->clear();
+  }
+  dataWindow->show();
+  /*
+if haltsweep = 1 then gosub [FinishSweeping] 'ver114-6f
+    'if the "Array Data Window" is already open, close it.
+        if datawindow = 1 then close #datawin:datawindow = 0
+    'create window called, Data Window, to display all data for each step
+
+
+    UpperLeftX = DisplayWidth-WindowWidth-20    'ver114-6f
+    UpperLeftY = 20    'ver114-6f
+    datawindow = 1
+*/
+
+}
+
+void MainWindow::CloseDataWindow(QString hndl)
+{
+  dataWindow->hide();
+}
+
+void MainWindow::MagnitudePhaseMSAinput()
+{
+  OpenDataWindow();
+  dataWindow->addLine(" Step           Calc Mag  Mag A/D  Freq Cal Pha A/D Processed");
+  dataWindow->addLine(" Num   Freq(MHz)  Input   Bit Val   Factor  Bit Val    Phase");
+  int validSteps=graph->gPointCount()-1;  //Number of completed steps
+  for (int i = 0; i < validSteps; i++)
+  {
+    QString freq=util.usingF("####.######",graph->gGetPointXVal(i+1));   //freq in MHz
+    QString data1=util.usingF("####.###", vars->datatable[i][2]);    //calculated mag input
+    QString data2=util.usingF("######", vars->magarray[i][3]);       //Raw ADC bits
+    QString data3=util.usingF("####.###", vars->freqCorrection[i]); //Freq correction
+    QString data4=util.usingF("######",vars->phaarray[i][3]); //Phase A/D. Bits ver115-5d
+    QString data5=util.usingF("####.##",vars->datatable[i][3]); //Phase Processed ver115-5d
+    dataWindow->addLine(util.uAlignDecimalInString(QString::number(i),4,4)+
+                        util.uAlignDecimalInString(freq,12,5)+
+                        util.uAlignDecimalInString(data1,9,5)+
+                        util.uAlignDecimalInString(data2,8,7)+
+                        util.uAlignDecimalInString(data3,11,5)+
+                        util.uAlignDecimalInString(data4,8,7)+
+                        util.uAlignDecimalInString(data5,10,5));
+  }
+  dataWindow->moveCursor(QTextCursor::Start);
+}
+
+void MainWindow::smithCopyParams()
+{
+  //Copy graph characteristics from main graph
+  //Set colors and trace size to match the main graph
+  QColor backCol, lineCol, boundsCol;
+  graph->gridappearance->gGetGridColors(backCol, lineCol, boundsCol);
+  smith->smithSetChartColors(backCol, lineCol, boundsCol);
+  QColor trace1Col, trace2Col, dum1, dum2, dum3, gridTextCol;
+  graph->gridappearance->gGetTraceColors(trace1Col, trace2Col);
+  graph->gridappearance->gGetTextColors(dum1, dum2, dum3, gridTextCol);
+  int w1, w2;
+  graph->gGetTraceWidth(w1, w2);
+  if (vars->primaryAxisNum==1) //Copy from primary axis
+  {
+    smith->smithSetTraceColor(trace1Col);
+    smith->smithSetTraceWidth(w1);
+  }
+  else    //Match Y2 color and width
+  {
+    smith->smithSetTraceColor(trace2Col);
+    smith->smithSetTraceWidth(w2);
+  }
+
+  QColor referenceColorSmith = graph->referenceColor2;
+  int referenceWidthSmith = graph->referenceWidth2;
+
+  smith->smithSetReferenceColor(referenceColorSmith);
+  smith->smithSetReferenceWidth(referenceWidthSmith);
+  smith->smithSetMarkerColor(gridTextCol);
+  smith->setR0(vars->S11GraphR0);
+/*
+          //If characteristics of the background chart have changed, indicate that our bitmap is no good any more.
+      if smithBackColor<>smithPrevBackCol or smithLineColor<>smithPrevLineCol or smithBoundsColor<>smithPrevBoundsCol _
+              or smithGridTextColor<>smithGridTextCol or smithR0<>S11GraphR0 then
+          if smithHasChartBmp then smithHasChartBmp=0 : unloadbmp "smithChartBmp"
+      end if
+      smithPrevBackCol=smithBackColor
+      smithPrevLineCol=smithLineColor
+      smithPrevBoundsCol=smithBoundsColor
+      smithPrevGridTextCol=smithGridTextColor
+      */
+}
 void MainWindow::on_actionMultiscan_Help_triggered()
 {
   QString Text = "Multiscan opens four sweep windows that will be swept in order. Originally they match the main graph window,"
@@ -2448,6 +2540,12 @@ void MainWindow::on_actionMultiscan_Help_triggered()
 
 void MainWindow::on_actionVNA_Reflection_triggered()
 {
+  if (graph->haltsweep)
+  {
+    graph->continueCode=1;
+    FinishSweeping();
+  }
+
   RestartReflectionMode();
 }
 
@@ -2458,16 +2556,31 @@ void MainWindow::on_actionHardware_Config_Manager_triggered()
 
 void MainWindow::on_actionVNA_TRansmission_triggered()
 {
+  if (graph->haltsweep)
+  {
+    graph->continueCode=1;
+    FinishSweeping();
+  }
   RestartTransmissionMode();
 }
 
 void MainWindow::on_actionSpectrum_Analyzer_triggered()
 {
+  if (graph->haltsweep)
+  {
+    graph->continueCode=1;
+    FinishSweeping();
+  }
   RestartPlainSAmode();
 }
 
 void MainWindow::on_actionSpectrum_Analyzer_with_TG_triggered()
 {
+  if (graph->haltsweep)
+  {
+    graph->continueCode=1;
+    FinishSweeping();
+  }
   RestartSATGmode();
 }
 
@@ -2602,7 +2715,7 @@ void MainWindow::on_btnTestSetup_clicked()
           textFile.close();
           return;
         }
-        graph->gGraphVal[vars->thisstep][0] = list.at(1).toFloat();
+        vars->gGraphVal[vars->thisstep][0] = list.at(1).toFloat();
         vars->datatable[vars->thisstep][2] = list.at(2).toFloat();
         vars->magarray[vars->thisstep][3] = list.at(3).toFloat();
         vars->freqCorrection[vars->thisstep] = list.at(4).toFloat();
@@ -2636,9 +2749,9 @@ void MainWindow::on_btnRedraw_clicked()
     return;   //Signal to halt after "scan" command
   }
   graph->mDeleteMarker("Halt");    //Delete Halt marker ver114-4c
-  if (smithGraphHndl()!="")
+  if (smith->isVisible())
   {
-    //smithDrawChart();    //To recreate bitmap of background, just in case it is messed up ver115-2c
+    smith->smithDrawChart();
   }
   graph->refreshGridDirty=1;
   graph->RefreshGraph(0);
@@ -2767,15 +2880,15 @@ void MainWindow::StartSweep()
         //after a halt resulting from partial restart, we returned before the first step was taken and need to
         //start with that step.
         graph->mDeleteMarker("Halt");
-        if (vars->thisstep == vars->sweepStartStep && hwdIf->syncsweep == 1)
-        {
-          hwdIf->SyncSweep();
-        }
+        //if (vars->thisstep == vars->sweepStartStep && hwdIf->syncsweep == 1)
+        //{
+//          hwdIf->SyncSweep();
+//        }
         if (vars->alternateSweep==0 || hwdIf->haltWasAtEnd==0)   //ver114-5c Go to next step unless we need to repeat this one
         {
           if (vars->sweepDir==1)
           {
-            if (vars->thisstep<vars->sweepEndStep)
+            if (vars->thisstep < vars->sweepEndStep)
               vars->thisstep = vars->thisstep + 1;
             else
               vars->thisstep=vars->sweepStartStep;
@@ -2903,12 +3016,12 @@ void MainWindow::CommandThisStep()
   //SEW [IncrementOneStep] is commented out to be clear it is not used for any goto.
   //[IncrementOneStep]
 
-  if (vars->thisstep == vars->sweepEndStep && hwdIf->syncsweep == 1)
-  {
-    hwdIf->SyncSweep();
-  }
+  //if (vars->thisstep == vars->sweepEndStep && hwdIf->syncsweep == 1)
+  //{
+    //hwdIf->SyncSweep();
+//  }
   //ver114-5a modified the following
-  if (vars->sweepDir==1)   //ver114-4k added this block to handle possible reverse sweeps
+  if (vars->sweepDir==1)   //added this block to handle possible reverse sweeps
   {
     if (vars->thisstep < vars->sweepEndStep)
     {
@@ -2945,6 +3058,22 @@ void MainWindow::CommandThisStep()
     return;
   }
   Halted();
+}
+
+void MainWindow::smithRefreshMain(int doRef)
+{
+  smithCopyParams();
+  smith->smithRefresh(doRef);
+}
+
+void MainWindow::gGetMinMaxPointNum(int &min, int &max)
+{
+  graph->gGetMinMaxPointNum(min, max);
+}
+
+void MainWindow::RecalcPlaneExtendAndR0AndRedraw()
+{
+  hwdIf->RecalcPlaneExtendAndR0AndRedraw();
 }
 int MainWindow::PostScan()
 {
@@ -3081,9 +3210,11 @@ void MainWindow::ProcessAndPrint()
     //convert phadata (bits read) to phase (degrees) if we have phase, but not for special graphs, which set phase directly
     if (vars->msaMode!=modeScalarTrans && vars->doSpecialGraph==0)
       hwdIf->ConvertPhadata();
-    hwdIf->ProcessDataArrays();   //Enter data in S21DataArray or ReflectArray
+    ProcessDataArrays();   //Enter data in S21DataArray or ReflectArray
   }
   graph->PlotDataToScreen();
+
+
   return; //from [ProcessAndPrint]
 
 }
@@ -3222,7 +3353,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   else
   {
     if (vars->msaMode!=modeSA)
-      vnaCal.InstallSelectedLineCal(graph->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());
+      vnaCal.InstallSelectedLineCal(vars->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());
   }
   vars->cycleNumber=1;
   gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[0],gridappearance->cycleColorsAxis2[0]);
@@ -3254,13 +3385,12 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
     graph->gDrawGrid();      // Clear graphics area and draw the background grid and labels. Wipes out all prior flushes.
     graph->DrawSetupInfo();    // Draw info describing the sweep setup
 
-    /*
-      //fix me no smith chart yet
-      if (smithGraphHndl()!="")   //ver115-1b draw smith chart if we have one ver115-1e
-      {
-        //smithRedrawChart(); //Draw blank chart ver115-2c
-      }
-*/
+
+    if (smith->isVisible())   // update smith chart if it's visible
+    {
+      smith->smithDrawChart();
+    }
+
     if (graph->referenceLineType!=0)    //Draw reference lines ver114-8a
     {
       if (graph->referenceLineType>1)
@@ -3370,7 +3500,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
 
   //Save some sweep settings for reflection and transmission for use when changing
   //back to a previously used mode, so we know the nature of the last gathered data
-  if (vars->msaMode==modeReflection)    //ver116-1b
+  if (vars->msaMode==modeReflection)
   {
     vars->refLastSteps=vars->steps;
     vars->refLastStartFreq=vars->startfreq;
@@ -3604,6 +3734,7 @@ void MainWindow::ResizeArrays(int nPoints)
     vars->OSLb.mresize(maxPoints, 2);
     vars->OSLc.mresize(maxPoints, 2);
     vars->OSLstdOpen.mresize(maxPoints,2);
+    vars->OSLstdShort.mresize(maxPoints,2);
     vars->OSLstdLoad.mresize(maxPoints,2);
     vars->OSLcalOpen.mresize(maxPoints,2);
     vars->OSLcalLoad.mresize(maxPoints,2);
@@ -3626,7 +3757,7 @@ void MainWindow::ResizeArrays(int nPoints)
       vnaCal.CreateOperatingCalFolder();  //Create OperatingCal folder if it does not exist
       vnaCal.LoadBaseLineCalFile();       //Load BaseLine file if it exists; if not we don't care
       vnaCal.bandLineNumSteps=-1; //Indicate no data; we just erased it
-      vnaCal.InstallSelectedLineCal(graph->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());     //To restore line cal data
+      vnaCal.InstallSelectedLineCal(vars->gGraphVal, graph->gNumPoints, graph->gGetXIsLinear());     //To restore line cal data
     }
   }
   //Note we don't have to resize configarray or configLineCalPoints$(); a flexible number of points
@@ -3652,6 +3783,70 @@ void MainWindow::CalcFreqCorrection()
     vars->freqCorrection[s]=hwdIf->calMan->calConvertFreqError(currFreq); //Put power correction into the array
   }
 }
+void MainWindow::ProcessDataArrays()
+{
+  //process "thisstep" data for VNA/SNA, filling S21DataArray and/or ReflectArray
+  //ver115-8b separated this from ProcessAndPrint so it can be called separately.
+  //Data is transferred from datatable, stored as necessary and calculations made.
+  //For reflection mode; do jig calc and/or apply OSL calibration
+  //But data as is if we are doing calibration.
+  TransferToDataArrays();
+  if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
+  {
+    if (vars->calInProgress==0 && vars->planeadj!=0)
+    {
+      float phaseToExtend=vars->S21DataArray[vars->thisstep][2];
+      util.uExtendCalPlane(vars->thisfreq, phaseToExtend, vars->planeadj,0);  //Do plane adjustment
+      vars->S21DataArray[vars->thisstep][2]=phaseToExtend;
+    }
+  }
+  else
+  {
+    if (vars->msaMode==modeReflection)
+    {
+      graph->ConvertRawDataToReflection(vars->thisstep);    //Apply calibration and calculate all reflection related data; apply OSL if necessary
+    }
+  }
+}
+void MainWindow::TransferToDataArrays()
+{
+  //Transfer datatable data to transmission or reflection array for thisstep
+  float thisfreq=vars->datatable[vars->thisstep][1];  //freq
+  int thisBand=vars->datatable[vars->thisstep][4];
+  if (thisBand!=1)
+    thisfreq= hwdIf->ActualSignalFrequency(thisfreq,thisBand); //actual signal frequency, not equivalent 1G freq
+  float thisDB=vars->datatable[vars->thisstep][2];     //mag db
+  float thisAng=vars->datatable[vars->thisstep][3];  //phase
+
+  //We save data in S21DataArray for VectorTrans and ScalarTrans modes
+  //We save data in ReflectArray for Reflection Mode.
+  //Note that the actual signal frequency, not equivalent 1G freq, gets saved in these arrays
+  //as part of the restart process, but we repeat that here in case we are called outside the normal
+  //scanning process.
+  //Note data in datatable has no adjustment for planeadj, but these other arrays do
+
+  if (vars->msaMode==modeVectorTrans || vars->msaMode==modeScalarTrans)
+  {
+    vars->S21DataArray[vars->thisstep][0]=thisfreq;   //actual signal freq
+    vars->S21DataArray[vars->thisstep][1]=thisDB;   //mag
+    vars->S21DataArray[vars->thisstep][2]=thisAng;  //phase--may be changed by plane extension
+    vars->S21DataArray[vars->thisstep][3]=thisAng;  //phase before plane extension ver116-1b
+  }
+  if (vars->msaMode==modeReflection)
+  {
+    for (int i=1; i <= 16; i++)
+    {
+      vars->ReflectArray[vars->thisstep][i]=0;
+    } //Clear all reflection data (except freq) for this point
+    vars->ReflectArray[vars->thisstep][0]=thisfreq;   //actual signal freq
+    //The following may be changed by applying OSL
+    vars->ReflectArray[vars->thisstep][constGraphS11DB]=thisDB;   //Save raw data in array that will hold reflection related data
+    vars->ReflectArray[vars->thisstep][constGraphS11Ang]=thisAng;
+    vars->ReflectArray[vars->thisstep][constIntermedS11DB]=thisDB;    //ConvertRawDataToReflection may override these intermed values
+    vars->ReflectArray[vars->thisstep][constIntermedS11Ang]=thisAng;
+  }
+}
+
 QString MainWindow::SaveContextFile(QString fName)
 {
   //Save specified Contexts to file+ return error message or ""
@@ -4490,8 +4685,8 @@ float MainWindow::StepWithValue(int dataType, int startStep, int dir, int targVa
   int saveY1Type=vars->Y1DataType; vars->Y1DataType=dataType; //Values will be calculated for Y1
   int saveY2Type=vars->Y2DataType; vars->Y2DataType=constNoGraph;
 
-  float dum;
-  float stepVal;
+  double dum;
+  double stepVal;
   graph->CalcGraphData(startStep, stepVal, dum, 0);  //Calculate Y1 data type from data arrays
   if (stepVal==targVal)
   {
@@ -4619,7 +4814,6 @@ void MainWindow::on_actionPrimary_Axis_triggered()
 
 void MainWindow::on_actionSweep_triggered()
 {
-
   if (graph->haltsweep)
   {
     graph->continueCode=1;
@@ -4796,3 +4990,330 @@ void MainWindow::on_actionSweep_triggered()
 }
 //-----------------------------------------------------------------------------
 
+
+void MainWindow::on_actionSpecial_Tests_triggered()
+{
+  hwdIf->specTestToggleVisible();
+}
+
+void MainWindow::on_actionInput_Data_triggered()
+{
+  OpenDataWindow();
+  if (vars->msaMode != modeSA && vars->msaMode != modeScalarTrans)
+  {
+    MagnitudePhaseMSAinput();    //Do phase if we have it
+    return;
+  }
+  dataWindow->addLine(" Step           Calc Mag  Mag AtoD Freq Cal");
+  dataWindow->addLine(" Num   Freq(MHz)  Input   Bit Val   Factor");
+  int validSteps = graph->gPointCount()-1;  //Number of completed steps
+  for (int i = 0; i < validSteps; i++)
+  {
+      QString freq = util.usingF("####.######",graph->gGetPointXVal(i+1));   //freq in MHz
+      QString data1 = util.usingF("####.###", vars->datatable[i][2]);    //calculated mag input
+      QString data2 = util.usingF("######", vars->magarray[i][3]);       //Raw ADC bits
+      QString data3 = util.usingF("####.###", vars->freqCorrection[i]); //Freq correction
+      dataWindow->addLine(util.uAlignDecimalInString(QString::number(i),4,4)+
+                  util.uAlignDecimalInString(freq,12,5)+
+                  util.uAlignDecimalInString(data1,9,5)+
+                  util.uAlignDecimalInString(data2,8,7)+
+                  util.uAlignDecimalInString(data3,11,5));
+  }
+  dataWindow->show();
+  dataWindow->moveCursor(QTextCursor::Start);
+}
+
+void MainWindow::on_actionGraph_Data_triggered()
+{
+  OpenDataWindow();
+  dataWindow->addLine("1" + graph->gGetTitleLine(1));   //ver115-6a put title in header
+  dataWindow->addLine("1" + graph->gGetTitleLine(2));
+  dataWindow->addLine("1" + graph->gGetTitleLine(3));
+  dataWindow->addLine("!Graph Data");
+  QString s="! Freq(MHZ)";
+  QString y1AxisLabel, y2AxisLabel, dum, dum1 , dum3;
+  int dum2;
+  QString data1;
+  QString data2;
+  QString freq;
+  if (vars->Y1DataType != constNoGraph)
+  {
+    graph->DetermineGraphDataFormat(vars->Y1DataType, y1AxisLabel, dum1,dum2,dum3);
+    s=s+"      "+y1AxisLabel;
+  }
+  if (vars->Y2DataType != constNoGraph)
+  {
+    graph->DetermineGraphDataFormat(vars->Y2DataType, y2AxisLabel, dum,dum2,dum3);
+    s=s+"        "+y2AxisLabel;
+  }
+  int validSteps = graph->gPointCount()-1;  //Number of completed steps
+  for (int i = 0; i < validSteps; i++)
+  {
+    freq = util.usingF("####.######", graph->gGetPointXVal(i+1));
+    double y1Val, y2Val;
+    graph->CalcGraphData(i, y1Val, y2Val, 0); //Get Y1 and Y2 values
+    if (vars->Y1DataType==constNoGraph)
+    {
+      data1="";
+    }
+    else
+    {
+      double aVal=abs(y1Val);
+      if (aVal>=1000000)
+        data1=util.uScientificNotation(y1Val, 6, 1); //6 decimals with zero padding
+      else if(aVal>=1000)
+        data1=util.usingF("########.###",y1Val);
+      else if (aVal>=0.000001)
+        data1=util.usingF("#####.######",y1Val);
+      else   //small values
+        data1=util.uScientificNotation(y1Val, 6, 1); //6 decimals with zero padding
+
+    }
+    if (vars->Y2DataType == constNoGraph)
+    {
+      data2="";
+    }
+    else
+    {
+      double aVal=abs(y2Val);
+      if (aVal>=1000000)
+        data2=util.uScientificNotation(y2Val, 6, 1); //6 decimals with zero padding
+      else if (aVal>=1000)
+        data2=util.usingF("########.###",y2Val);
+      else if (aVal>=0.000001)
+        data2=util.usingF("#####.######",y2Val);
+      else   //small values
+        data2=util.uScientificNotation(y2Val, 6, 1); //6 decimals with zero padding
+
+    }
+    if (vars->Y1DataType==constNoGraph) //skip data1 if nonexistent ver115-9d
+    {
+      dataWindow->addLine( util.uAlignDecimalInString(freq,11,4) + util.uAlignDecimalInString(data2,22,8));
+    }
+    else
+    {
+      if (vars->Y2DataType==constNoGraph)
+      {
+        dataWindow->addLine( util.uAlignDecimalInString(freq,11,4)
+                             + util.uAlignDecimalInString(data1,22,8));
+      }
+      else
+      {
+        dataWindow->addLine( util.uAlignDecimalInString(freq,11,4)
+                             + util.uAlignDecimalInString(data1,22,8)
+                             + util.uAlignDecimalInString(data2,22,8));
+      }
+    }
+  }
+  dataWindow->moveCursor(QTextCursor::Start);
+}
+
+void MainWindow::on_actionS21_Parameters_triggered()
+{
+  OpenDataWindow();
+  dataWindow->addLine("!" + graph->gGetTitleLine(1));   //put title in header
+  dataWindow->addLine("!" + graph->gGetTitleLine(2));
+  dataWindow->addLine("!" + graph->gGetTitleLine(3));
+  dataWindow->addLine( "# MHZ S DB R "+ QString::number(vnaCal.S21JigR0));
+  dataWindow->addLine( "!  MHz       S21_Mag   S21_Ang");
+  int validSteps=graph->gPointCount()-1;  //Number of completed steps  //ver116-1b
+  for (int i = 0; i < validSteps; i++)
+  {
+    QString freq = util.usingF("####.######",vars->S21DataArray[i][0]);
+    QString data1 = util.usingF("####.#####",vars->S21DataArray[i][1]);
+    QString data2 = util.usingF("####.##",vars->S21DataArray[i][2]);
+    dataWindow->addLine( util.uAlignDecimalInString(freq,11,4)
+                         + util.uAlignDecimalInString(data1,9,5)
+                         + util.uAlignDecimalInString(data2,8,5));
+  }
+  dataWindow->moveCursor(QTextCursor::Start);
+}
+
+void MainWindow::on_actionInstalled_Line_Cal_triggered()
+{
+  OpenDataWindow();
+
+
+  if (vars->msaMode==modeReflection)
+    dataWindow->addLine("!Cal Reference");
+  else
+    dataWindow->addLine("!Line Calibration");
+  dataWindow->addLine( "! Freq(MHz)   Cal_Mag Cal_Ang");
+  for (int i = 0; i < vars->steps; i++)
+  {
+    QString freq=util.usingF("####.######",graph->gGetPointXVal(i+1));
+    QString data1=util.usingF("####.###",vars->lineCalArray[i][1]);
+    QString data2=util.usingF("####.##",vars->lineCalArray[i][2]);
+    dataWindow->addLine( util.uAlignDecimalInString(freq,11,4)
+                         + util.uAlignDecimalInString(data1,9,5)
+                         + util.uAlignDecimalInString(data2,10,5));
+  }
+  dataWindow->moveCursor(QTextCursor::Start);
+}
+
+void MainWindow::on_actionS11_Parameters_triggered()
+{
+  OpenDataWindow();
+  dataWindow->addLine("!" + graph->gGetTitleLine(1));   //put title in header
+  dataWindow->addLine("!" + graph->gGetTitleLine(2));
+  dataWindow->addLine("!" + graph->gGetTitleLine(3));
+  dataWindow->addLine( "# MHZ S DB R " + QString::number(vars->S11GraphR0));
+  dataWindow->addLine( "! MHz       S11_Mag   S11_Ang");
+  int validSteps=graph->gPointCount()-1;  //Number of completed steps
+  for (int i = 0; i < validSteps; i++)
+  {
+    QString freq= util.usingF("####.######",vars->ReflectArray[i][0]);
+    QString data1=util.usingF("####.#####",vars->ReflectArray[i][1]);
+    QString data2=util.usingF("####.##",vars->ReflectArray[i][2]);
+    dataWindow->addLine( util.uAlignDecimalInString(freq,11,4)
+                         + util. uAlignDecimalInString(data1,10,5)
+                         + util.uAlignDecimalInString(data2,8,5));
+  }
+  dataWindow->moveCursor(QTextCursor::Start);
+}
+
+void MainWindow::on_actionS11_Derived_Data_triggered()
+{
+  OpenDataWindow();
+  dataWindow->addLine("   Freq      S11_DB   S11_Ang  Rho    Z_Mag   Z_Ang     Rs       Xs       Cs       Ls      Rp       Xp      Lp      Cp     VSWR     RL    %RefPwr    Q");
+  int validSteps = graph->gPointCount()-1;  //Number of completed steps
+  for (int i = 0; i < validSteps; i++)
+  {
+    dataWindow->addLine( AlignedReflectData(i));
+  }
+  dataWindow->moveCursor(QTextCursor::Start);
+}
+
+void MainWindow::on_actionCal_Reference_triggered()
+{
+  on_actionInstalled_Line_Cal_triggered();
+}
+
+void MainWindow::on_actionOSL_Info_triggered()
+{
+  OpenDataWindow();
+  dataWindow->addLine(" Freq(MHz)  Open_Real  Open_Imag    Short_Real    Short_Imag   Load_Real    Load_Imag   OSL_A_Real   OSL_A_Imag   OSL_B_Real   OSL_B_Imag   OSL_C_Real   OSL_C_Imag");
+
+  QString Or, Oi, Sr, Si, Lr, Li, Ar, Ai, Br, Bi, Cr, Ci;
+  //OSL calibration standards and coefficients
+  for (int i = 0; i < vars->steps; i++)
+  {
+    QString freq = util.usingF("####.######", graph->gGetPointXVal(i+1));
+    double OSLdataMin=1e-7;
+    if (abs(vars->OSLstdOpen[i][0])<OSLdataMin)
+      Or="0";
+    else
+      Or=util.uScientificNotation(vars->OSLstdOpen[i][0], 5,0) ;
+    if (abs(vars->OSLstdOpen[i][1])<OSLdataMin)
+      Oi="0";
+    else
+      Oi=util.uScientificNotation(vars->OSLstdOpen[i][1], 5,0);
+    if (abs(vars->OSLstdShort[i][0])<OSLdataMin)
+      Sr="0";
+    else
+      Sr=util.uScientificNotation(vars->OSLstdShort[i][0], 5,0);
+    if (abs(vars->OSLstdShort[i][1])<OSLdataMin)
+      Si="0";
+    else
+      Si=util.uScientificNotation(vars->OSLstdShort[i][1], 5,0);
+    if (abs(vars->OSLstdLoad[i][0])<OSLdataMin)
+      Lr="0";
+    else
+      Lr=util.uScientificNotation(vars->OSLstdLoad[i][0], 5,0);
+    if (abs(vars->OSLstdLoad[i][1])<OSLdataMin)
+      Li="0";
+    else
+      Li=util.uScientificNotation(vars->OSLstdLoad[i][1], 5,0);
+    if (abs(vars->OSLa[i][0])<OSLdataMin)
+      Ar="0";
+    else
+      Ar=util.uScientificNotation(vars->OSLa[i][0], 5,0);
+    if (abs(vars->OSLa[i][1])<OSLdataMin)
+      Ai="0";
+    else
+      Ai=util.uScientificNotation(vars->OSLa[i][1], 5,0);
+    if (abs(vars->OSLb[i][0])<OSLdataMin)
+      Br="0";
+    else
+      Br=util.uScientificNotation(vars->OSLb[i][0], 5,0);
+    if (abs(vars->OSLb[i][1])<OSLdataMin)
+      Bi="0";
+    else
+      Bi=util.uScientificNotation(vars->OSLb[i][1], 5,0);
+    if (abs(vars->OSLc[i][0])<OSLdataMin)
+      Cr="0";
+    else
+      Cr=util.uScientificNotation(vars->OSLc[i][0], 5,0);
+    if (abs(vars->OSLc[i][1])<OSLdataMin)
+      Ci="0";
+    else
+      Ci=util.uScientificNotation(vars->OSLc[i][1], 5,0);
+    dataWindow->addLine( util.uAlignDecimalInString(freq,11,4)
+                         + " "
+                         + util.uAlignDecimalInString(Or,13,3)
+                         + util.uAlignDecimalInString(Oi,13,3)
+                         + util.uAlignDecimalInString(Sr,13,3)
+                         + util.uAlignDecimalInString(Si,13,3)
+                         + util.uAlignDecimalInString(Lr,13,3)
+                         + util.uAlignDecimalInString(Li,13,3)
+                         + util.uAlignDecimalInString(Ar,13,3)
+                         + util.uAlignDecimalInString(Ai,13,3)
+                         + util.uAlignDecimalInString(Br,13,3)
+                         + util.uAlignDecimalInString(Bi,13,3)
+                         + util.uAlignDecimalInString(Cr,13,3)
+                         + util.uAlignDecimalInString(Ci,13,3));
+  }
+  dataWindow->moveCursor(QTextCursor::Start);
+
+}
+QString MainWindow::AlignedReflectData(int currStep)
+{
+  //Return string of formatted ReflectArray data
+  QString aForm="3,3,4//UseMultiplier//DoCompact";
+  QString resForm="3,3,4//UseMultiplier//SuppressMilli//DoCompact";
+  QString freq=util.usingF("####.######",vars->ReflectArray[currStep][0]);
+  QString db=util.usingF("####.#####",vars->ReflectArray[currStep][constGraphS11DB]);
+  QString ang=util.usingF("####.##",vars->ReflectArray[currStep][constGraphS11Ang]);
+  QString rho=util.usingF("#.###",vars->ReflectArray[currStep][constRho]);
+  QString ZMag=util.uFormatted(vars->ReflectArray[currStep][constImpedMag], resForm);
+  QString ZAng=util.usingF("####.##",vars->ReflectArray[currStep][constImpedAng]);
+  QString serR=util.uFormatted(vars->ReflectArray[currStep][constSerR], resForm);
+  QString serReact=util.uFormatted(vars->ReflectArray[currStep][constSerReact], resForm);
+  QString serC=util.uFormatted(vars->ReflectArray[currStep][constSerC], aForm);
+  QString serL=util.uFormatted(vars->ReflectArray[currStep][constSerL], aForm);
+  QString parR=util.uFormatted(vars->ReflectArray[currStep][constParR], resForm);
+  QString parReact=util.uFormatted(vars->ReflectArray[currStep][constParReact], resForm);
+  QString parC=util.uFormatted(vars->ReflectArray[currStep][constParC], aForm);
+  QString parL=util.uFormatted(vars->ReflectArray[currStep][constParL], aForm);
+  double t = vars->ReflectArray[currStep][constSWR];
+  QString swr=util.uFormatted(qMin(9999.0, t),"4,2,4") ;
+  QString RL=util.usingF("###.###",0-vars->ReflectArray[currStep][constGraphS11DB]);
+  QString RefPow=util.usingF("###.###",100*pow(vars->ReflectArray[currStep][constRho],2));
+  double X=vars->ReflectArray[currStep][constSerReact];
+  double R=vars->ReflectArray[currStep][constSerR];
+  QString  Q;
+  if (R==0)
+    Q="9999";
+  else
+    Q= util.usingF("####.#",abs(X)/R); //Q=X/R works for single L or C only
+
+  return  (util.uAlignDecimalInString(freq,11,4)
+           + util.uAlignDecimalInString(db,11,5)
+           + util.uAlignDecimalInString(ang,8,5)
+           + util.uAlignDecimalInString(rho,6,2)
+           + util.uAlignDecimalInString(ZMag,9,5)
+           + util.uAlignDecimalInString(ZAng,8,5)
+           + util.uAlignDecimalInString(serR,9,5)
+           + util.uAlignDecimalInString(serReact,9,5)
+           + util.uAlignDecimalInString(serC,8,5)
+           + util.uAlignDecimalInString(serL,8,5)
+           + util.uAlignDecimalInString(parR,9,5)
+           + util.uAlignDecimalInString(parReact,9,5)
+           + util.uAlignDecimalInString(parC,8,5)
+           + util.uAlignDecimalInString(parL,8,5)
+           + util.uAlignDecimalInString(swr,8,5)
+           + util.uAlignDecimalInString(RL,8,4)
+           + util.uAlignDecimalInString(RefPow,8,4)
+           + util.uAlignDecimalInString(Q,7,5));
+
+}

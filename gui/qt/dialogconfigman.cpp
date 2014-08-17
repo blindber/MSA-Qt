@@ -47,6 +47,34 @@ dialogConfigMan::dialogConfigMan(QWidget *parent) :
   allowClose = false;
   ui->setupUi(this);
 
+  ui->PLL1Ref->setValidator(new QDoubleValidator(this));
+  ui->PLL2Ref->setValidator(new QDoubleValidator(this));
+  ui->PLL3Ref->setValidator(new QDoubleValidator(this));
+
+   ui->DDS1freq->setValidator(new QDoubleValidator(this));
+   ui->DDS1bw->setValidator(new QDoubleValidator(this));
+
+   ui->DDS3freq->setValidator(new QDoubleValidator(this));
+   ui->DDS3bw->setValidator(new QDoubleValidator(this));
+
+   ui->LO2->setValidator(new QDoubleValidator(this));
+   ui->mast->setValidator(new QDoubleValidator(this));
+
+   ui->FiltWideMag->setValidator(new QDoubleValidator(this));
+   ui->FiltWidePhase->setValidator(new QDoubleValidator(this));
+   ui->FiltMidMag->setValidator(new QDoubleValidator(this));
+   ui->FiltMidPhase->setValidator(new QDoubleValidator(this));
+   ui->FiltNarrowMag->setValidator(new QDoubleValidator(this));
+   ui->FiltNarrowPhase->setValidator(new QDoubleValidator(this));
+   ui->FiltXNarrowMag->setValidator(new QDoubleValidator(this));
+   ui->FiltXNarrowPhase->setValidator(new QDoubleValidator(this));
+
+   ui->PDM->setValidator(new QIntValidator(this));
+   ui->Inv->setValidator(new QDoubleValidator(this));
+
+   ui->filtFreq->setValidator(new QDoubleValidator(this));
+   ui->filtBW->setValidator(new QDoubleValidator(this));
+
 
   DefaultDir = QApplication::applicationDirPath();
   moduleVersion=" 1.10";

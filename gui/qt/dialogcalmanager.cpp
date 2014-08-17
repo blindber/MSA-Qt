@@ -695,14 +695,14 @@ int  dialogCalManager::calNumFreqPoints()
 }
 void dialogCalManager::calGetMagPoint(int N, float &adc, float &db, float &phase)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub calGetMagPoint N, byref adc, byref db, byref phase       'Get mag data for point N
-    if N<=0 or N>calMagPoints then notice "Invalid mag cal point number."
-    adc=calMagTable(N,0)
-    db=calMagTable(N,1)
-    phase=calMagTable(N,2)
-end sub*/
+  //Get mag data for point N
+  if (N<=0 || N>calMagPoints)
+  {
+    QMessageBox::information(this, "Notice", "Invalid mag cal point number.");
+  }
+  adc=calMagTable[N][0];
+  db=calMagTable[N][1];
+  phase=calMagTable[N][2];
 }
 void dialogCalManager::calGetFreqPoint(int N, float &f, float &db)
 {

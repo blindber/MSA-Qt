@@ -66,6 +66,20 @@ dialogFreqAxisPreference::dialogFreqAxisPreference(QWidget *parent) :
 {
   allowClose = false;
   ui->setupUi(this);
+
+  ui->baseFreq->setValidator(new QDoubleValidator(this));
+  ui->SweepCent->setValidator(new QDoubleValidator(this));
+  ui->SweepSpan->setValidator(new QDoubleValidator(this));
+  ui->SweepStart->setValidator(new QDoubleValidator(this));
+  ui->SweepStop->setValidator(new QDoubleValidator(this));
+  ui->invdegbox->setValidator(new QDoubleValidator(this));
+  ui->R0->setValidator(new QDoubleValidator(this));
+  ui->freqoffbox->setValidator(new QDoubleValidator(this));
+
+  ui->SweepWait->setValidator(new QIntValidator(this));
+  ui->SweepSteps->setValidator(new QIntValidator(this));
+  ui->planeadjbox->setValidator(new QIntValidator(this));
+
   int  x, y, h1, h2;
   x = parent->x();
   y = parent->y();

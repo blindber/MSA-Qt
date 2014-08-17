@@ -42,6 +42,9 @@
 #include "hwdinterface.h"
 #include "debugmodule.h"
 #include "dialogshowvars.h"
+#include "smithdialog.h"
+#include "dialogdatawindow.h"
+
 
 namespace Ui {
 class MainWindow;
@@ -72,9 +75,13 @@ private:
   //QTimer *timerStart;
   //QTimer *timerStart2;
   dialogShowVars *showVars;
+  smithDialog *smith;
+  dialogDataWindow *dataWindow;
 
 
   void CalcFreqCorrection();
+  void ProcessDataArrays();
+  void TransferToDataArrays();
 
   int PostScan();
   void FinishSweeping();
@@ -90,15 +97,7 @@ private:
 
   void CreateGraphWindow();
 
-
-
-
-
-
-
   void GetDialogPlacement();
-
-
 
   void menuRunConfig();
   void menuRunCal();
@@ -114,16 +113,12 @@ private:
   void GoTransmissionMode();
   void RestartReflectionMode();
   void GoReflectionMode();
+  void smithOpenChart();
   void LeftButDouble();
   void preupdatevar();
   void RightButDown();
   void MarkerClick();
   void StartingLimits();
-
-
-
-
-
 
   void mUpdateMarkerEditButtons();
   void mMarkSelect(QString markID);
@@ -189,6 +184,16 @@ private:
 
   void gMouseQuery(float x, float y);
 
+  void OpenDataWindow();
+  void CloseDataWindow(QString hndl);
+
+  void MagnitudePhaseMSAinput();
+  QString AlignedReflectData(int currStep);
+
+
+//=========================== Smith Graphing Module=====================================
+  void smithCopyParams();
+//======================================================================================
 protected:
   void resizeEvent(QResizeEvent *event);
   virtual void showEvent ( QShowEvent * event );
@@ -259,6 +264,24 @@ private slots:
 
   void on_actionSweep_triggered();
 
+  void on_actionSpecial_Tests_triggered();
+
+  void on_actionInput_Data_triggered();
+
+  void on_actionGraph_Data_triggered();
+
+  void on_actionS21_Parameters_triggered();
+
+  void on_actionInstalled_Line_Cal_triggered();
+
+  void on_actionS11_Parameters_triggered();
+
+  void on_actionS11_Derived_Data_triggered();
+
+  void on_actionCal_Reference_triggered();
+
+  void on_actionOSL_Info_triggered();
+
 public slots:
   void updateView();
   void DisplayButtonsForHalted();
@@ -281,6 +304,10 @@ public slots:
   //void IncrementOneStep();
   void StartSweep();
   void CommandThisStep();
+
+  void smithRefreshMain(int doRef);
+  void gGetMinMaxPointNum(int &min, int &max);
+  void RecalcPlaneExtendAndR0AndRedraw();
 
 };
 

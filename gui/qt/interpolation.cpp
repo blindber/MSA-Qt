@@ -25,7 +25,6 @@ void interpolation::setGlobalVars(globalVars *newVars)
 {
   vars = newVars;
 }
-//ver114-5p added Interpolation Module; ver114-5q moved it to preced config module
 //====================START INTERPOLATION ROUTINES==========================
 //The interpolation module handles linear and cubic interpolation, and deals with the fact
 //that LB does not allow arrays as arguments. Three arrays are created: intSrc() contains the

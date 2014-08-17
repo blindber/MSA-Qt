@@ -201,21 +201,23 @@ public:
   void SetY1Range(int bot, int top);
   void SetY2Range(int bot, int top);
   void CalcAutoScale(int axisNum, int &axisMin, int &axisMax);
+  void ConvertRawDataToReflection(int currStep);
+  void ApplyExtensionAndTransformR0(double freq, double &db, double &ang);
   void mDrawMarkerInfo();
   void mUpdateMarkerLocations();
   void gDrawGrid();
 
   void CreateReferenceSource();
   void CreateReferenceTransform();
-  void CalcReferencesWholeStep(int stepNum, float &ref1, float &ref2);
+  void CalcReferencesWholeStep(int stepNum, double &ref1, double &ref2);
   void CalcReferences();
   QString CreateReferenceTraces(QColor tCol, int tSize, int traceNum, QPainterPath *path);
   QString PrivateCreateReferenceTrace(int traceNum, int startPoint, int endPoint, QPainterPath *path);
 
-  void CalcGraphData(int currStep, float &y1, float &y2, int useWorkArray);
-  void CalcGraphDataType(int currStep, int dataType1, int dataType2, float &y1, float &y2, int useWorkArray);
+  void CalcGraphData(int currStep, double &y1, double &y2, int useWorkArray);
+  void CalcGraphDataType(int currStep, int dataType1, int dataType2, double &y1, double &y2, int useWorkArray);
   void CalcReflectDerivedData(int currStep);
-  void CalcReflectGraphData(int currStep, float &y1, float &y2, int useWorkArray);
+  void CalcReflectGraphData(int currStep, double &y1, double &y2, int useWorkArray);
   void SetStartStopFreq(float startF, float stopF);
   void gDrawMarkers();
   void gEraseMarkers();
@@ -258,6 +260,9 @@ public:
   int referenceWidth2;    //Reference Trace color and width
   QColor referenceColorSmith;
   int referenceWidthSmith;     //color/width for smith chart reference line
+  //double S11GraphR0;
+  //double S11BridgeR0;
+
   //The following globals determine whether we redraw various components from scratch or by a faster method.
   int refreshGridDirty;    //Forces grid (and labels, title) and setup info to redraw from scratch in RefreshGraphs
   int refreshTracesDirty;    //Forces traces to be redrawn from raw Y1 and Y2 values in RefreshGraph
@@ -276,7 +281,7 @@ public:
   //If referenceDoMath=2 then math is done on the current graph values (e.g. capacitance)
   int referenceDoMath, referenceOpA, referenceOpB; //ver114-7b
   int autoScaleY1, autoScaleY2; //=1 to autoscale the axes
-  float thispointy1, thispointy2;
+  double thispointy1, thispointy2;
 
   //------SEWgraph globals for graph params
   int firstScan;   //Set to 1 for first scan after background grid for graph is drawn
@@ -353,14 +358,12 @@ public:
   QString axisPrefHandle;  //handle variable for axis preference window; non-blank when window is open
   QString TwoPortGraphBox;     //Handle to graph box for two-port graphs, or blank if no window open ver116-1b
 
-  Q2DfloatVector gGraphVal;      //Can be used to hold graph. frequency(0), Y1(1), Y2(2)
-
+  dialogGridappearance *gridappearance;
 
 private:
   QGraphicsScene *graphScene;
   QGraphicsView *graphicsView;
   interpolation inter;
-  dialogGridappearance *gridappearance;
   msaUtilities util;
   globalVars *vars;
   msaConfig *activeConfig;
@@ -374,7 +377,7 @@ private:
 
   marker * haltMarker;
 
-  void CalcTransmitGraphData(int currStep, float &y1, float &y2, int useWorkArray);
+  void CalcTransmitGraphData(int currStep, double &y1, double &y2, int useWorkArray);
   QString gRestoreTraceContext(QString &s, int &startPos, int isValidation);
   QString gGridContext();
   QString gTraceContext();
@@ -424,7 +427,7 @@ private:
   QString gTitle[5];      //Title printed above top grid line; up to 4 lines, excluding the zero entry ver114-5m
   //Fourth line is not printable title; it is sweep info set by user
 
-  int gMaxPoints;       //Max number of points allowed. Starts at 1200
+
   //In dynamic graphing, the pixel values are saved in gGraphPix, and the commands to graph
   //the trace lines are saved in gTrace1() and gTrace2(). The commands to draw the background
   //are cumulated in gGridString; this includes the grid boundaries and everything inside, but not
@@ -469,14 +472,14 @@ private:
 
   QColor gRefTrace[12]; //Trace draw commands, as one string, for reference lines, numbered 1... ver114-6g
 
-
-
   void gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, int markerY, int &endNum);
   QString gDrawMarkerAtPointNum(float N, QString trace, QString style, QString markLabel);
+
 signals:
   void ChangeMode();
   void RequireRestart();
   void updatevar(int);
+  void smithRefreshMain(int);
 
 };
 

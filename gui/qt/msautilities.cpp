@@ -263,7 +263,11 @@ QString msaUtilities::usingF(QString form, float v)
   QString str;
 
   int decPos = form.indexOf(".");
-  int decCount = form.length() - decPos - 1;
+  int decCount = 0;
+  if (decPos != -1)
+  {
+    decCount = form.length() - decPos - 1;
+  }
 
   str = QString::number(v,'f', decCount);
   str = QString("%1").arg(str,form.length(),' ');
@@ -856,21 +860,28 @@ float msaUtilities::uRoundDownToPower(float X, float base)
 
   return pow(base,trunc);
 }
-float msaUtilities::uTenPower(float pow1)
+double msaUtilities::uTenPower(double pow1)
 {
-  return pow(pow1, 10);
-/*
-function uTenPower(pow)  //Raise 10 to power pow; avoid hangup if pow is large integer
-    //LB does not seem to use divide and conquer for large integral powers,
-    //so we force use of floating point math
-    if pow>=0 then absPow=pow else absPow=0-pow //ver114-6k
-    if absPow<8 then uTenPower=10^pow :exit function    //this covers most cases ver114-7a
-    if int(pow)<>pow then uTenPower=10^pow :exit function
-    pow=pow-0.1     //SEW9
-    res=10^pow*1.258925412 // the constant is 10^0.1 ver114-7a
-    if pow>0 then uTenPower=int(res+0.5) else uTenPower=res //Pos integer power has integer result ver114-7a
-end function
-*/
+  //Raise 10 to power pow; avoid hangup if pow is large integer
+  //LB does not seem to use divide and conquer for large integral powers,
+  //so we force use of floating point math
+  double absPow;
+  if (pow1>=0)
+    absPow=pow1;
+  else
+    absPow=0-pow1;
+  if (absPow<8)
+    return pow(10,pow1);   //this covers most cases
+
+  if (((int)pow1) != pow1)
+    return pow(10,pow1);
+  pow1=pow1-0.1;
+
+  double res=pow(10,pow1*1.258925412); // the constant is 10^0.1
+  if (pow1>0)
+    return int(res+0.5);
+  else
+    return res; //Pos integer power has integer result
 }
 float msaUtilities::uPower(float x, float fpow)
 {
@@ -884,31 +895,41 @@ float msaUtilities::uPower(float x, float fpow)
   if ((int)(fpow)!=fpow) return pow(x,fpow);
   return pow(x,(fpow-(float)0.1))*pow(x,(float)0.1);
 }
-float msaUtilities::uATan2(float r, float i)
+float msaUtilities::uATan2(double r, double i)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
- 'Return angle (degrees) of r+j*i whose tangent is i/r
-     if r=0 then
-        if i=0 then
-            ang=0
-        else
-            if i>0 then ang=90 else ang=-90
-        end if
+  double ang;
+  //Return angle (degrees) of r+j*i whose tangent is i/r
+  if (r==0)
+  {
+    if (i==0)
+    {
+      ang=0;
+    }
     else
-        ang = uKDegreesPerRad*atn(i/r)   'Gives angle betwee        if r < 0 then
-            if i < 0 then ang = ang - 180 else ang = ang + 180
-        end if
-        'Put angle within bounds; rounding may have put it outside
-        if ang>180 then
-            ang=ang-360
-        else
-            if ang<=-180 then ang=ang+360
-        end if
-    end if
-    uATan2=ang
-    */
-  return -1;
+    {
+      if (i>0)
+        ang=90;
+      else
+        ang=-90;
+    }
+  }
+  else
+  {
+    ang = uKDegreesPerRad*atan(i/r);   //Gives angle betwee        if r < 0 then
+    if (i < 0)
+      ang = ang - 180;
+    else
+      ang = ang + 180;
+
+    //Put angle within bounds; rounding may have put it outside
+    if (ang>180)
+      ang=ang-360;
+    else
+      if (ang<=-180)
+        ang=ang+360;
+  }
+  return ang;
+
 }
 float msaUtilities::uNormalizeDegrees(float deg)
 {
@@ -919,37 +940,46 @@ float msaUtilities::uNormalizeDegrees(float deg)
 }
 QString msaUtilities::uAlignDecimalInString(QString v, int lenInDigits, int nLeft)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'Return string with decimal aligned at decPos
-    'Aligns decimal in string for printing in columns. Decimal need not actually be present.
-    'lenInDigits is the desired string length, if the string were filled with digits.
-    'nLeft is the number of characters allowed left of the decimal, so decimal (if any) will be at nLeft+1.
-    'String will be padded with spaces on both ends if necessary.
-    'If v$ is too big, it is possible we return a string that is too long.
-    'nWhole is the desired number of whole digits--i.e. before the decimal, if any.
-    'This works with fonts like Courier New, where all digits, spaces, sign and "e" have the same width
-    'values that end with a multiplier character are aligned at the right side of the field, not at the decimal
-
-    endChar$=Right$(v$,1)
-    if instr("0123456789.", endChar$)=0 then  'check for multiplier character
-            'Ends with non-numeric, non-decimal, so must have multiplier character
-            'We right-align these in the string.
-        leftPadLen=lenInDigits-len(v$) : if leftPadLen<0 then leftPadLen=0
-        uAlignDecimalInString$=space$(leftPadLen);v$
-        exit function
-    end if
-    sep=instr(v$,".")
-    if sep=0 then
-        whole$=v$ : fract$="" : dec$=""
-    else
-        whole$=Left$(v$,sep-1) : fract$=Mid$(v$,sep+1) : dec$="."
-    end if
-    leftPadLen=nLeft-len(whole$) : if leftPadLen<0 then leftPadLen=0
-    rightPadLen=lenInDigits-nLeft-len(fract$)-len(dec$) : if rightPadLen<0 then rightPadLen=0
-    uAlignDecimalInString$=space$(leftPadLen);whole$;dec$;fract$;space$(rightPadLen)
-    */
-  return "fix me 7";
+  //Return string with decimal aligned at decPos
+  //Aligns decimal in string for printing in columns. Decimal need not actually be present.
+  //lenInDigits is the desired string length, if the string were filled with digits.
+  //nLeft is the number of characters allowed left of the decimal, so decimal (if any) will be at nLeft+1.
+  //String will be padded with spaces on both ends if necessary.
+  //If v is too big, it is possible we return a string that is too long.
+  //nWhole is the desired number of whole digits--i.e. before the decimal, if any.
+  //This works with fonts like Courier New, where all digits, spaces, sign and "e" have the same width
+  //values that end with a multiplier character are aligned at the right side of the field, not at the decimal
+  QString whole, fract, dec;
+  QString endChar = v.right(1);
+  if (QString("0123456789").indexOf(endChar) != -1)  //check for multiplier character
+  {
+    //Ends with non-numeric, non-decimal, so must have multiplier character
+    //We right-align these in the string.
+    int leftPadLen = lenInDigits-v.length();
+    if (leftPadLen<0)
+      leftPadLen=0;
+    return (Space(leftPadLen)+v);
+  }
+  int sep = v.indexOf(".");
+  if (sep==-1)
+  {
+    whole=v;
+    fract="";
+    dec="";
+  }
+  else
+  {
+    whole = v.left(sep-1);
+    fract = v.mid(sep+1);
+    dec=".";
+  }
+  int leftPadLen=nLeft-whole.length();
+  if (leftPadLen<0)
+    leftPadLen=0;
+  int rightPadLen = lenInDigits-nLeft-fract.length()-dec.length();
+  if (rightPadLen<0)
+    rightPadLen=0;
+  return Space(leftPadLen) + whole + dec + fract + Space(rightPadLen);
 }
 QString msaUtilities::uScientificNotation(float v, int nDec, int padZero)
 {
@@ -1240,36 +1270,55 @@ void msaUtilities::uS11DBToImpedance(float R0, float S11DB, float S11Deg, float 
     call uRefcoToImpedance R0, m, S11Deg, Res, React    'ver115-1e
     */
 }
-void msaUtilities::uRefcoToImpedance(float R0, float rho, float theta, float &Res, float &React)
+void msaUtilities::uRefcoToImpedance(double R0, double rho, double theta, double &Res, double &React)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'Calc impedance from refco: rho, theta (deg)
-'   Z(DUT)= Ro*(1+G)/(1-G), where G is the reflection coefficient
-'Special case : if a=1 and b=0 (or close), treat the impedance as huge resistance
-    if rho<0 then rho=0    'rho<0 is error but could happen due to rounding
-    if rho>1 then rho=1 'rho should never exceed 1 but might due to noise or rounding ver115-1e
-    p=theta*uRadsPerDegree()   'S11 Radians
-    a=rho*cos(p) : b=rho*sin(p)
-        'a near +1 means rho is near 1 and theta is near zero. We treat these as large resistances
-    if 0.999999<a then Res=constMaxValue : React=0 : exit sub   'ver115-4b
+  //Calc impedance from refco: rho, theta (deg)
+  //   Z(DUT)= Ro*(1+G)/(1-G), where G is the reflection coefficient
+  //Special case : if a=1 and b=0 (or close), treat the impedance as huge resistance
+  if (rho<0) rho=0;    //rho<0 is error but could happen due to rounding
+  if (rho>1) rho=1; //rho should never exceed 1 but might due to noise or rounding ver115-1e
+  double p=theta*uRadsPerDegree();   //S11 Radians
+  double a=rho*cos(p);
+  double b=rho*sin(p);
+  //a near +1 means rho is near 1 and theta is near zero. We treat these as large resistances
+  if (0.999999<a)
+  {
+    Res=1e12;//constMaxValue;
+    React=0;
+    return;
+  }
 
-    'ver115-1h deleted additional test for a>0.99
-        'Similarly, a near -1 means we have a very small resistance or reactance. It doesn't make much difference
-        'which way we go.
-    if -0.999999>a then Res=0 : React=0 : exit sub   'ver115-4b
-    Rnum=a*R0+R0 : Inum=R0*b : Rden=1-a : Iden=0-b  'ver115-1e
-    'Now do the divide, copying the procedure of cxDivide; faster than calling cxDivide
-    'First invert the denominator
-    D=Rden^2+Iden^2
-    if D<0.0000000001 then Res=constMaxValue : React=0: exit sub    'a near 1 and b near 0 ver115-1e
-    Rinv=Rden/D : Iinv=0-Iden/D
-    'Now multiply Rnum+jInum times Rinv+jIinv
-    Res=Rnum*Rinv-Inum*Iinv
-    React=Rnum*Iinv+Inum*Rinv
-    if Res<0.001 then Res=0 'avoids printing tiny values
-    if React>-0.001 and React<0.001 then React=0 'avoids printing tiny values
-    */
+  //ver115-1h deleted additional test for a>0.99
+  //Similarly, a near -1 means we have a very small resistance or reactance. It doesn't make much difference
+  //which way we go.
+  if (-0.999999>a)
+  {
+    Res=0;
+    React=0;
+    return;
+  }
+  double Rnum=a*R0+R0;
+  double Inum=R0*b;
+  double Rden=1-a;
+  double Iden=0-b;
+  //Now do the divide, copying the procedure of cxDivide; faster than calling cxDivide
+  //First invert the denominator
+  double D=pow(Rden,2)+pow(Iden,2);
+  if (D<0.0000000001)
+  {
+    Res=1e12;//constMaxValue;
+    React=0;
+    return;    //a near 1 and b near 0 ver115-1e
+  }
+  double Rinv=Rden/D;
+  double Iinv=0-Iden/D;
+  //Now multiply Rnum+jInum times Rinv+jIinv
+  Res=Rnum*Rinv-Inum*Iinv;
+  React=Rnum*Iinv+Inum*Rinv;
+  if (Res<0.001)
+    Res=0; //avoids printing tiny values
+  if (React>-0.001 && React<0.001)
+    React=0; //avoids printing tiny values
 }
 void msaUtilities::uImpedanceToRefco(float R0, float R, float I, float &rho, float &theta)
 {
@@ -2052,40 +2101,59 @@ void msaUtilities::uEquivParallelRLC(int freq, int serR, int serReact, int &parR
 */
 }
 
-void msaUtilities::uEquivSeriesLC(int freq, int serR, int serReact,  int &serL, int &serC)
+void msaUtilities::uEquivSeriesLC(double freq, double serR, double serReact,  double &serL, double &serC)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /* //Calc equiv series circuit of impedance
-    //Compute equivalent series circuit RLC components for imped of R+j*X. R itself is the series resistance
-    //and does not need computing. To generate the desired impedance, R must be combined with either an L or a C,
-    //but not both. Both L and C are possibilities, though unless L and C are both zero, one will be positive
-    //and the other negative. The positive one is the "real" component.
+  //Calc equiv series circuit of impedance
+  //Compute equivalent series circuit RLC components for imped of R+j*X. R itself is the series resistance
+  //and does not need computing. To generate the desired impedance, R must be combined with either an L or a C,
+  //but not both. Both L and C are possibilities, though unless L and C are both zero, one will be positive
+  //and the other negative. The positive one is the "real" component.
 
-    if freq=0 then serL=0: serC=constMaxValue : exit sub     //Set for min impedance
-    twoPiF = 2.0*uPi() * freq
-    if serReact>=constMaxValue then serL=constMaxValue else serL = serReact/twoPiF
-    if serReact=0 then serC=constMaxValue else serC = -1.0/(twoPiF * serReact)
-*/
+  if (freq==0)
+  {
+    serL=0;
+    serC=1e12;//constMaxValue     //Set for min impedance
+    return;
+  }
+  double twoPiF = 2.0*uPi() * freq;
+  if (serReact>=1e12)//constMaxValue
+    serL=1e12;//constMaxValue
+  else
+    serL = serReact/twoPiF;
+  if (serReact==0)
+    serC=1e12;//constMaxValue
+  else
+    serC = -1.0/(twoPiF * serReact);
+
 }
 
-void msaUtilities::uEquivParallelImped(int sR, int sX, int &pR, int &pX)
+void msaUtilities::uEquivParallelImped(double sR, double sX, double &pR, double &pX)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /* //Calc parallel impedances that would produce this imped
-    //Calculates a resistance and reactance pR and pX that when placed in parallel
-    //would produce an impedance of sR+j*sX.
-    magSquared = sR^2+sX^2
-    if sR=0 then
-        if sX=0 then
-            pR=0 : pX=constMaxValue: exit sub //target imped is zero; do small R and large X
-        else
-            pR=constMaxValue  //target resistance is 0 but react is not; we need no parallel resistor
-        end if
+  //Calc parallel impedances that would produce this imped
+  //Calculates a resistance and reactance pR and pX that when placed in parallel
+  //would produce an impedance of sR+j*sX.
+  double magSquared = pow(sR,2)+pow(sX,2);
+  if (sR==0)
+  {
+    if (sX==0)
+    {
+      pR=0;
+      pX=1e12;//constMaxValue //target imped is zero; do small R and large X
+      return;
+    }
     else
-        pR=magSquared/sR    //Nothing is zero so parallel res is simple formula
-    end if
-    if sX=0 then pX=constMaxValue else pX=magSquared/sX
-*/
+      pR=1e12;//constMaxValue  //target resistance is 0 but react is not; we need no parallel resistor
+
+  }
+  else
+  {
+    pR=magSquared/sR;    //Nothing is zero so parallel res is simple formula
+  }
+  if (sX==0)
+    pX=1e12;//constMaxValue;
+  else
+    pX=magSquared/sX;
+
 }
 
 float msaUtilities::NormalizePhase(float p)

@@ -24,6 +24,7 @@
 #endif
 
 #include "constants.h"
+#include "complexmaths.h"
 
 msagraph::msagraph(QWidget *parent)
 {
@@ -32,6 +33,7 @@ msagraph::msagraph(QWidget *parent)
   connect(this, SIGNAL(ChangeMode()), parent, SLOT(ChangeMode()));
   connect(this, SIGNAL(RequireRestart()), parent, SLOT(RequireRestart()));
   connect(this, SIGNAL(updatevar(int)), parent, SLOT(updatevar(int)));
+  connect(this, SIGNAL(smithRefreshMain(int)), parent, SLOT(smithRefreshMain(int)));
 
 
 //****************************
@@ -139,7 +141,7 @@ msagraph::msagraph(QWidget *parent)
 //****************************
 
 
-  gGraphVal.mresize(805,3);
+
   gGraphPix.mresize(805,3);
   gTrace1.resize(805);
   gTrace2.resize(805);
@@ -153,7 +155,7 @@ msagraph::msagraph(QWidget *parent)
 
   referenceLineSpec="";
   referenceDoMath = 0;
-  gMaxPoints = 0;
+
   referenceOpA = 0;
   referenceOpB = 0;
 
@@ -377,22 +379,22 @@ void msagraph::gSetMaxPoints(int n)
   //Existing points are erased if we resize. Number will always be 800 or more
   //changed so dimension is never reduced
 
-  if (n>gMaxPoints)
+  if (n > vars->gMaxPoints)
   {
-    gMaxPoints=n;
-    gGraphVal.mresize(gMaxPoints+5,3);
-    gGraphPix.mresize(gMaxPoints+5,3);
-    gTrace1.resize(gMaxPoints+5);
-    gTrace2.resize(gMaxPoints+5);
-    gErase1.resize(gMaxPoints+5);
-    gErase2.resize(gMaxPoints+5);
+    vars->gMaxPoints=n;
+    vars->gGraphVal.mresize(vars->gMaxPoints+5,3);
+    gGraphPix.mresize(vars->gMaxPoints+5,3);
+    gTrace1.resize(vars->gMaxPoints+5);
+    gTrace2.resize(vars->gMaxPoints+5);
+    gErase1.resize(vars->gMaxPoints+5);
+    gErase2.resize(vars->gMaxPoints+5);
     gNumPoints=0;
   }
 }
 int msagraph::gMaxNumPoints()
 {
   //max number of points given size of arrays. We fudge a little to allow safety margin
-  return gMaxPoints;
+  return vars->gMaxPoints;
 }
 void msagraph::gSetDoHist(int doHist)
 {
@@ -447,31 +449,31 @@ void msagraph::gGetPointVal(int N, int &x, int &y1, int &y2)
   {
     int whole=(int)(N);
     float fract=N-whole;
-    x=gGraphVal[whole][0];
-    y1=gGraphVal[whole][1];
-    y2=gGraphVal[whole][2];
+    x=vars->gGraphVal[whole][0];
+    y1=vars->gGraphVal[whole][1];
+    y2=vars->gGraphVal[whole][2];
     //Note that angles in the main program are kept in the range -180 to +180, but
     //in gGraphVal they have been adjusted to fit graph range
     if (fract>0)
     {
-      x=x+fract*(gGraphVal[whole+1][0]-x);
+      x=x+fract*(vars->gGraphVal[whole+1][0]-x);
       if (gY1IsPhase)
       {
         //created special interpolation for angles to deal with wrap-around
-        y1=inter.intLinearInterpolateDegrees(fract, y1, gGraphVal[whole+1][1], gY1AxisMin, gY1AxisMax);
+        y1=inter.intLinearInterpolateDegrees(fract, y1, vars->gGraphVal[whole+1][1], gY1AxisMin, gY1AxisMax);
       }
       else
       {
-        y1=y1+fract*(gGraphVal[whole+1][1]-y1);
+        y1=y1+fract*(vars->gGraphVal[whole+1][1]-y1);
       }
       if (gY2IsPhase)
       {
         //created special interpolation for angles to deal with wrap-around
-        y2=inter.intLinearInterpolateDegrees(fract, y2, gGraphVal[whole+1][2], gY2AxisMin, gY2AxisMax);
+        y2=inter.intLinearInterpolateDegrees(fract, y2, vars->gGraphVal[whole+1][2], gY2AxisMin, gY2AxisMax);
       }
       else
       {
-        y2=y2+fract*(gGraphVal[whole+1][2]-y2);
+        y2=y2+fract*(vars->gGraphVal[whole+1][2]-y2);
       }
     }
   }
@@ -490,7 +492,7 @@ float msagraph::gGetPointYVal(int N, int yNum)
   {
     int whole=(int)(N);
     float fract=N-whole;
-    y=gGraphVal[whole][yNum];
+    y=vars->gGraphVal[whole][yNum];
     if (fract>0)
     {
       float yMin, yMax;
@@ -512,11 +514,11 @@ float msagraph::gGetPointYVal(int N, int yNum)
         //Note that angles in the main program are kept in the range -180 to +180, but
         //in gGraphVal they have been adjusted to fit graph range
         //created special interpolation for angles to deal with wrap-around
-        y=inter.intLinearInterpolateDegrees(fract, y, gGraphVal[whole+1][yNum], yMin, yMax);
+        y=inter.intLinearInterpolateDegrees(fract, y, vars->gGraphVal[whole+1][yNum], yMin, yMax);
       }
       else
       {
-        y=y+fract*(gGraphVal[whole+1][yNum]-y);
+        y=y+fract*(vars->gGraphVal[whole+1][yNum]-y);
       }
     }
   }
@@ -533,14 +535,14 @@ float msagraph::gGetPointXVal(float N)
   //We don't verify that N is in bounds, because its value may have been created with gGenerateXValues
   //and the actual point data may not have been added yet.
   //N may have a fractional part, so we do linear interpolation
-  if (N>0 && N<=gMaxPoints)
+  if (N>0 && N<=vars->gMaxPoints)
   {
     int whole=int(N);
     float fract=N-whole;
-    x=gGraphVal[whole][0];
+    x=vars->gGraphVal[whole][0];
     if (fract>0)
     {
-      x=x+fract*(gGraphVal[whole+1][0]-x);
+      x=x+fract*(vars->gGraphVal[whole+1][0]-x);
     }
   }
   else
@@ -557,7 +559,7 @@ float msagraph::gGetPointXPix(float N)
   //We don't verify that N is in bounds, because its value may have been created with gGenerateXValues
   //and the actual point data may not have been added yet.
   //N may have a fractional part, so we do linear interpolation
-  if (N>0 && N<=gMaxPoints)
+  if (N>0 && N<=vars->gMaxPoints)
   {
     int whole=(int)N;
     float fract=N-whole;
@@ -578,7 +580,7 @@ void msagraph::gSetNumPoints(int nPts)
   //Set number of points to be considered valid. Does not affect values ver116-1b
   if (nPts < 0)
     nPts=0;
-  if (nPts >= gMaxPoints)
+  if (nPts >= vars->gMaxPoints)
     gSetMaxPoints(nPts);
   gNumPoints=nPts;
 }
@@ -588,8 +590,8 @@ void msagraph::gClearYValues()
   //Zero Y values of gNumPoints points
   for (int i=1; i <= gNumPoints;i++)
   {
-    gGraphVal[i][1] = 0;
-    gGraphVal[i][2] = 0;
+    vars->gGraphVal[i][1] = 0;
+    vars->gGraphVal[i][2] = 0;
   }
 }
 int msagraph::gPointCount()
@@ -604,21 +606,21 @@ void msagraph::gChangePoints(int pNum, int y1, int y2)
   {
     QMessageBox::warning(0,"Error", QString("Invalid point number: %1").arg(pNum));    //debugging
   }
-  gGraphVal[pNum][1] = y1;
-  gGraphVal[pNum][2] = y2;
+  vars->gGraphVal[pNum][1] = y1;
+  vars->gGraphVal[pNum][2] = y2;
 }
 
 int msagraph::gAddPoints(float x, float y1, float y2)
 {
   //Add points to end. Must be done with non-decreasing x
   //return 1 if too many points
-  if (gNumPoints>=gMaxPoints)
+  if (gNumPoints>=vars->gMaxPoints)
     return 1;
   gNumPoints=gNumPoints+1;
   //enter new point
-  gGraphVal[gNumPoints][0]=x;
-  gGraphVal[gNumPoints][1]=y1;
-  gGraphVal[gNumPoints][2]=y2;
+  vars->gGraphVal[gNumPoints][0]=x;
+  vars->gGraphVal[gNumPoints][1]=y1;
+  vars->gGraphVal[gNumPoints][2]=y2;
   return 0;
 }
 void msagraph::gGenerateXValues(int numValidPoints)
@@ -653,18 +655,18 @@ void msagraph::gGenerateXValues(int numValidPoints)
   {
     if (i==numPoints)
     {
-      gGraphVal[i][0]=gXAxisMax;
+      vars->gGraphVal[i][0]=gXAxisMax;
       gGraphPix[i][0]=pixEnd;  //to get it exact
     }
     else
     {
       if (x>0)
       {
-        gGraphVal[i][0]=(double)( (int)(1000000*x+0.5) )/1000000 ;
+        vars->gGraphVal[i][0]=(double)( (int)(1000000*x+0.5) )/1000000 ;
       }
       else
       {
-        gGraphVal[i][0]=0-(double)( (int)(1000000*(0-x)+0.5) )/1000000;    //Round to nearest Hz
+        vars->gGraphVal[i][0]=0-(double)( (int)(1000000*(0-x)+0.5) )/1000000;    //Round to nearest Hz
       }
       //We round pixels to the nearest tenth
       //gGraphPix[i][0]=(double)( (int)(10*xPix+0.5) )/10;
@@ -687,9 +689,9 @@ void msagraph::gFindMinMax()
   gGetMinMaxPointNum(pMin, pMax);
   for (int i=pMin; i <= pMax; i++)
   {
-    int x=gGraphVal[i][0];
-    int y1=gGraphVal[i][1];
-    int y2=gGraphVal[i][2];
+    int x=vars->gGraphVal[i][0];
+    int y1=vars->gGraphVal[i][1];
+    int y2=vars->gGraphVal[i][2];
     if (i==1)
     {
       gXAxisMin=x;
@@ -761,7 +763,7 @@ void msagraph::gFindPeaks(int traceNum, int p1, int p2, int &minNum, int &maxNum
   int minNumStart, maxNumStart, minNumEnd,maxNumEnd;
   for (int i=p1; i < p2; i++)
   {
-    int y=gGraphVal[i][traceNum];
+    int y=vars->gGraphVal[i][traceNum];
     if (i==p1)
     {
       minNumStart=p1; maxNumStart=p1;
@@ -881,12 +883,12 @@ void msagraph::gSetDoAxis(int doY1, int doY2)
     if (doY1==0)
     {
       gTrace1[i]= QPointF(0,0);  //"down";
-      gGraphVal[i][1]=0;
+      vars->gGraphVal[i][1]=0;
     }
     if (doY2==0)
     {
       gTrace2[i]= QPointF(0,0);
-      gGraphVal[i][2]=0;
+      vars->gGraphVal[i][2]=0;
     }
   }
 }
@@ -906,6 +908,8 @@ void msagraph::gInitDefaults()
   gDoHist=0;
   gPrimaryAxis=1;
   gSetGridStyles("ENDSANDCENTER", "All", "All"); //Label these grid lines
+  vars->S11GraphR0 = 50;
+  vars->S11BridgeR0 = 50;
 }
 void msagraph::gSetSweepDir(int dir)
 {
@@ -1043,7 +1047,7 @@ QString msagraph::gGridBoundaryLabel(float v, QString form)
   //by the using() function, or a series of 3 numbers (separated by spaces or commas)
   //indicating the max number of whole digits, the max number of decimal digits, and
   //the max number of significant digits. The latter is used only to restrict the actual
-  //number of decimal places so the max sig dig won//t be exceeded.
+  //number of decimal places so the max sig dig won't be exceeded.
   QString s=util.uFormatted(v, form);
   int L=s.length();
   int dec=s.indexOf(".");
@@ -1735,7 +1739,7 @@ void msagraph::gCalcGraphParams()
   if (gDoY2==1)
   {
     //If Y1 is graphed, Y2 will go with gVertDiv calculated for Y1. We do this by
-    //forcing the isLinear param to 1. The only situation that doesn//t work is if Y1
+    //forcing the isLinear param to 1. The only situation that doesn't work is if Y1
     //is linear and Y2 is log, in which case Y2 would like to recalculate gVertDiv
     int lin;
     if (gDoY1==0)
@@ -1995,9 +1999,9 @@ void msagraph::gConvertY1ToPix(float &y1)
   }
   y1=((int)(y1*10+0.5))/10;    //Round to tenth of a pixel
   if (y1<gMarginTop)
-    y1=gMarginTop; //don//t let it go off the top
+    y1=gMarginTop; //don't let it go off the top
   if (y1>gOriginY)
-    y1=gOriginY;     //don//t let it go off the bottom
+    y1=gOriginY;     //don't let it go off the bottom
 }
 
 void msagraph::gConvertY2ToPix(float &y2)
@@ -2095,7 +2099,7 @@ float msagraph::gAdjustPhaseToDisplay(int axisNum, int pointNum, int useWorkArra
   }
   else
   {
-    phase=gGraphVal[pointNum][axisNum];
+    phase=vars->gGraphVal[pointNum][axisNum];
   }
   float origPhase=phase;
   //Put phase in bounds from gY1AxisMin to gY1AxisMax. In general case, phase can
@@ -2118,7 +2122,7 @@ float msagraph::gAdjustPhaseToDisplay(int axisNum, int pointNum, int useWorkArra
 
   if (phase<axisMin || phase>axisMax)
   {
-    //Couldn//t find in-bounds value; put in normal range. Can happen only if phaseRange<360
+    //Couldn't find in-bounds value; put in normal range. Can happen only if phaseRange<360
     phase=origPhase;
     while (phase>180)
     {
@@ -2140,7 +2144,7 @@ float msagraph::gAdjustPhaseToDisplay(int axisNum, int pointNum, int useWorkArra
     }
     else
     {
-      lastPhase=gGraphVal[pointNum-gSweepDir][axisNum];
+      lastPhase=vars->gGraphVal[pointNum-gSweepDir][axisNum];
     }
     if (pointNum!=gSweepStart && phaseSpan>=360)
     {
@@ -2188,7 +2192,7 @@ void msagraph::gSetNumDynamicSteps(int nSteps)
   //if (nSteps<=2) nSweepPoints=2;
   gDynamicSteps=nSteps ;
   int nPoints=nSteps+1;
-  //Our existing points probably aren//t any good anyway, but in case they get graphed...
+  //Our existing points probably aren't any good anyway, but in case they get graphed...
   if (gNumPoints>nSteps+1)
     gNumPoints=nSteps+1;
   gSetMaxPoints(nPoints);  //Be sure we have room
@@ -2224,7 +2228,7 @@ void msagraph::gGetErasure(int &doErase1, int &doErase2, int &nEraseLead)
 void msagraph::gPauseDynamicScan()
 {
   //Suspend until next gResumeDynamicScan or gInitDynamicDraw
-  //When the user halts the scanning, the screen may be redrawn, and we don//t want any
+  //When the user halts the scanning, the screen may be redrawn, and we don't want any
   //of those draw commands mixed into gTrace1$() or gTrace2$(). In addition, we want to save
   //the last graphed point for proper Resuming.
   gIsDynamic=0;    //Signal not to accumulate drawing commands
@@ -2244,36 +2248,45 @@ void msagraph::gResumeDynamicScan()
 
 void msagraph::gRestoreErasure()
 {
+  //Restore the erasure gEraseLead points in front of the traces. This is called
+  //after redrawing the graphs.
+  //Erasures occurring immediately adacent to the current draw point can affect pixels for prior draw
+  //points (which may actually be at the same rounded off pixel x-value as the current point. So after
+  //erasing we redraw a couple of points.
+  //gPrevPointNum is the last point previously drawn, and thus is the point from which
+  //the erasure is to begin, and the final point that we will redraw.
+  if (gIsFirstDynamicScan==1 || (gDoErase1==0 && gDoErase2==0))
+      return;
 
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
+  int saveNum=gPrevPointNum;
+  gInitErase();
+  //Redraw some retroactive points if possible to eliminate erasure artifacts
+  //The best indicator of how many to redraw is gEraseLead.
+  int nRedraw;
+  if (gSweepDir==1)
+  {
+    nRedraw=qMin(gPrevPointNum, gEraseLead);
+    gPrevPointNum=gPrevPointNum-nRedraw;
+  }
+  else
+  {
+    if (gPrevPointNum == gNumPoints)
+    {
+      nRedraw=1;
+      gPrevPointNum=0;     //zero signals we are at first point
+    }
+    else
+    {
+      nRedraw=qMin(gNumPoints-gPrevPointNum, 0-gEraseLead);   //note gEraseLead is negative here
+      gPrevPointNum=gPrevPointNum+nRedraw;
+    }
+  }
+  for (int i=1; i <= nRedraw; i++)
+  {
+    gDrawNextPoint();
+  }
+  gPrevPointNum=saveNum;
 
-    'Restore the erasure gEraseLead points in front of the traces. This is called
-    'after redrawing the graphs.
-    'Erasures occurring immediately adacent to the current draw point can affect pixels for prior draw
-    'points (which may actually be at the same rounded off pixel x-value as the current point. So after
-    'erasing we redraw a couple of points.
-    'gPrevPointNum is the last point previously drawn, and thus is the point from which
-    'the erasure is to begin, and the final point that we will redraw.
-    if gIsFirstDynamicScan=1 or (gDoErase1=0 and gDoErase2=0) then exit sub
-    saveNum=gPrevPointNum
-    call gInitErase
-        'Redraw some retroactive points if possible to eliminate erasure artifacts
-        'The best indicator of how many to redraw is gEraseLead.
-    if gSweepDir=1 then
-        nRedraw=min(gPrevPointNum, gEraseLead)
-        gPrevPointNum=gPrevPointNum-nRedraw
-    else    'ver114-4m modified this else... block
-        if gPrevPointNum=gNumPoints then
-            nRedraw=1 : gPrevPointNum=0     'zero signals we are at first point
-        else
-            nRedraw=min(gNumPoints-gPrevPointNum, 0-gEraseLead)   'note gEraseLead is negative here
-            gPrevPointNum=gPrevPointNum+nRedraw
-        end if
-    end if
-    for i=1 to nRedraw : call gDrawNextPoint: next i
-    gPrevPointNum=saveNum
-end sub*/
 }
 
 void msagraph::gStartNextDynamicScan()
@@ -2303,7 +2316,7 @@ void msagraph::gDynamicDrawPoint(float y1, float y2)
     'is called.
     'The data for the prior line, is already in gGraphVal(); we reuse the X-values.
     if gIsFirstDynamicScan=1 then
-        if gNumPoints>gMaxPoints then notice "Too many points to " : exit sub
+        if gNumPoints>vars->gMaxPoints then notice "Too many points to " : exit sub
         gNumPoints=gNumPoints+1
         'Do Draw.
         call gDrawNextPointValue y1,y2  'Draw segment and save values
@@ -2329,6 +2342,10 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
   //is called.
   //The data for the prior line, is already in gGraphVal(); we reuse the X-values.
   int prevPoint=gPrevPointNum;
+  if (prevPoint == 399)
+  {
+    qDebug() << "399";
+  }
   //1A. Erase prior segments if required
   // created this if... block to deal with reverse sweeps
   // modified to use gSweepStart and gSweepEnd
@@ -2385,8 +2402,12 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
 
   //2. Draw the new Segments
   //created isFirstPoint and isFinalPoint, and added the gSweepDir tests
-  gGraphVal[currPoint][1]=y1;
-  gGraphVal[currPoint][2]=y2;
+  if (currPoint > vars->gGraphVal.count() || currPoint > 410)
+  {
+    qDebug() << "over max";
+  }
+  vars->gGraphVal[currPoint][1]=y1;
+  vars->gGraphVal[currPoint][2]=y2;
   //2A. Save Y1 and convert to pixel coords
   if (gDoY1==1)
   {
@@ -2394,7 +2415,7 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
     if (gY1IsPhase)
     {
       y1=gAdjustPhaseToDisplay(1, currPoint, 0);
-      gGraphVal[currPoint][1]=y1;
+      vars->gGraphVal[currPoint][1]=y1;
     }
     if (gY1IsLinear==1)
       y1=(y1-gY1AxisMin)*gY1Scale+gOriginY;
@@ -2416,7 +2437,7 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
     if (gY2IsPhase)
     {
       y2=gAdjustPhaseToDisplay(2, currPoint,0);
-      gGraphVal[currPoint][2]=y2;
+      vars->gGraphVal[currPoint][2]=y2;
     }
     if (gY2IsLinear==1)
         y2=(y2-gY2AxisMin)*gY2Scale+gOriginY;
@@ -2435,14 +2456,14 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
         //2C. If first scan, we need to count the points
   if (gIsFirstDynamicScan==1)
   {
-    if (gNumPoints>gMaxPoints)
+    if (gNumPoints>vars->gMaxPoints)
     {
       QMessageBox::about(0, "Notice", "Too many points to ");
       return;
     }
     gNumPoints=gNumPoints+1;
   }
-  int x=gGraphPix[currPoint][0];    //Use old x pixel coord; it//s still good
+  int x=gGraphPix[currPoint][0];    //Use old x pixel coord; it's still good
 
   //2D. For every scan, save the y  pixel coords
   gGraphPix[currPoint][1]=y1;
@@ -2564,7 +2585,7 @@ void msagraph::gDrawSingleTrace()
   if (gIsFirstDynamicScan)
   {
     //1. If first scan, we need to count the points, but not erase
-    if (gNumPoints > gMaxPoints)
+    if (gNumPoints > vars->gMaxPoints)
     {
       QMessageBox::warning(0, "Error", "Too many points to graph.");
       return;
@@ -2604,12 +2625,12 @@ void msagraph::gDrawSingleTrace()
 
   //3. Draw the new Segments
   //3A. Save Y and convert to pixel coord
-  gGraphVal[currPoint][2]=thispointy2; //save new y values
+  vars->gGraphVal[currPoint][2]=thispointy2; //save new y values
   float yPix=(thispointy2-gY2AxisMin)*gY2Scale+gOriginY;
   if (yPix<gMarginTop)
-    yPix=gMarginTop; //don//t let it go off the top
+    yPix=gMarginTop; //don't let it go off the top
   if (yPix>gOriginY)
-    yPix=gOriginY;     //don//t let it go off the bottom
+    yPix=gOriginY;     //don't let it go off the bottom
   //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
   //yPix=((int)(10*yPix+0.5))/10;
   gGraphPix[currPoint][2]=yPix;  //save y pixel coords
@@ -2667,8 +2688,8 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
       return;
   }
 
-  gGraphVal[currPoint][1]=y1;
-  gGraphVal[currPoint][2]=y2;
+  vars->gGraphVal[currPoint][1]=y1;
+  vars->gGraphVal[currPoint][2]=y2;
   int x=gGraphPix[currPoint][0];    //Get previously calculated x pixel value for current point
 
   //Draw to Y1 if necessary
@@ -2678,7 +2699,7 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
     if (gY1IsPhase)
     {
       y1=gAdjustPhaseToDisplay(1, currPoint, 0);
-      gGraphVal[currPoint][1]=y1;
+      vars->gGraphVal[currPoint][1]=y1;
     }
     if (gY1IsLinear==1)
     {
@@ -2701,7 +2722,7 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
     if (gY2IsPhase)
     {
       y2=gAdjustPhaseToDisplay(2, currPoint, 0);
-      gGraphVal[currPoint][2]=y2;
+      vars->gGraphVal[currPoint][2]=y2;
     }
     if (gY2IsLinear==1)
     {
@@ -2870,32 +2891,52 @@ end sub*/
 
 void msagraph::gEraseNextPoint()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'erase line for the next segment due for erasure
-    'Note gPrevPointNum is negative when we erase the first gEraseLead points when
-    'starting a scan.
-    if (gDoErase1=0 and gDoErase2=0) then exit sub   'ver114-2f
-        'Note gEraseLead is negative for reverse sweep
-    prevPoint=gPrevPointNum
-    if prevPoint=0 then prevPoint=gSweepStart-gSweepDir 'The point before the sweep start
-    prevErasePoint=prevPoint+gEraseLead 'Erase is ahead of draw by gEraseLead points
-    thisErasePoint=prevErasePoint+gSweepDir
+  //erase line for the next segment due for erasure
+  //Note gPrevPointNum is negative when we erase the first gEraseLead points when
+  //starting a scan.
+  if (gDoErase1==0 && gDoErase2==0)
+    return;
+  //Note gEraseLead is negative for reverse sweep
+  int prevPoint=gPrevPointNum;
+  if (prevPoint==0)
+    prevPoint=gSweepStart-gSweepDir; //The point before the sweep start
+  int prevErasePoint=prevPoint+gEraseLead; //Erase is ahead of draw by gEraseLead points
+  int thisErasePoint=prevErasePoint+gSweepDir;
 
-    if gSweepDir=1 then         'ver114-4k allows for reverse
-        if thisErasePoint>gSweepEnd or thisErasePoint<gSweepStart then exit sub 'ver114-5e
-    else
-        if thisErasePoint<gSweepEnd or thisErasePoint>gSweepStart then exit sub  'ver114-5e
-    end if
+  if (gSweepDir==1)
+  {
+    if (thisErasePoint>gSweepEnd || thisErasePoint<gSweepStart)
+      return;
+  }
+  else
+  {
+    if (thisErasePoint<gSweepEnd || thisErasePoint>gSweepStart)
+      return;
+  }
 
-        'Erase a segment on each trace
-    cmd$=""
-    'ver114-6d We erase by using the same command used to draw the segment, which is
-    'in gTrace1$() or gTrace2$(). We prefix with our size/color info
-    if gDoErase1 and gTrace1Width<>0 then cmd$=gErase1$;gTrace1$(thisErasePoint) else cmd$="down"   'down is our NOP command
-    if gDoErase2 and gTrace2Width<>0 then  cmd$=cmd$;";";gErase2$;gTrace2$(thisErasePoint)  ' ver116-4b
-    if cmd$<>"" then #gGraphHandle$, cmd$    'Send command to erase
-end sub*/
+  //Erase a segment on each trace
+
+  if (gDoErase1 && gTrace1Width!=0)
+  {
+    QGraphicsItem *temp = gErase1[thisErasePoint];
+    if (temp != 0)
+    {
+      graphScene->removeItem(temp);
+      delete temp;
+    }
+    gErase1[thisErasePoint] = 0;
+  }
+
+  if (gDoErase2 && gTrace2Width!=0)
+  {
+    QGraphicsItem *temp = gErase2[thisErasePoint];
+    if (temp != 0)
+    {
+      graphScene->removeItem(temp);
+      delete temp;
+    }
+    gErase2[thisErasePoint] = 0;
+  }
 }
 void msagraph::gInitDraw()
 {
@@ -2907,30 +2948,41 @@ void msagraph::gInitDraw()
 
 void msagraph::gInitErase()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
   //Initialize Erase.
-      //Erases from point gPrevPointNum to point gPrevPointNum+gEraseLead
-      //When a scan is restarted, gPrevPointNum is 0. If the scan is resumed in the middle,
-      //gPrevPointNum is the last point that was drawn.
-      if (gDoErase1=0 and gDoErase2=0) then exit sub
-      saveNum=gPrevPointNum
-      if gPrevPointNum=0 then gPrevPointNum=gSweepStart-gSweepDir //The point before the starting point ver114-5e
-      if gPrevPointNum=gSweepStart-gSweepDir then extra=1 else extra=0
-      if gEraseLead>0 then
-          nErase=extra+gEraseLead
-      else    //reverse sweep
-          nErase=extra-gEraseLead //gEraseLead is negative
-          if gPrevPointNum=0 then gPrevPointNum=gNumPoints+1  //zero signals start at beginning
-      end if
-      gPrevPointNum=gPrevPointNum-gEraseLead   //gEraseNextPoint will use this
-      for i=1 to nErase
-              //Note gEraseNextPoint does nothing if the point number gets out of bounds
-          call gEraseNextPoint    //Erase gPrevPointNum+gEraseLead to gPrevPointNum+gEraseLead+1
-          gPrevPointNum=gPrevPointNum+gSweepDir
-      next
-      gPrevPointNum=saveNum   //Restore
-  end sub*/
+  //Erases from point gPrevPointNum to point gPrevPointNum+gEraseLead
+  //When a scan is restarted, gPrevPointNum is 0. If the scan is resumed in the middle,
+  //gPrevPointNum is the last point that was drawn.
+  if (gDoErase1==0 && gDoErase2==0)
+    return;
+  int saveNum=gPrevPointNum;
+  if (gPrevPointNum==0)
+    gPrevPointNum=gSweepStart-gSweepDir; //The point before the starting point ver114-5e
+
+  int extra = 0;
+  int nErase;
+  if (gPrevPointNum==gSweepStart-gSweepDir)
+    extra=1;
+  else
+    extra=0;
+  if (gEraseLead>0)
+  {
+    nErase=extra+gEraseLead;
+  }
+  else    //reverse sweep
+  {
+    nErase=extra-gEraseLead; //gEraseLead is negative
+    if (gPrevPointNum==0)
+      gPrevPointNum=gNumPoints+1;  //zero signals start at beginning
+  }
+  gPrevPointNum=gPrevPointNum-gEraseLead;   //gEraseNextPoint will use this
+  for (int i=1; i <= nErase; i++)
+  {
+    //Note gEraseNextPoint does nothing if the point number gets out of bounds
+    gEraseNextPoint();    //Erase gPrevPointNum+gEraseLead to gPrevPointNum+gEraseLead+1
+    gPrevPointNum=gPrevPointNum+gSweepDir;
+  }
+  gPrevPointNum=saveNum;   //Restore
+
 }
 void msagraph::gClearMarkers()
 {
@@ -3019,10 +3071,10 @@ void msagraph::gRecalcPix(int calcXPix)
   for (int i=1; i <= gDynamicSteps+1; i++) //ver114-6d
   {
     float x;
-    if (calcXPix) {x=gGraphVal[i][0]; gConvertXToPix(x); gGraphPix[i][0]=x;}
+    if (calcXPix) {x=vars->gGraphVal[i][0]; gConvertXToPix(x); gGraphPix[i][0]=x;}
     if (i>=pMin && i<=pMax)      //Only do for actual graph points ver114-6d
     {
-      float y1=gGraphVal[i][1]; float y2=gGraphVal[i][2];
+      float y1=vars->gGraphVal[i][1]; float y2=vars->gGraphVal[i][2];
       if (gDoY1) gConvertY1ToPix(y1); else y1=0; //ver116-4k
       if (gDoY2) gConvertY2ToPix(y2); else y2=0; //ver116-4k
       gGraphPix[i][1]=y1; gGraphPix[i][2]=y2;
@@ -3205,8 +3257,8 @@ void msagraph::gPrivateDrawMarkerInfo(int startNum, int maxLines, int markerX, i
               break;
         }
     }  //To next marker
-        //Draw heading last, because we don//t need it if we
-        //didn//t draw any markers
+        //Draw heading last, because we don't need it if we
+        //didn't draw any markers
     if (drawCount==0)
     {
       return;
@@ -3358,14 +3410,23 @@ void msagraph::RefreshGraph(int restoreErase)
   {
    // then #graphBox$, "discard" else #graphBox$, "flush"
   }
-  /*
-  if smithGraphHndl$()<>"" then  //ver115-1b draw smith chart if we have one
-    call smithSetGraphMarkers doGraphMarkers    //Tell smith whether to draw markers on graph ver115-2c
-    if referenceLineType<>0 and (referenceTrace and 4=4) then _
-                    doSmithRef=(referenceDoMath=0) else doSmithRef=0   //draw non-fixed value reference ver115-7a
-    call smithRefresh doSmithRef //Draw chart and graph, with possible reference line
-  end if
-  */
+
+  if (vars->smithWindowVisible)
+  {
+    int doSmithRef;
+    // fix me smithSetGraphMarkers(doGraphMarkers);    //Tell smith whether to draw markers on graph ver115-2c
+    if (referenceLineType!=0 && (referenceTrace & 4))
+    {
+      // fix me what does this code actually
+      //doSmithRef=(referenceDoMath=0);
+      doSmithRef= 0;
+      referenceDoMath=0;
+    }
+    else
+      doSmithRef=0;   //draw non-fixed value reference ver115-7a
+
+    smithRefreshMain(doSmithRef); //Draw chart and graph, with possible reference line
+  }
   refreshForceRefresh=0; //Clear refresh flags, since we just redrew
   refreshGridDirty=0;
   refreshTracesDirty=0;
@@ -3403,7 +3464,7 @@ void msagraph::gRecreateTraces(bool doDraw)
     for (int i=pMin; i<= pMax; i++)
     {
       //create segment from prior point to this point, for both y1 and y2 as appropriate
-      gDrawNextPointValue(gGraphVal[i][1], gGraphVal[i][2]);   //create command for this draw
+      gDrawNextPointValue(vars->gGraphVal[i][1], vars->gGraphVal[i][2]);   //create command for this draw
     }
   }
   else
@@ -3411,7 +3472,7 @@ void msagraph::gRecreateTraces(bool doDraw)
     for (int i=pMax; i!= pMin; i--)
     {
       //create segment from prior point to this point, for both y1 and y2 as appropriate
-      gDrawNextPointValue(gGraphVal[i][1], gGraphVal[i][2]);   //create command for this draw
+      gDrawNextPointValue(vars->gGraphVal[i][1], vars->gGraphVal[i][2]);   //create command for this draw
     }
   }
   //gGraphHandle$=saveGraph$
@@ -3472,15 +3533,15 @@ void msagraph::DrawSetupInfo()
   {
     if (vars->msaMode==modeScalarTrans)
     {
-      gPrintText("SNA Transmission", InfoX-10,16,textColor);
+      gPrintText("SNA Transmission", InfoX-10,0,textColor);
     }
     if (vars->msaMode==modeVectorTrans)
     {
-      gPrintText("VNA Transmission", InfoX-10,16,textColor);
+      gPrintText("VNA Transmission", InfoX-10,0,textColor);
     }
         //ver115-1c revised the printing of the cal level
     if (vars->msaMode==modeReflection)
-      gPrintText("VNA Reflection", InfoX-10,16,textColor);
+      gPrintText("VNA Reflection", InfoX-10,0,textColor);
     QColor col;
     if (vnaCal->applyCalLevel < vnaCal->desiredCalLevel)
     {
@@ -3592,7 +3653,8 @@ void msagraph::DrawSetupInfo()
   }
   if (vars->msaMode==modeReflection)
   {
-    //gPrintText("Z0=";uFormatted$(S11GraphR0, "3,4,5//UseMultiplier//DoCompact//SuppressMilli"), InfoX, InfoY); InfoY=InfoY+16;
+    gPrintText("Z0="+util.uFormatted(vars->S11GraphR0, "3,4,5//UseMultiplier//DoCompact//SuppressMilli"), InfoX, InfoY,textColor);
+    InfoY=InfoY+16;
   }
   if (vars->msaMode!=modeSA)
   {
@@ -3605,10 +3667,14 @@ void msagraph::DrawSetupInfo()
   QString s="";
   if (referenceLineType!=0 && referenceDoMath!=0)  //If doing math with reference line, so indicate ver116-1b
   {
-    if (referenceOpA==1 && referenceOpB==1) s="Data+Ref";
-    if (referenceOpA==1 && referenceOpB==-1) s="Ref-Data";
-    if (referenceOpA==-1 && referenceOpB==1) s="Data-Ref";
-    gPrintText(s, InfoX, InfoY,textColor); InfoY=InfoY+16;
+    if (referenceOpA==1 && referenceOpB==1)
+      s="Data+Ref";
+    if (referenceOpA==1 && referenceOpB==-1)
+      s="Ref-Data";
+    if (referenceOpA==-1 && referenceOpB==1)
+      s="Data-Ref";
+    gPrintText(s, InfoX, InfoY,textColor);
+    InfoY=InfoY+16;
   }
 }
 void msagraph::PrintMessage(QString message)
@@ -3639,14 +3705,13 @@ QString msagraph::gSweepContext()
   QString newLine="\r";
   QString aSpace=" ";
   //QString sep=";;";   //delimits text items on one line
-  //ver114-2d cleaned up the following
 
   QString s1= "MinMaxXAxis="+QString::number(gXAxisMin)+aSpace+QString::number(gXAxisMax);         //X-axis range
   s1= s1+ newLine+ "MinMaxY1Axis="+QString::number(gY1AxisMin)+aSpace+QString::number(gY1AxisMax); //Y1 axis range
   s1= s1+ newLine+ "MinMaxY2Axis="+QString::number(gY2AxisMin)+aSpace+QString::number(gY2AxisMax); //Y2 axis range
   s1= s1+ newLine+ "IsLinear="+QString::number(gXIsLinear)+aSpace+QString::number(gY1IsLinear)+aSpace+QString::number(gY2IsLinear);    //Is Linear
   s1= s1+ newLine+ "NumSteps="+ QString::number(gDynamicSteps);    //Number of steps
-  s1= s1+ newLine+ "SweepDir="+ QString::number(gSweepDir);    //Sweep direction ver114-4k
+  s1= s1+ newLine+ "SweepDir="+ QString::number(gSweepDir);    //Sweep direction
   //Note gMode is handled by saving msaMode ver114-6f
   return s1;
 }
@@ -3669,13 +3734,12 @@ void msagraph::gGetMarkerByNum(int markNum, int &pointNum, QString &ID, QString 
 
 void msagraph::gUsePresetText(QString btn)
 {
-  //@gUsePresetText
-  //btn$ specifies the preset to be used. It may be in the form of a
+  //btn specifies the preset to be used. It may be in the form of a
   //handle, so we drop everything through the period, if there is one.
   int pos=btn.indexOf(".");
   if (pos>-1) btn=btn.mid(pos+1);
   btn=btn.trimmed().toUpper();
-  gridappearance->gGraphTextPreset=btn;  //ver114-2a Save for later reference
+  gridappearance->gGraphTextPreset=btn;  //Save for later reference
   if (btn == "BASICTEXT")
   {
     gridappearance->gXAxisFont="Arial bold 9";
@@ -3729,7 +3793,7 @@ void msagraph::RecalcYValues()
   gGetMinMaxPointNum(pMin, pMax);
   for (int i=pMin; i <= pMax; i++)
   {
-    float y1, y2;
+    double y1, y2;
     CalcGraphData(i-1, y1, y2, 0);  //i-1 to get step number from point number ver114-6h
     if (referenceDoMath==2) //ref math is to be done on graph values ver115-5d
     {
@@ -3819,7 +3883,7 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
       }
     }
   }
-  else if (componConst == constMagWatts || componConst == constMagRatio || componConst == constMagV || componConst == constRho) //Fractional values that won//t exceed 1 or be negative
+  else if (componConst == constMagWatts || componConst == constMagRatio || componConst == constMagV || componConst == constRho) //Fractional values that won't exceed 1 or be negative
   {
     if (axisMax>1) axisMax=1;
     axisMin=util.uRoundDownToPower(axisMin, 10);
@@ -3875,7 +3939,7 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
     int auxNum=componConst-constAux0;    //e.g. constAux4 produces 4
     axisMin=vars->auxGraphDataInfo[auxNum][1]  ; axisMax=vars->auxGraphDataInfo[auxNum][2];
   }
-  else if (componConst == constNoGraph)   //ver115-2c
+  else if (componConst == constNoGraph)
   {
     //Do nothing
   }
@@ -3888,6 +3952,155 @@ void msagraph::CalcAutoScale(int axisNum, int &axisMin, int &axisMax)
     axisMin=util.uRoundDownToPower(axisMin, 10);
     axisMax=util.uRoundUpToPower(axisMax, 10);
   }
+}
+
+void msagraph::ConvertRawDataToReflection(int currStep)
+{
+  //For the current step in reflection mode, calculate S11, referenced to S11GraphR0 ver115-5f mod by ver116-4n
+  //Calculate reflection in db, angle format and puts results in ReflectArray, which already contains the raw data.
+  //Also calculates the various items in ReflectArray() from the final reflection value.
+  //We need to adjust the data for calibration
+  //      Reference calibration
+  //The simplest reflection calibration is to use the Open or Short as a reference. In that case, we still calculate
+  //OSL coefficients as though we did full OSL, using Ideal results for the missing data.
+  //    Full OSL
+  //More extensive calibration would include the Open, Short and Load, from which we calculated the a, b, c OSL
+  //coefficients during calibration. If we have full OSL coefficients, we apply them here.
+  //We identify the type of jig used with S11JigType$, which the user sets during calibration.
+  //S11JigType$ is always set to "Reflect" when doing full OSL, since we don't even know the nature of the actual jig.
+  //In addition, S21JigR0 is set to S11BridgeR0.
+  //Note that S21 or S11 are now referenced to the S21JigR0 or S11BridgeR0, not the graph R0. We do the
+  //conversion here. But we also save S11 as an intermediate value before applying the R0 coversion or plane extension
+  //(but after applying cal) to make recalculations easier. It is saved with constIntermedS11DB and constIntermedS11Ang.
+
+      //First get the raw reflection data. This is the measured data, adjusted by subtracting the reference.
+      //planeadj has not been applied; it is applied after applying calibration
+      //S21JigShuntDelay has not yet been applied. It will be applied here via the OSL coefficients.
+
+  double trueFreq=vars->ReflectArray[currStep][0]*1000000;
+  double db=vars->ReflectArray[currStep][constGraphS11DB];
+  double ang=vars->ReflectArray[currStep][constGraphS11Ang];
+  if (vars->calInProgress)    //If calibrating we don't adjust anything here, or calculate anything other than S11
+  {
+    vars->ReflectArray[currStep][constIntermedS11DB]=db;
+    vars->ReflectArray[currStep][constIntermedS11Ang]=ang;
+    return;
+  }
+
+  double rho=util.uTenPower(db/20);    //mag made linear
+  //db, rho, and ang (degrees) now have the raw reflection data
+  //If necessary, we apply full OSL to the reflection data, whether it was derived
+  //from a reflection bridge or a transmission jig.
+  //If doing OSL cal, then we don't want to apply whatever coefficients we happen to have now.
+  //If doSpecialGraph<>0 we don't want to mess with the internally generated data
+  if (vars->doSpecialGraph==0 && vnaCal->applyCalLevel!=0)
+  {
+    double rads=ang*util.uRadsPerDegree();   //angle in radians
+    double mR=rho*cos(rads);
+    double mI=rho*sin(rads);     //measured S11, real and imaginary
+    double aR=vars->OSLa[currStep][0];
+    double aI=vars->OSLa[currStep][1];   //coefficient a, real and imaginary
+    double bR=vars->OSLb[currStep][0];
+    double bI=vars->OSLb[currStep][1];   //coefficient b, real and imaginary
+    double cR=vars->OSLc[currStep][0];
+    double cI=vars->OSLc[currStep][1];   //coefficient c, real and imaginary
+    double refR, refI;
+
+    //calculate adjusted db, ang via OSL. Note OSL must be referenced to S11BridgeR0
+    int calcMethod=1;    //For debugging, we have two different methods
+    if (calcMethod==1)
+    {
+      //The first method uses  the following formula, and corresponds to CalcOSLCoeff
+      //       S = (M ? b) / (ac*M)
+      //where S is the actual reflection coefficient and M is the measured reflection coefficient.
+      //S and M are in rectangular form in this equation.
+      double RealCM=(cR*mR-cI*mI);
+      double ImagCM=cR*mI+cI*mR;     //c*M, real and imaginary
+      ComplexMaths a;
+      a.cxDivide(mR-bR, mI-bI, aR-RealCM,aI-ImagCM,refR, refI);   //Divide M-b by a-c*M
+    }
+    else
+    {
+      //The second method uses  the following formula, and corresponds to CalcOSLCoeff1
+      //       S = (a - cM)/(bM - 1)
+      //where S is the actual reflection coefficient and M is the measured reflection coefficient.
+      //S and M are in rectangular form in this equation.
+
+      double RealCM=cR*mR-cI*mI;
+      double ImagCM=cR*mI+cI*mR;     //c*M, real and imaginary
+      double RealBM=bR*mR-bI*mI;
+      double ImagBM=bR*mI+bI*mR;     //b*M, real and imaginary
+      double numR=aR-RealCM;
+      double numI=aI-ImagCM;             //numerator, real and imaginary
+      double denR=RealBM-1;
+      double denI=ImagBM;                  //denominator, real and imaginary
+      ComplexMaths a;
+      a.cxDivide(numR, numI, denR, denI, refR, refI);     //Divide numerator by denominator; result is reflection coeff.
+    }
+    //separated the following common calculations from the above if...else block
+    double magSquared=pow(refR,2)+pow(refI,2);        //mag of S, squared
+    db=10*util.uSafeLog10(magSquared);    //S mag in db; multiply by 10 not 20 because mag is squared
+    if (db>0)
+      db=0;   //Shouldn't happen
+    ang=util.uATan2(refR, refI);      //angle of S in degrees
+    //db, ang (degrees) now have S11 data produced by applying OSL calibration.
+  }
+
+  //Save the angle prior to applying plane extension or Z0 transform, to make it easier to recalculate with a new values
+  vars->ReflectArray[currStep][constIntermedS11DB]=db;
+  vars->ReflectArray[currStep][constIntermedS11Ang]=ang;
+      //Note we do apply plane extension even when doSpecialGraph<>0
+  if (vars->planeadj!=0 || vars->S11BridgeR0!=vars->S11GraphR0)
+    ApplyExtensionAndTransformR0(vars->ReflectArray[currStep][0], db, ang);
+
+      //Note we do not put the reflection data in datatable, which retains the original raw data
+  vars->ReflectArray[currStep][constGraphS11DB]=db;   //Save final S11 in db, angle format (in Graph R0, after plane ext)
+  while (ang>180)
+  {
+    ang=ang-360;
+  }
+  while (ang<=-180)
+  {
+    ang=ang+360;
+  }
+  vars->ReflectArray[currStep][constGraphS11Ang]=ang;
+  //We now compute the various items in ReflectArray() from S11, but if we are doing calibration we don't need this
+  //other data, and it probably doesn//t make sense anyway.
+  if (vars->calInProgress==0)
+    CalcReflectDerivedData(currStep);  //Calc other ReflectArray() data from S11.
+}
+
+void msagraph::ApplyExtensionAndTransformR0(double freq, double &db, double &ang)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+ /*
+//ver115-2d created ApplyExtensionAndR0Transform so it can be called from a couple of places
+sub ApplyExtensionAndTransformR0 freq, byref db, byref ang   //Apply reflection mode plane extension and transform from bridge R0 to graph R0 for reflection
+    //freq is in MHz
+    //apply plane extension. We do this after applying calibration.
+    //For reflection mode with S21 series jig, plane extension makes no sense, so we don//t do it
+    //For Transmission mode, we don//t get here.
+    //We don//t do the adjustment when calibrating,
+    //because plane extension is used to extend the plane after calibration, and we don//t need to do S11GraphR0
+    //ver115-2b modified this procedure
+
+    if calInProgress=1 then exit sub
+    if planeadj<>0 then
+        //Do the extension, but not if series fixtures is used
+        if S11JigType$="Reflect" or S21JigAttach$="Shunt" then call uExtendCalPlane freq, ang, planeadj,1  //1 means reflection mode  ver116-4j
+    end if
+
+    //Convert into new R0 if necessary   //ver115-1e moved this here from CalcReflectDerivedData
+    //We don//t convert if calibrating
+    if S11BridgeR0<>S11GraphR0 then  //ver115-1e
+            //Transform to graph reference impedance
+        call uS11DBToImpedance S11BridgeR0, db, ang, impR, impX       //calc impedance : R, X
+        call uImpedanceToRefco S11GraphR0, impR, impX, rho, ang   //calc S11
+        db=20*uSafeLog10(rho) //put S11 in db form   ver115-1b fixed typo
+    end if
+    refLastGraphR0=S11GraphR0   //ver116-1b
+end sub
+*/
 }
 
 void msagraph::mUpdateMarkerLocations()
@@ -4192,16 +4405,32 @@ void msagraph::CreateReferenceSource()
       //ver115-7a modified this
       int source1, source2;
       referenceSourceNumPoints=gNumDynamicSteps()+1;
-      if (vars->msaMode==modeSA) { source1=constMagDBM; source2=constNoGraph;}
-      if (vars->msaMode==modeScalarTrans) { source1=constMagDB; source2=constNoGraph;}
-      if (vars->msaMode==modeVectorTrans) { source1=constMagDB; source2=constAngle;}
-      if (vars->msaMode==modeReflection) { source1=constGraphS11DB; source2=constGraphS11Ang;}
+      if (vars->msaMode==modeSA)
+      {
+        source1=constMagDBM;
+        source2=constNoGraph;
+      }
+      if (vars->msaMode==modeScalarTrans)
+      {
+        source1=constMagDB;
+        source2=constNoGraph;
+      }
+      if (vars->msaMode==modeVectorTrans)
+      {
+        source1=constMagDB;
+        source2=constAngle;
+      }
+      if (vars->msaMode==modeReflection)
+      {
+        source1=constGraphS11DB;
+        source2=constGraphS11Ang;
+      }
       for (int i=1; i <= referenceSourceNumPoints; i++)
       {
         referenceSource[i][0]=gGetPointXVal(i);   //Actual tuning freq, in MHz
         //No matter what we are doing with the reference, we save dB(m)/angle data as the "source"
         //and later do any necessary "transform".
-        float y1, y2;
+        double y1, y2;
         CalcGraphDataType(i-1, source1, source2, y1, y2,0);  //calc db/angle info
         referenceSource[i][1] = y1;   //dB or dBm
         referenceSource[i][2] = y2;    //angle or 0
@@ -4215,14 +4444,14 @@ void msagraph::CreateReferenceTransform()
 //Transform referenceSource() data into actual graph data; put it into referenceTransform
   for (int i=0; i < referenceSourceNumPoints; i++)  //iterate by step num, though referenceTransform starts at 1 (point num)
   {
-    float ref1, ref2;
+    double ref1, ref2;
     CalcReferencesWholeStep(i, ref1, ref2);
     referenceTransform[i+1][0]=referenceSource[i+1][0];  //freq
     referenceTransform[i+1][1]=ref1;  //Trace 1
     referenceTransform[i+1][2]=ref2; //Trace 2
   }
 }
-void msagraph::CalcReferencesWholeStep(int stepNum, float &ref1, float &ref2)
+void msagraph::CalcReferencesWholeStep(int stepNum, double &ref1, double &ref2)
 {
   //Calculate reference line data at whole step stepNum
   int pointNum = stepNum+1;
@@ -4403,7 +4632,7 @@ QString msagraph::PrivateCreateReferenceTrace(int traceNum, int startPoint, int 
   path->lineTo(lastX,lastY);
   return t;
 }
-void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArray)
+void msagraph::CalcGraphData(int currStep, double &y1, double &y2, int useWorkArray)
 {
   //Calculate y1,y2 per user request
   //If useWorkArray=1 then the data source is uWorkArray() or uWorkReflectData;
@@ -4411,7 +4640,7 @@ void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArra
   //If data type is an auxiliary type, we retrieve the data from auxGraphData()
   //currStep may have a fractional part, in which case we need to interpolate.
   y1=0;
-  y2=0; //ver115-4a
+  y2=0;
   if (vars->Y1DataType>=constAux0 && vars->Y1DataType<=constAux5)
   {
     y1=vars->auxGraphData[currStep][vars->Y1DataType-constAux0];
@@ -4458,12 +4687,12 @@ void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArra
         }
         else if (c == constMagWatts)
         {
-          fpow = pow(10,(db/10)); //ver115-9f
+          fpow = pow(10,(db/10));
           y=fpow/1000;
         }
         else if (c == constMagV)
         {
-          fpow=pow(10,(db/10));  //ver115-9f
+          fpow=pow(10,(db/10));
           y=sqrt(fpow/20);    //square root of 50* mw/1000
         }
         else if (c == constAux0
@@ -4471,7 +4700,7 @@ void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArra
                  || c == constAux2
                  || c == constAux3
                  || c == constAux4
-                 || c == constAux5)   //ver115-4a
+                 || c == constAux5)
         {
           if (i==1)
             y=y1;
@@ -4495,8 +4724,8 @@ void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArra
     return;    //No need to interpolate; we are done
 
   //We interpolate the required data types, not the raw S21, S11, etc.
-  float nextY1;
-  float nextY2;
+  double nextY1;
+  double nextY2;
   CalcGraphData(wholeStep+1, nextY1, nextY2, useWorkArray); //Get values at next step
 
   if (vars->Y1DataType!=constNoGraph)
@@ -4505,7 +4734,7 @@ void msagraph::CalcGraphData(int currStep, float &y1, float &y2, int useWorkArra
   if (vars->Y2DataType!=constNoGraph)
     y2=inter.LinearInterpolateDataType(vars->Y2DataType, fract, y2, nextY2);
 }
-void msagraph::CalcGraphDataType(int currStep, int dataType1, int dataType2, float &y1, float &y2, int useWorkArray)
+void msagraph::CalcGraphDataType(int currStep, int dataType1, int dataType2, double &y1, double &y2, int useWorkArray)
 {
   //Calculate specified data type (constRho, etc.) for step currStep
   //This just calls CalcGraphData, after forcing data types to the dataTypes we want.
@@ -4583,149 +4812,260 @@ void msagraph::gInitDynamicDraw()
 
 void msagraph::CalcReflectDerivedData(int currStep)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'Calc ReflectArray() data from S11. frequency and S11 must already be in place.
-    'if currStep<0 then we get the data from uWorkReflectData(x) and put results into uWorkReflectData(x)
-    'otherwise we get the data from ReflectArray() and put results into ReflectArray(currStep,x)
-    'S11 is assumed to be re S11GraphR0
+  //Calc ReflectArray() data from S11. frequency and S11 must already be in place.
+  //if currStep<0 then we get the data from uWorkReflectData(x) and put results into uWorkReflectData(x)
+  //otherwise we get the data from ReflectArray() and put results into ReflectArray(currStep,x)
+  //S11 is assumed to be re S11GraphR0
 
-    if currStep<0 then  'Get frequency and S11; we calculate everything else
-        trueFreq=1000000*uWorkReflectData(0)    'ver115-1f
-        db=uWorkReflectData(constGraphS11DB)
-        ang=uWorkReflectData(constGraphS11Ang)
+  double trueFreq;
+  double db;
+  double ang;
+  if (currStep<0)  //Get frequency and S11; we calculate everything else
+  {
+    trueFreq=1000000*vars->uWorkReflectData[0];
+    db=vars->uWorkReflectData[constGraphS11DB];
+    ang=vars->uWorkReflectData[constGraphS11Ang];
+  }
+  else
+  {
+    trueFreq=1000000*vars->ReflectArray[currStep][0];
+    db=vars->ReflectArray[currStep][constGraphS11DB];
+    ang=vars->ReflectArray[currStep][constGraphS11Ang];
+  }
+
+  double rho=pow(10,(db/20));
+
+  double serL, serC, serR, serReact;
+  double parL, parC, parR, parReact;
+  util.uRefcoToImpedance(vars->S11GraphR0, rho, ang, serR, serReact);
+  util.uEquivSeriesLC(trueFreq, serR, serReact, serL, serC);
+  if (fabs(serReact)<0.001)
+    serReact=0  ;
+  if (serR<0.001)
+    serR=0;
+  util.uEquivParallelImped(serR, serReact, parR, parReact); //Convert imped to equivalent parallel resistance and reactance
+  if (fabs(parReact)<0.001)
+    parReact=0;
+  if (parR<0.001)
+    parR=0;
+  if (trueFreq==0)
+  {
+    parR=1e12;//constMaxValue;
+    parL=1e12;//constMaxValue;
+    parC=0;   //Set for max impedance
+  }
+  else
+  {
+    double twoPiF = 2.0*util.uPi() * trueFreq;
+    if (parReact>=1e12)//constMaxValue)
+      parL=1e12;//constMaxValue;
     else
-        trueFreq=1000000*ReflectArray(currStep,0)
-        db=ReflectArray(currStep,constGraphS11DB)
-        ang=ReflectArray(currStep,constGraphS11Ang)
-    end if
-
-    rho=10^(db/20)
-
-    call uRefcoToImpedance S11GraphR0, rho, ang, serR, serReact
-    call uEquivSeriesLC trueFreq, serR, serReact, serL, serC
-    if fabs(serReact)<0.001 then serReact=0  'ver115-5d
-    if serR<0.001 then serR=0 'ver115-5d
-    call uEquivParallelImped serR, serReact, parR, parReact 'Convert imped to equivalent parallel resistance and reactance ver114-7b
-    if fabs(parReact)<0.001 then parReact=0 'ver115-5d
-    if parR<0.001 then parR=0 'ver115-5d
-    if trueFreq=0 then
-        parR=constMaxValue: parL=constMaxValue: parC=0   'Set for max impedance
+      parL = parReact/twoPiF;
+    if (parReact==0)
+      parC=1e12;//constMaxValue;
     else
-        twoPiF = 2.0*uPi() * trueFreq
-        if parReact>=constMaxValue then parL=constMaxValue else  parL = parReact/twoPiF
-        if parReact=0 then parC=constMaxValue else parC = -1.0/(twoPiF * parReact)
-    end if
+      parC = -1.0/(twoPiF * parReact);
+  }
 
-    if rho>0.999999 then swr=9999 else swr=(1+rho)/(1-rho)
-        'Impose a max of 1F or 1H
-    if serC>1 then serC=1
-    if serL>1 then serL=1
-    if parC>1 then parC=1
-    if serC>1 then serC=1
-    if serC<-1 then serC=-1
-    if serL<-1 then serL=-1
-    if parC<-1 then parC=-1
-    if serC<-1 then serC=-1
-    minC=1e-15 : minL=1e-12 'impose min of 1 fF and 1 pH ver115-2d
-    if abs(serC)<minC then serC=0
-    if abs(parC)<minC then parC=0
-    if abs(serL)<minL then serL=0
-    if abs(parL)<minL then parL=0
+  double swr;
+  if (rho>0.999999)
+    swr=9999;
+  else
+    swr=(1+rho)/(1-rho);
+  //Impose a max of 1F or 1H
+  if (serC>1) serC=1;
+  if (serL>1) serL=1;
+  if (parC>1) parC=1;
+  if (serC>1) serC=1;
+  if (serC<-1) serC=-1;
+  if (serL<-1) serL=-1;
+  if (parC<-1) parC=-1;
+  if (serC<-1) serC=-1;
+  double minC=1e-15;
+  double minL=1e-12; //impose min of 1 fF and 1 pH ver115-2d
+  if (abs(serC)<minC) serC=0;
+  if (abs(parC)<minC) parC=0;
+  if (abs(serL)<minL) serL=0;
+  if (abs(parL)<minL) parL=0;
 
-    if currStep<0 then    'Store the data in the appropriate place
-        uWorkReflectData(constRho)=rho
-        uWorkReflectData(constImpedMag)=sqr(serR^2+serReact^2)  'mag of impedance
-        uWorkReflectData(constImpedAng)=uATan2(serR, serReact)  'angle of impedance
-        uWorkReflectData(constSerR)=serR
-        uWorkReflectData(constSerReact)=serReact
-        uWorkReflectData(constSerC)=serC
-        uWorkReflectData(constSerL)=serL
-        uWorkReflectData(constParR)=parR
-        uWorkReflectData(constParReact)=parReact
-        uWorkReflectData(constParC)=parC
-        uWorkReflectData(constParL)=parL
-        uWorkReflectData(constSWR)=swr
-    else
-        ReflectArray(currStep,constRho)=rho
-        ReflectArray(currStep,constImpedMag)=sqr(serR^2+serReact^2)  'mag of impedance
-        ReflectArray(currStep,constImpedAng)=uATan2(serR, serReact)  'angle of impedance
-        ReflectArray(currStep,constSerR)=serR
-        ReflectArray(currStep,constSerReact)=serReact
-        ReflectArray(currStep,constSerC)=serC
-        ReflectArray(currStep,constSerL)=serL
-        ReflectArray(currStep,constParR)=parR
-        ReflectArray(currStep,constParReact)=parReact
-        ReflectArray(currStep,constParC)=parC
-        ReflectArray(currStep,constParL)=parL
-        ReflectArray(currStep,constSWR)=swr
-    end if
-    */
+  if (currStep<0)    //Store the data in the appropriate place
+  {
+    vars->uWorkReflectData[constRho]=rho;
+    vars->uWorkReflectData[constImpedMag]=sqrt(pow(serR,2)+pow(serReact,2));  //mag of impedance
+    vars->uWorkReflectData[constImpedAng]=util.uATan2(serR, serReact);  //angle of impedance
+    vars->uWorkReflectData[constSerR]=serR;
+    vars->uWorkReflectData[constSerReact]=serReact;
+    vars->uWorkReflectData[constSerC]=serC;
+    vars->uWorkReflectData[constSerL]=serL;
+    vars->uWorkReflectData[constParR]=parR;
+    vars->uWorkReflectData[constParReact]=parReact;
+    vars->uWorkReflectData[constParC]=parC;
+    vars->uWorkReflectData[constParL]=parL;
+    vars->uWorkReflectData[constSWR]=swr;
+  }
+  else
+  {
+    vars->ReflectArray[currStep][constRho]=rho;
+    vars->ReflectArray[currStep][constImpedMag]=sqrt(pow(serR,2)+pow(serReact,2));  //mag of impedance
+    vars->ReflectArray[currStep][constImpedAng]=util.uATan2(serR, serReact);  //angle of impedance
+    vars->ReflectArray[currStep][constSerR]=serR;
+    vars->ReflectArray[currStep][constSerReact]=serReact;
+    vars->ReflectArray[currStep][constSerC]=serC;
+    vars->ReflectArray[currStep][constSerL]=serL;
+    vars->ReflectArray[currStep][constParR]=parR;
+    vars->ReflectArray[currStep][constParReact]=parReact;
+    vars->ReflectArray[currStep][constParC]=parC;
+    vars->ReflectArray[currStep][constParL]=parL;
+    vars->ReflectArray[currStep][constSWR]=swr;
+  }
 }
-void msagraph::CalcReflectGraphData(int currStep, float &y1, float &y2, int useWorkArray)
+void msagraph::CalcReflectGraphData(int currStep, double &y1, double &y2, int useWorkArray)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
- 'Calculate y1,y2 per user request
-    'If useWorkArray=1 then the data source is uWorkReflectData(); otherwise it is ReflectArray()
-    'Power is in uWorkArray(currStep+1,1), phase in uWorkArray(currStep+1,2)
-    'S11 db is in ReflectArray(currStep,2), phase in ReflectArray(currStep,3)
+  double y;
+  double X;
+  double R;
 
-    for dataNum=2 to 1 step -1
-        if dataNum=1 then
-            if msaMode$="SA" or msaMode$="ScalarTrans" then exit for    'don't have phase
-            graph.componConst=Y1DataType
+  //Calculate y1,y2 per user request
+  //If useWorkArray=1 then the data source is uWorkReflectData(); otherwise it is ReflectArray()
+  //Power is in uWorkArray(currStep+1,1), phase in uWorkArray(currStep+1,2)
+  //S11 db is in ReflectArray(currStep,2), phase in ReflectArray(currStep,3)
+
+  for (int dataNum=2 ; dataNum >= 1; dataNum--)
+  {
+    if (dataNum==1)
+    {
+      if (vars->msaMode==modeSA || vars->msaMode==modeScalarTrans)
+        break;  //exit for don't have phase
+      componConst=vars->Y1DataType;
+    }
+    else
+    {
+      componConst=vars->Y2DataType;
+    }
+    switch (componConst)
+    {
+    case constGraphS11DB:
+    case constGraphS11Ang:
+    case constRho:
+    case constImpedMag:
+    case constImpedAng:
+    case constSerR:
+    case constSerReact:
+    case constParR:
+    case constParReact:
+    case constSerC:
+    case constSerL:
+    case constParC:
+    case constParL:
+    case constSWR:
+      //All these have already been computed
+      if (useWorkArray)
+        y=vars->uWorkReflectData[componConst];
+      else
+        y=vars->ReflectArray[currStep][componConst];
+      break;
+    case constTheta:     //Same as angle
+      if (useWorkArray)
+        y=vars->uWorkReflectData[constGraphS11Ang];
+      else
+        y=vars->ReflectArray[currStep][constGraphS11Ang];
+      break;
+    case constReturnLoss:
+      if (useWorkArray)
+        y=0-vars->uWorkReflectData[constGraphS11DB];
+      else
+        y=0-vars->ReflectArray[currStep][constGraphS11DB];
+      break;
+    case constReflectPower:
+      if (useWorkArray)
+        y=100*pow(vars->uWorkReflectData[constRho],2);
+      else
+        y=100*pow(vars->ReflectArray[currStep][constRho],2);
+      break;
+    case constComponentQ:
+      //Note that this formula works only for a single L or C. For LC combos][ we would need the reactance
+      //of the individual components
+      if (useWorkArray)
+      {
+        X=vars->uWorkReflectData[constSerReact];
+        R=vars->uWorkReflectData[constSerR];
+      }
+      else
+      {
+        X=vars->ReflectArray[currStep][constSerReact];
+        R=vars->ReflectArray[currStep][constSerR];
+      }
+
+      if (R==0)
+        y=99999;
+      else
+        y=abs(X)/R; //Q=X/R
+      break;
+    case constAdmitMag:
+    case constAdmitAng:
+    case constConductance:
+    case constSusceptance:
+      switch (componConst)
+      {
+      case constAdmitMag:
+        double mag;
+        if (useWorkArray)
+          mag=vars->uWorkReflectData[constImpedMag];
         else
-            graph.componConst=Y2DataType
-        end if
-        select graph.componConst
-            case constGraphS11DB, constGraphS11Ang, constRho, constImpedMag, constImpedAng, constSerR,constSerReact,constParR,constParReact,_
-                        constSerC,constSerL,constParC,constParL,constSWR
-                'All these have already been computed
-                if useWorkArray then y=uWorkReflectData(graph.componConst) else y=ReflectArray(currStep,graph.componConst)  'ver115-1e
-            case constTheta     'Same as angle
-                if useWorkArray then y=uWorkReflectData(constGraphS11Ang) else y=ReflectArray(currStep,constGraphS11Ang)   'ver115-1e
-            case constReturnLoss
-                if useWorkArray then y=0-uWorkReflectData(constGraphS11DB) else y=0-ReflectArray(currStep,constGraphS11DB) 'ver115-1e
-            case constReflectPower
-                if useWorkArray then y=100*uWorkReflectData(constRho)^2 else y=100*ReflectArray(currStep,constRho)^2    'ver115-2d
-            case constComponentQ    'ver115-2d
-                'Note that this formula works only for a single L or C. For LC combos, we would need the reactance
-                'of the individual components
-                if useWorkArray then
-                    X=uWorkReflectData(constSerReact) : R=uWorkReflectData(constSerR)
-                else
-                    X=ReflectArray(currStep,constSerReact) : R=ReflectArray(currStep,constSerR)
-                end if
-                if R=0 then y=99999 else y=abs(X)/R 'Q=X/R
-
-            case constAdmitMag, constAdmitAng, constConductance, constSusceptance   'ver115-4a
-                select case graph.componConst
-                    case constAdmitMag
-                        if useWorkArray then mag=uWorkReflectData(constImpedMag) else mag=ReflectArray(currStep,constImpedMag)
-                        if mag=0 then y=constMaxValue else y=1/mag
-                    case constAdmitAng
-                        if useWorkArray then ang=uWorkReflectData(constImpedAng) else ang=ReflectArray(currStep,constImpedAng)
-                        y=0-ang
-                    case else 'constConductance, constSusceptance
-                        if useWorkArray then R=uWorkReflectData(constSerR) : X=uWorkReflectData(constSerReact) _
-                            else R=ReflectArray(currStep,constSerR) : X=ReflectArray(currStep,constSerReact)
-                        call cxInvert R, X, G, S
-                        if graph.componConst=constConductance then y=G else y=S
-                end select
-            case constAux0, constAux1, constAux2, constAux3, constAux4, constAux5   'ver115-4a
-                if dataNum=1 then y=y1 else y=y2  'Auxiliary data has already been calculated, so keep it
-            case else
-                y=0    'invalid data, or None
-        end select
-        if dataNum=1 then  'Put data into y1 or y2
-            y1=y
+          mag=vars->ReflectArray[currStep][constImpedMag];
+        if (mag==0)
+          y=vars->constMaxValue;
         else
-            y2=y
-        end if
-    next dataNum
+          y=1/mag;
+        break;
+      case constAdmitAng:
+        double ang;
+        if (useWorkArray)
+          ang=vars->uWorkReflectData[constImpedAng];
+        else
+          ang=vars->ReflectArray[currStep][constImpedAng];
 
-*/
+        y=0-ang;
+        break;
+      default: //constConductance, constSusceptance
+        if (useWorkArray)
+        {
+          R=vars->uWorkReflectData[constSerR];
+          X=vars->uWorkReflectData[constSerReact];
+        }
+        else
+        {
+          R=vars->ReflectArray[currStep][constSerR];
+          X=vars->ReflectArray[currStep][constSerReact];
+        }
+        double G, S;
+        ComplexMaths a;
+        a.cxInvert(R, X, G, S);
+        if (componConst==constConductance)
+          y=G;
+        else
+          y=S;
+      }
+      break;
+    case constAux0:
+    case constAux1:
+    case constAux2:
+    case constAux3:
+    case constAux4:
+    case constAux5:
+      if (dataNum==1)
+        y=y1;
+      else y=y2 ; //Auxiliary data has already been calculated, so keep it
+      break;
+    default:
+      y=0;    //invalid data, or None
+    }
+    if (dataNum==1)   //Put data into y1 or y2
+      y1=y;
+    else
+      y2=y;
+  }
+
 }
 
 void msagraph::SetStartStopFreq(float startF, float stopF)
@@ -4808,8 +5148,8 @@ QString msagraph::gDrawMarkerAtPointNum(float N,QString trace, QString style, QS
         float y1=gGraphPix[whole][1];
         if (fract>0)
         {
-            float thisY=gGraphVal[whole][1];
-            float nextY= gGraphVal[whole+1][1];
+            float thisY=vars->gGraphVal[whole][1];
+            float nextY= vars->gGraphVal[whole+1][1];
             //Note that angles in the main program are kept in the range -180 to +180, but
             //in gGraphVal they have been adjusted to fit graph range
             if (gY1IsPhase) //Special rule for phase
@@ -4925,7 +5265,7 @@ void msagraph::gDrawMarkerPix(QString style, QString markLabel, float x, float y
   //markLabel$ is the marker ID, for styles which draw the ID
   style=style.trimmed().toUpper();
   //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
-  //If they have already been so rounded, this doesn//t hurt
+  //If they have already been so rounded, this doesn't hurt
   //x=int(10*x+0.5)/10 : y=int(10*y+0.5)/10
   if (style == "WEDGE")
   {
@@ -5097,7 +5437,7 @@ void msagraph::gRefreshGridLinesOnly()   //Redraw grid lines but no text, withou
     #gGraphHandle$, gGridString$    'Draws the grid lines
 */
 }
-void msagraph::CalcTransmitGraphData(int currStep, float &y1, float &y2, int useWorkArray)
+void msagraph::CalcTransmitGraphData(int currStep, double &y1, double &y2, int useWorkArray)
 {
 
   //Calculate y1,y2 per user request
@@ -5965,7 +6305,7 @@ void msagraph::ImplementDisplayModes()
     vars->isStickMode=0;
   }
   gSetDoAxis(vars->Y1DataType!=constNoGraph, vars->Y2DataType!=constNoGraph); //Turn graph data on or off ver115-3b
-    //Note that gActivateGraphs won//t activate a graph if we just set its data existence to zero ver115-3b
+    //Note that gActivateGraphs won't activate a graph if we just set its data existence to zero ver115-3b
   gActivateGraphs(vars->Y1DisplayMode!=0,vars->Y2DisplayMode!=0);   //Turn actual graphing on or off ver115-3b
   if ((vars->Y1DataType!=constNoGraph && vars->Y1DisplayMode>2) || (vars->Y2DataType!=constNoGraph && vars->Y2DisplayMode>2))
   {
@@ -6122,7 +6462,7 @@ void msagraph::UpdateGraphDataFormat(int doTwoPort)
     //gSetDoAxis specifies whether data for the axis even exists. gActivateGraphs specifies whether
     //to actually graph the data, based on display mode, which for two port is always On.
     gSetDoAxis(twoPort.TwoPortGetY1Type()!=constNoGraph, twoPort.TwoPortGetY2Type()!=constNoGraph); //Turn graph data on or off ver115-3b
-    //Note that gActivateGraphs won//t activate a graph if we just set its data existence to zero ver115-3b
+    //Note that gActivateGraphs won't activate a graph if we just set its data existence to zero ver115-3b
     gActivateGraphs(1, 1);   //Turn actual graphing on
   }
   else
@@ -6562,7 +6902,7 @@ void msagraph::PlotDataToScreen()
       refreshMarkersDirty=1;   //Signals to relocate any markers to correspond to their frequency.
       //If required, do auto scaling of axes at end of first scan
       if (autoScaleY2 || autoScaleY1)
-        refreshAutoScale=1; //ver115-3b
+        refreshAutoScale=1;
     }
     else
     {
@@ -6593,7 +6933,7 @@ void msagraph::PlotDataToScreen()
     //if (int(oneThousandthThisStep)==oneThousandthThisStep) then #graphBox$, "discard"
   }
   //ver114-4e deleted drawing of point values at start, center and end
-  if (vars->thisstep==vars->sweepEndStep) //just processed final point of a sweep //ver114-4k
+  if (vars->thisstep == vars->sweepEndStep) //just processed final point of a sweep //ver114-4k
   {
     //If autoscale is on for either axis then calculate the scale and redraw from raw values
     //We only do this for the first scan. ver114-7a added this autoscale material
@@ -6613,7 +6953,8 @@ void msagraph::PlotDataToScreen()
     {
       //force full refresh unless we are in stick mode; and don't redraw if haltAtEnd=1 because
       //a redraw will occur when we halt.
-      if (vars->isStickMode==0 && haltAtEnd==0) RefreshGraph(1);
+      if (vars->isStickMode==0 && haltAtEnd==0)
+        RefreshGraph(1);
     }
     else
     {//modver116-4b
@@ -6654,10 +6995,10 @@ void msagraph::PlotDataToScreen()
       gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[vars->cycleNumber], gridappearance->cycleColorsAxis2[vars->cycleNumber]);  //ver116-4s
     }
     firstScan=0;  //scan has ended; next point is not in first scan since restart
-    vars->doSpecialRandom=(rand() % 100) / 100;  //Random number for doSpecialGraph ver115-1b
+    vars->doSpecialRandom=(rand() % 100) / 100.0;  //Random number for doSpecialGraph ver115-1b
   }
 
-  updatevar(vars->thisstep); //moved here from [ProcessAndPrint] ver111-34a
+  updatevar(vars->thisstep); //moved here from [ProcessAndPrint]
 }
 
 void msagraph::mMarkToCenter()
@@ -6971,8 +7312,11 @@ void msagraph::mDeleteMarker(QString markID)
   }
   else if (markID == "Halt")
   {
-    graphScene->removeItem(haltMarker);
-    delete haltMarker;
+    if (haltMarker)
+    {
+      graphScene->removeItem(haltMarker);
+      delete haltMarker;
+    }
     haltMarker = NULL;
   }
   else
@@ -7118,7 +7462,7 @@ void msagraph::mUserMarkSelect(QString btn)
           //Show marker editing info; ver114-4a revised
       call mUpdateMarkerEditButtons    //Enable/disable proper buttons
       call mDisplaySelectedMarker  //Display numeric info
-          //Update Smith chart. But if sweep is in progress don//t, because we may have
+          //Update Smith chart. But if sweep is in progress don't, because we may have
           //been called by program action. If sweeping, it will be updated at refresh time.
       if haltsweep=0 and smithGraphHndl$()<>"" then call smithRefreshMarkerInfo   //ver115-2c
   end sub
