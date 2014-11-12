@@ -74,7 +74,8 @@ SOURCES += main.cpp\
     libusbfunctions.cpp \
     usbfunc.cpp \
     dialogspecialtests.cpp \
-    dialogdatawindow.cpp
+    dialogdatawindow.cpp \
+    dialogrlc.cpp
 
 HEADERS  += mainwindow.h \
     uwork.h \
@@ -107,7 +108,9 @@ HEADERS  += mainwindow.h \
     libusbfunctions.h \
     usbfunc.h \
     dialogspecialtests.h \
-    dialogdatawindow.h
+    dialogdatawindow.h \
+    dialogrlc.h \
+    vectortypes.h
 
 FORMS    += mainwindow.ui \
     referencedialog.ui \
@@ -122,7 +125,8 @@ FORMS    += mainwindow.ui \
     dialogshowvars.ui \
     smithdialog.ui \
     dialogspecialtests.ui \
-    dialogdatawindow.ui
+    dialogdatawindow.ui \
+    dialogrlc.ui
 
 RESOURCES += \
     resource.qrc

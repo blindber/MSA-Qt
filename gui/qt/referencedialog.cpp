@@ -516,7 +516,7 @@ void referenceDialog::load()
   {
     //Insert existing values for fixed value reference
     QString s=settings.referenceLineSpec;
-    float v1, v2, v3;
+    double v1, v2, v3;
     util.uExtractNumericItems(2,s,";",v1,v2,v3);   //Get two value; destroys s$
 
     ui->val1->setText(util.uFormatted(v1, settings.Y1DataFormat));  //Y1

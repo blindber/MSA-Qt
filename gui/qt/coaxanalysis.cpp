@@ -23,12 +23,13 @@
 
 coaxAnalysis::coaxAnalysis()
 {
+  test = 3;
   maxCoaxEntries=100;
 }
 
 void coaxAnalysis::CoaxLoadDataFile(QString path)
 {
-  //Load coax data file into coaxData$. If error, clear coaxData$
+  //Load coax data file into coaxData%. If error, clear coaxData%
   coaxNames.clear();
   numCoaxEntries = 0;
 
@@ -58,7 +59,7 @@ void coaxAnalysis::CoaxLoadDataFile(QString path)
         if (line.left(1) != "!")
         {
           QString aName = util.uExtractTextItem(line, ",");
-          float R0, VF, K1, K2, dum1, dum2;
+          double R0, VF, K1, K2, dum1, dum2;
           if (aName != "")
           {
             int isErr;
@@ -83,23 +84,23 @@ void coaxAnalysis::CoaxLoadDataFile(QString path)
 
   //vars->numCoaxEntries = vars->coaxNames.count();
   /*
-  while EOF(#fHndl$)=0
-      Line Input #fHndl$, tLine$  //get one line
-      if Left$(tLine$,1)<>"!" then    //skip comment lines, which start with !  ver115-4b
+  while EOF(#fHndl%)=0
+      Line Input #fHndl%, tLine%  //get one line
+      if Left%(tLine%,1)<>"!" then    //skip comment lines, which start with !  ver115-4b
           //Line contains name, Z0, VF, K1, K2, comma-separated
-          fullLine$=tLine$
-          aName$=uExtractTextItem$(tLine$, ",")    //get coax name
-          if aName$<>"" then
-              isErr=uExtractNumericItems(3,tLine$,",",R0, VF, K1)
-              if isErr=0 then isErr=uExtractNumericItems(1,tLine$,",",K2, dum1, dum2)
-              if isErr then notice "Error reading coax data file: ";fullLine$
+          fullLine%=tLine%
+          aName%=uExtractTextItem%(tLine%, ",")    //get coax name
+          if aName%<>"" then
+              isErr=uExtractNumericItems(3,tLine%,",",R0, VF, K1)
+              if isErr=0 then isErr=uExtractNumericItems(1,tLine%,",",K2, dum1, dum2)
+              if isErr then notice "Error reading coax data file: ";fullLine%
           end if
           numCoaxEntries=numCoaxEntries+1
-          coaxNames$(numCoaxEntries)=aName$ : coaxData(numCoaxEntries, 1)=R0 : coaxData(numCoaxEntries, 2)=VF
+          coaxNames%(numCoaxEntries)=aName% : coaxData(numCoaxEntries, 1)=R0 : coaxData(numCoaxEntries, 2)=VF
           coaxData(numCoaxEntries, 3)=K1 : coaxData(numCoaxEntries, 4)=K2
       end if
   wend
-  close #fHndl$
+  close #fHndl%
 */
 }
 
@@ -156,45 +157,56 @@ void coaxAnalysis::setFilePath(QString path)
   DefaultDir = path;
   CoaxLoadDataFile(path);
 }
+
+
 /*
 '=============Start Coax Analysis Module===================================
-function CoaxOpenDataFile$(isInput) 'open file for input or output
+function CoaxOpenDataFile%(isInput) 'open file for input or output
     'Open coax data file; return its handle
     'If file does not exist, return "".
-    fName$=DefaultDir$;"\MSA_Info\CoaxData.txt"
+    fName%=DefaultDir%;"\MSA_Info\CoaxData.txt"
     On Error goto [noFile]
-    if isInput then open fName$ for input as #coaxFile else open fName$ for output as #coaxFile
-    CoaxOpenDataFile$="#coaxFile"
+    if isInput then open fName% for input as #coaxFile else open fName% for output as #coaxFile
+    CoaxOpenDataFile%="#coaxFile"
     exit function
 [noFile]
-    CoaxOpenDataFile$=""
+    CoaxOpenDataFile%=""
 end function
         sub CoaxSaveDataFile
             'Save coax data file.
-            fHndl$=CoaxOpenDataFile$(0) 'open for output
-            if fHndl$="" then notice "Unable to save coax data file." : exit sub
-            print #fHndl$, "!Transmission line data file"
-            print #fHndl$, "!Type, Z0, VF, K1, K2; K factors based on 100 ft and MHz."
+            fHndl%=CoaxOpenDataFile%(0) 'open for output
+            if fHndl%="" then notice "Unable to save coax data file." : exit sub
+            print #fHndl%, "!Transmission line data file"
+            print #fHndl%, "!Type, Z0, VF, K1, K2; K factors based on 100 ft and MHz."
             for i=1 to numCoaxEntries
                     'Print comma-separated items
-                cName$=coaxNames$(i)
-                if cName$<>" " then print #fHndl$, cName$;",";coaxData(i,1);",";coaxData(i,2);",";coaxData(i,3);",";coaxData(i,4)
+                cName%=coaxNames%(i)
+                if cName%<>" " then print #fHndl%, cName%;",";coaxData(i,1);",";coaxData(i,2);",";coaxData(i,3);",";coaxData(i,4)
             next i
-            close #fHndl$
+            close #fHndl%
         end sub
-    sub CoaxGetData coaxName$, byref R0, byref VF, byref K1, byref K2       'Return data for named coax, or VF=0 if doesn't exist
-            'VF is velocity of propagation as fraction of speed of light
-            'K1 and K2 are in db/hundred ft per the equation
-            '  Total db loss=(Len(in feet)/100) * ((K1)*Sqrt(freq) +(K2)*freq)  freq is in MHz
-        found=0
-        for i=1 to numCoaxEntries
-            if coaxName$=coaxNames$(i) then found=i : exit for
-        next i
-        if found=0 then R0=50 : VF=1 : K1=0 : K2=0 : exit sub   'Name not found. Use ideal values.
-        R0=coaxData(found,1) : VF=coaxData(found,2)
-        K1=coaxData(found,3) : K2=coaxData(found,4)
-    end sub
-
+        */
+void coaxAnalysis::CoaxGetData(QString coaxName, float &R0, float &VF, float &K1, float &K2)
+{
+  //Return data for named coax, or VF=0 if doesn't exist
+  //VF is velocity of propagation as fraction of speed of light
+  //K1 and K2 are in db/hundred ft per the equation
+  //  Total db loss=(Len(in feet)/100) * ((K1)*Sqrt(freq) +(K2)*freq)  freq is in MHz
+  int found = coaxNames.indexOf(coaxName);
+  if (found==-1)
+  {
+    R0=50;
+    VF=1;
+    K1=0;
+    K2=0;
+    return;
+  }
+  R0=coaxData[found][0];
+  VF=coaxData[found][1];
+  K1=coaxData[found][2];
+  K2=coaxData[found][3];
+}
+/*
     function CoaxDelayNS(VF,lenFeet)    'Return ns of one-way delay for velocity factor and length
         'Speed of light is 983.6 million feet per second
         if VF=0 then CoaxDelayNS=constMaxValue else CoaxDelayNS=1000*lenFeet/(VF*983.6) 'ver116-4i
@@ -340,22 +352,36 @@ end function
         call cxMultiply Z0Real, Z0Imag, divR, divI, ZReal, ZImag   'Z0 times the result of the divide
     end sub
 
-    sub CoaxTerminatedZFromName coaxName$, fMHz, ZtReal, ZtImag, lenFeet, byref ZReal, byref ZImag 'Calculate Z0 and then terminated Z value
-        call CoaxGetData coaxName$, R0, VF, K1, K2
-        spec$=CoaxSpecs$(R0, VF, K1, K2,lenFeet)  'put data into a coax spec
-        call CoaxTerminatedZFromSpecs spec$, fMHz, ZtReal, ZtImag, ZReal, ZImag
+    sub CoaxTerminatedZFromName coaxName%, fMHz, ZtReal, ZtImag, lenFeet, byref ZReal, byref ZImag 'Calculate Z0 and then terminated Z value
+        call CoaxGetData coaxName%, R0, VF, K1, K2
+        spec%=CoaxSpecs%(R0, VF, K1, K2,lenFeet)  'put data into a coax spec
+        call CoaxTerminatedZFromSpecs spec%, fMHz, ZtReal, ZtImag, ZReal, ZImag
     end sub
-
-    sub CoaxTerminatedZFromSpecs coaxSpecs$, fMHz, ZtReal, ZtImag, byref ZReal, byref ZImag  'Calculate Z0 and then terminated Z value
-        isErr=CoaxParseSpecs(coaxSpecs$, R0, VF, K1, K2, lenFeet)
-        if isErr then ZReal=0 : ZImag=0 : exit sub  'invalid spec
-        Z0Real=R0 : Z0Imag=0  'starting value
-        if fMHz<=0 then fMHz=0.000001   'To avoid numerical problems
-        call CoaxComplexZ0Iterate fMHz, VF, K1, K2, Z0Real, Z0Imag  'Calculate complex Z0
-        call CoaxGetPropagationGamma fMHz, VF, K1, K2, Greal, Gimag 'get propagation coefficient alpha +j*beta
-        call CoaxTerminatedZ Z0Real, Z0Imag, ZtReal, ZtImag, lenFeet, Greal,Gimag, ZReal, ZImag
-    end sub
-
+*/
+void coaxAnalysis::CoaxTerminatedZFromSpecs( QString coaxSpecs, double fMHz, double ZtReal, double ZtImag, double &ZReal, double &ZImag)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+  //Calculate Z0 and then terminated Z value
+  float R0, VF, K1, K2, lenFeet;
+  int isErr = CoaxParseSpecs(coaxSpecs, R0, VF, K1, K2, lenFeet);
+  if (isErr)
+  {
+    ZReal=0;
+    ZImag=0;
+    return;
+  }
+  float Z0Real=R0;
+  float Z0Imag=0;  //starting value
+  float Greal,Gimag;
+  if (fMHz<=0)
+    fMHz=0.000001;   //To avoid numerical problems
+  CoaxComplexZ0Iterate(fMHz, VF, K1, K2, Z0Real, Z0Imag);  //Calculate complex Z0
+  CoaxGetPropagationGamma(fMHz, VF, K1, K2, Greal, Gimag); //get propagation coefficient alpha +j*beta
+  CoaxTerminatedZ(Z0Real, Z0Imag, ZtReal, ZtImag, lenFeet, Greal,Gimag, ZReal, ZImag);
+  */
+}
+/*
     sub CoaxZ0FromTerminationImpedance ZLReal, ZLImag, ZReal, ZImag, GLreal, GLimag, byref Z0Real, byref Z0Imag    'Calc Z0 from Z and ZL
         'ZL is the terminating impedance; Z is the measured input impedance of the line.
         'GLreal and GLimage are the gamma*len components
@@ -378,10 +404,10 @@ end function
         Z0Imag=(difCothI+sqrtI)/2
     end sub
 
-    function CoaxPhaseDelayAndLossFromSpecs(coaxSpecs$, phase, lossDB)    'Get delay in degrees and loss in dB for specified coax
+    function CoaxPhaseDelayAndLossFromSpecs(coaxSpecs%, phase, lossDB)    'Get delay in degrees and loss in dB for specified coax
         'returns 1 if error in spec; otherwise 0
         'Assumes proper termination for loss calculation
-        isErr=CoaxParseSpecs(coaxSpecs$, R0, VF, K1, K2, lenFeet)
+        isErr=CoaxParseSpecs(coaxSpecs%, R0, VF, K1, K2, lenFeet)
         if isErr then CoaxDelayAndLossFromSpecs=1 : exit function  'invalid spec
         CoaxDelayAndLossFromSpecs=0
         phase=CoaxDelayDegrees(fMHz,VF,lenFeet)
@@ -408,14 +434,18 @@ end function
         call cxInvert eR, eI, fR, fI     'f=1/e
         S21real=2*fR : S21imag=2*fI     'S21=2/e, real, imag format
     end sub
-
-    sub CoaxS21FromSpecs sysZ0real, sysZ0imag, coaxSpecs$, fMHz, byref S21dB, byref S21ang  'Calc S21 of coax cable
+*/
+void coaxAnalysis::CoaxS21FromSpecs(double sysZ0real, double sysZ0imag, QString coaxSpecs, double fMHz, double &S21dB, double &S21ang)
+{
+  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  /*
+    sub CoaxS21FromSpecs sysZ0real, sysZ0imag, coaxSpecs%, fMHz, byref S21dB, byref S21ang  'Calc S21 of coax cable
         'sysZ0 is the system reference impedance
         'fMHz is frequency in MHz,
-        'coaxSpecs$ describes the coax
+        'coaxSpecs% describes the coax
         'We calculate S21 of the coax cable with source and load of sysZ0. Returned as db, angle (degrees)
-        if coaxSpecs$="" then S21dB=0 : S21ang=0 : exit sub 'No specs; treat as zero length coax
-        isErr=CoaxParseSpecs(coaxSpecs$, R0, VF, K1, K2, lenFeet)
+        if coaxSpecs%="" then S21dB=0 : S21ang=0 : exit sub 'No specs; treat as zero length coax
+        isErr=CoaxParseSpecs(coaxSpecs%, R0, VF, K1, K2, lenFeet)
         if isErr then S21dB=-200 : S21ang=0 : exit sub  'invalid spec
         Z0Real=R0 : Z0Imag=0  'starting value
         if fMHz<=0 then fMHz=0.000001   'To avoid numerical problems
@@ -427,49 +457,82 @@ end function
         S21dB=10*uSafeLog10(magSquared)   'use 10 instead of 20 because mag is already squared
         S21ang=uATan2(S21real, S21imag) 'Angle, degrees
     end sub
+    */
+}
 
-    function CoaxSpecs$(R0, VF, K1, K2,lenFeet) 'Assemble coax parameters into a spec string
-        CoaxSpecs$="Z";R0;",V";VF;",K";K1;",K";K2;",L";lenFeet
-    end function
+QString coaxAnalysis::CoaxSpecs(float R0, float VF, float K1, float K2, float lenFeet)
+{
+  //Assemble coax parameters into a spec string
+  return QString("Z%1,V%2,K%3,K%4,L%5").arg(R0).arg(VF).arg(K1).arg(K2).arg(lenFeet);
+  //CoaxSpecs%="Z";R0;",V";VF;",K";K1;",K";K2;",L";lenFeet
+}
+int coaxAnalysis::CoaxParseSpecs(QString coaxSpecs, double &R0, double &VF, double &K1, double &K2, double &lenFeet)   //Get coax characteristics from specs
+{
+  //Returns 0 if no error; 1 if error.
+  //coaxSpecs% is in the form Z50, V0.5, K0.05, K0.05, L3
+  //Z is R0, V is velocity factor, first K is conductor loss factor (K1),
+  //   second K is dielectric loss factor (K2), L is length in feet.
+  int retVal = 0;   //Assume no error
+  R0=50;
+  VF=1;
+  K1=0;
+  K2=0;
+  lenFeet=0;  //default is lossless coax of zero len
+  if (coaxSpecs=="")
+  {
+    return 0;
+  }
+  int isErr=0;
+  int kNum=1;
+  QStringList list = coaxSpecs.split(",");
+  QStringListIterator i(list);
 
-    function CoaxParseSpecs(coaxSpecs$, byref R0, byref VF, byref K1, byref K2, byref lenFeet)   'Get coax characteristics from specs
-        'Returns 0 if no error; 1 if error.
-        'coaxSpecs$ is in the form Z50, V0.5, K0.05, K0.05, L3
-        'Z is R0, V is velocity factor, first K is conductor loss factor (K1),
-        '   second K is dielectric loss factor (K2), L is length in feet.
-        CoaxParseSpecs=0    'Assume no error
-        R0=50 : VF=1 : K1=0 : K2=0 : lenFeet=0  'default is lossless coax of zero len
-        if coaxSpecs$="" then exit function
-        specLen=len(coaxSpecs$)
-        isErr=0 : commaPos=0
-        kNum=1
-        while commaPos<specLen
-            oldCommaPos=commaPos
-            commaPos=instr(coaxSpecs$,",", commaPos+1)
-            if commaPos=0 then commaPos=specLen+1     'Pretend comma follows the string
-            compon$=Trim$(Mid$(coaxSpecs$,oldCommaPos+1, commaPos-oldCommaPos-1))   'get this component spec
-            if compon$="" then exit while  'get next word; done if there is none
-            firstChar$=Left$(compon$,1)   'data tag, single character
-            data$=Mid$(compon$,2)   'From second character to end
-            if data$<>"" then v=uValWithMult(data$)   'Value of everything after first char
-            select firstChar$   'Assign value to proper variable
-                case "Z"    'Z0
-                    R0=v : if R0<=0 then isErr=1
-                case "V"    'velocity factor
-                    VF=v : if VF<=0 or VF>1 then isErr=1
-                case "K"    'K1 or K2
-                    if v<0 or v>1 then isErr=1
-                    if kNum=1 then
-                        K1=v : kNum=2
-                    else
-                        K2=v
-                    end if
-                case "L"    'coax len
-                    lenFeet=v
-                case else   'Invalid component spec
-                    isErr=1
-            end select
-            if isErr then CoaxParseSpecs=1 : exit function
-        wend
-    end function
-*/
+  while (i.hasNext())
+  {
+    QString compon = i.next().trimmed();
+    if (compon == "")
+      break;
+    QString firstChar = compon.left(1);   //data tag, single character
+    QString data = compon.mid(1);   //From second character to end
+    float v;
+    if (data!="")
+      v = util.uValWithMult(data);   //Value of everything after first char
+    if (firstChar == "Z")    //Z0
+    {
+      R0=v;
+      if (R0<=0)
+        isErr=1;
+    }
+    else if (firstChar == "V")    //velocity factor
+    {
+      VF=v;
+      if (VF<=0 || VF>1)
+        isErr=1;
+    }
+    else if (firstChar == "K")    //K1 or K2
+    {
+      if (v<0 || v>1)
+        isErr=1;
+      if (kNum==1)
+      {
+        K1=v;
+        kNum=2;
+      }
+      else
+        K2=v;
+    }
+    else if (firstChar == "L")    //coax len
+    {
+      lenFeet=v;
+    }
+    else   //Invalid component spec
+    {
+      isErr=1;
+    }
+
+    if (isErr)
+      return 1;
+  }
+
+  return retVal;
+}

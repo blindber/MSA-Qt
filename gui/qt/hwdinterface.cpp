@@ -136,7 +136,9 @@ void hwdInterface::setUwork(cWorkArray *newuWork)
 void hwdInterface::setFilePath(QString Dir)
 {
   DefaultDir = Dir;
-  coax.setFilePath(Dir);
+
+  mSAconfig::coax.setFilePath(Dir);
+
   calMan->setFilePath(Dir);
 }
 
@@ -2590,7 +2592,8 @@ void hwdInterface::DoSpecialGraph(float &power)
     if (vars->msaMode==modeSA)   //added the 1 MHz square wave for SA mode
     {
       currXVal=gGetPointXVal(vars->gGraphVal, vars->gMaxPoints,  vars->thisstep+1);
-      specialWholeFreq=ceil(currXVal);
+      specialWholeFreq=round(currXVal);
+      //specialWholeFreq=int(currXVal + 0.5);
       specialFractFreq=currXVal-specialWholeFreq; //fract may be -0.5 to +0.5
       specialNoise=(1e-11)*activeConfig->finalbw*(1+4*(rand() % 100 / 100.0));
       if (specialWholeFreq == 2*int(specialWholeFreq/2))
@@ -2610,25 +2613,26 @@ void hwdInterface::DoSpecialGraph(float &power)
     }
     else    //VNA modes
     {
-      qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
       uWork->uWorkNumPoints=1;
       uWork->uWorkArray[1][0]=gGetPointXVal(vars->gGraphVal, vars->gMaxPoints,  vars->thisstep+1);//set up for uRLCComboResponse
       uWork->uWorkArray[1][1]=0;
       uWork->uWorkArray[1][2]=0; //Default in case of error
       //Calc response in whatever S11 or S21 setup the user has chosen
-      /*
-      if (vars->msaMode==modeReflection)
+
+      QString doSpecialJig;
+      double doSpecialR0;
+      if (vars->msaMode == modeReflection)
       {
-        doSpecialR0=S11BridgeR0;
-        doSpecialJig$="S11";
+        doSpecialR0=vars->S11BridgeR0;
+        doSpecialJig="S11";
       }
       else
       {
-        doSpecialR0=S21JigR0;
-        if (S21JigAttach$=="Series")
-          doSpecialJig$="S21Series";
+        doSpecialR0=vnaCal->S21JigR0;
+        if (vnaCal->S21JigAttach == "Series")
+          doSpecialJig="S21Series";
         else
-          doSpecialJig$="S21Shunt";
+          doSpecialJig="S21Shunt";
 
       }
 
@@ -2636,11 +2640,11 @@ void hwdInterface::DoSpecialGraph(float &power)
       //Note calibration will not be applied for doSpecialGraph=5, so uRLCComboResponse
       //calculates the actual final response. e.g. S21JigShuntDelay is not taken into account, because
       //it would be removed by a perfect calibration.
-      isErr=uRLCComboResponse(doSpecialRLCSpec$, doSpecialR0, doSpecialJig$);
+      int isErr = util.uRLCComboResponse(vars->doSpecialRLCSpec, doSpecialR0, doSpecialJig, uWork->uWorkNumPoints, uWork->uWorkArray);
       power=uWork->uWorkArray[1][1];   //get results of uRLCComboResponse
       phase=uWork->uWorkArray[1][2];
       vars->datatable[vars->thisstep][3] = phase;
-      */
+
     }
     break;
   default:

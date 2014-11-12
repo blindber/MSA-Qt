@@ -34,6 +34,7 @@ msagraph::msagraph(QWidget *parent)
   connect(this, SIGNAL(RequireRestart()), parent, SLOT(RequireRestart()));
   connect(this, SIGNAL(updatevar(int)), parent, SLOT(updatevar(int)));
   connect(this, SIGNAL(smithRefreshMain(int)), parent, SLOT(smithRefreshMain(int)));
+  connect(this, SIGNAL(mMarkSelect(QString)), parent, SLOT(mMarkSelect(QString)));
 
 
 //****************************
@@ -1702,7 +1703,7 @@ void msagraph::gCalcGraphParams()
 
   for (int i=1; i<= gHorDiv+1; i++)  //Save grid line locations and labels
   {
-    float gridVal, gridPix, doLabel;
+    double gridVal, gridPix, doLabel;
     util.uExtractNumericItems(3,gridLines, ",", gridVal, gridPix, doLabel);
     gXGridLines[i]=gridPix;
     if (doLabel==1)   //gCalcAxis determined whether a label is needed
@@ -1723,7 +1724,7 @@ void msagraph::gCalcGraphParams()
               , gY1Scale, gY1BlackHoleRadius, gY1BlackHolePix, gridLines); //ver116-4k
     for (int i=1; i <= gVertDiv+1; i++)  //Save grid line locations and labels
     {
-      float gridVal, gridPix, doLabel;
+      double gridVal, gridPix, doLabel;
       util.uExtractNumericItems(3,gridLines, ",", gridVal, gridPix, doLabel);
       gY1GridLines[i]=gridPix;
       if (doLabel==1)
@@ -1755,7 +1756,7 @@ void msagraph::gCalcGraphParams()
               , gY2Scale, gY2BlackHoleRadius, gY2BlackHolePix, gridLines); //ver116-4k
     for (int i=1; i <= gVertDiv+1; i++)  //Save grid line locations and labels
     {
-      float gridVal, gridPix, doLabel;
+      double gridVal, gridPix, doLabel;
       util.uExtractNumericItems(3,gridLines, ",", gridVal, gridPix, doLabel);
       gY2GridLines[i]=gridPix;
       if (doLabel==1)
@@ -2291,12 +2292,12 @@ void msagraph::gRestoreErasure()
 
 void msagraph::gStartNextDynamicScan()
 {
- //Prepare for next pass of dynamic draw
-    //#gGraphHandle$, "discard"   'Discard last scan info stored in Liberty Basic
-    gIsFirstDynamicScan=0;
-    gPrevPointNum=0;
-    gInitDraw();  //implements current color and width in case they were changed at end of prior scan ver116-4s
-    gInitErase(); //Erase first group of segments if required
+  //Prepare for next pass of dynamic draw
+  //#gGraphHandle$, "discard"   'Discard last scan info stored in Liberty Basic
+  gIsFirstDynamicScan=0;
+  gPrevPointNum=0;
+  gInitDraw();  //implements current color and width in case they were changed at end of prior scan ver116-4s
+  gInitErase(); //Erase first group of segments if required
 }
 
 void msagraph::gDynamicDrawPoint(float y1, float y2)
@@ -2372,12 +2373,12 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
 
   if (gSweepDir==1)
   {
-    if (thisErasePoint>=gSweepStart && thisErasePoint<=gSweepEnd)
+    if (thisErasePoint >= gSweepStart && thisErasePoint <= gSweepEnd)
       eraseInBounds=1;
   }
   else
   {
-    if (thisErasePoint<=gSweepStart && thisErasePoint>=gSweepEnd)
+    if (thisErasePoint <= gSweepStart && thisErasePoint >= gSweepEnd)
       eraseInBounds=1;
   }
 
@@ -2422,7 +2423,7 @@ void msagraph::gDynamicComboDrawPoint(float y1, float y2)
     else
       gConvertY1ToPix(y1);
 
-    // disbale rounding as we are not using trings for graphics
+    // disable rounding as we are not using strings for graphics
     //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
     //y1=int(10*y1+0.5)/10;
 
@@ -2602,12 +2603,12 @@ void msagraph::gDrawSingleTrace()
     int doErase=0;
     if (vars->sweepDir==1)
     {
-      if (gDoErase2 && thisErasePoint<=vars->sweepEndStep+1)
+      if (gDoErase2 && thisErasePoint <= vars->sweepEndStep + 1)
         doErase=1;
     }
     else
     {
-      if (gDoErase2 && thisErasePoint>=vars->sweepEndStep+1)
+      if (gDoErase2 && thisErasePoint >= vars->sweepEndStep + 1)
         doErase=1;
     }
     if (doErase)
@@ -2637,7 +2638,7 @@ void msagraph::gDrawSingleTrace()
 
   //3B. Construct total draw command as one string and send it
   //ver114-4d modified the following to set the first point
-  float xPix=gGraphPix[currPoint][0]; //ver114-4k
+  float xPix=gGraphPix[currPoint][0];
   //ver114-4n We set a point by drawing the line backward; except first point of non-histo is directly set.
   //For wide traces, "set" can create artifacts, but they are OK on first point.
   float lastX=gGraphPix[prevPoint][0];
@@ -2690,7 +2691,7 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
 
   vars->gGraphVal[currPoint][1]=y1;
   vars->gGraphVal[currPoint][2]=y2;
-  int x=gGraphPix[currPoint][0];    //Get previously calculated x pixel value for current point
+  //int x=gGraphPix[currPoint][0];    //Get previously calculated x pixel value for current point
 
   //Draw to Y1 if necessary
   if (gDoY1==1)
@@ -2707,7 +2708,7 @@ void msagraph::gDrawNextPointValue(float y1, float y2)
     }
     else
     {
-      gConvertY1ToPix(y1); //ver116-4k
+      gConvertY1ToPix(y1);
     }
     //We round pixels to the nearest tenth just to keep the accumulated draw commands shorter
     //y1=((int)(10*y1+0.5))/10;
@@ -3084,7 +3085,7 @@ void msagraph::gRecalcPix(int calcXPix)
 
 void msagraph::gDrawMarkerInfo()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+ // qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
 
   QGraphicsItem *item;
   QList<QGraphicsItem *> allItems = graphScene->items();
@@ -4105,7 +4106,7 @@ end sub
 
 void msagraph::mUpdateMarkerLocations()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+  //qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
 
   //Find point numbers for peak markers and for L and R if relative to the peaks
       //We are called from mDrawMarkerInfo, which also has the ability to move markers.
@@ -4360,19 +4361,28 @@ void msagraph::CreateReferenceSource()
       uWork->uWorkArray[i+1][0] = vars->datatable[i][1];
     }   //set up for uRLCComboResponse
       //Calc response in whatever S11 or S21 setup the user has chosen
-    int doSpecialR0; QString doSpecialJig;
+    int doSpecialR0;
+    QString doSpecialJig;
     if (vars->msaMode == modeReflection)
     {
-      doSpecialR0=vnaCal->S11BridgeR0; doSpecialJig="S11";   //ver115-2a
+      doSpecialR0=vnaCal->S11BridgeR0;
+      doSpecialJig="S11";   //ver115-2a
     }
     else
     {
       doSpecialR0=vnaCal->S21JigR0;
-      if (vnaCal->S21JigAttach=="Series") doSpecialJig="S21Series"; else doSpecialJig="S21Shunt";
+      if (vnaCal->S21JigAttach=="Series")
+        doSpecialJig="S21Series";
+      else
+        doSpecialJig="S21Shunt";
     }
     //TO DO--Note uRLCComboResponse does not adjust for S21JigShuntDelay. If we need to do so, do it here.
-    int isErr= util.uRLCComboResponse(referenceLineSpec, doSpecialR0, doSpecialJig);
-    if (isErr) { QMessageBox::about(0,"", "Invalid RLC reference specification"); return; }
+    int isErr= util.uRLCComboResponse(referenceLineSpec, doSpecialR0, doSpecialJig, uWork->uWorkNumPoints, uWork->uWorkArray);
+    if (isErr)
+    {
+      QMessageBox::about(0,"", "Invalid RLC reference specification");
+      return;
+    }
 
     //uWorkArray now contains the db, degrees response for each frequency
     //Transfer to referenceSource()
@@ -4389,7 +4399,7 @@ void msagraph::CreateReferenceSource()
     if (referenceLineType==3) //3=Fixed value
     {
       QString s=referenceLineSpec;
-      float v1, v2, v3;
+      double v1, v2, v3;
       util.uExtractNumericItems(2, s, ";",v1, v2, v3);
       referenceSourceNumPoints=gNumDynamicSteps()+1;
       for (int i=1; i <= referenceSourceNumPoints; i++)
@@ -4772,7 +4782,7 @@ void msagraph::setAppearance(dialogGridappearance *newGridappearance)
 void msagraph::gInitFirstUse(QGraphicsView *view, int winWidth, int winHt, int marLeft, int marRight, int marTop, int marBot)
 {
   graphicsView = view;
-  gNumMarkers=20;  //ver114-4d Some may not be in use at any given time
+  gNumMarkers=20;  //Some may not be in use at any given time
   gSetMaxPoints(800);
   gUpdateGraphObject(winWidth, winHt, marLeft, marRight, marTop, marBot);
   graphicsView->fitInView(graphScene->sceneRect());
@@ -5088,7 +5098,7 @@ void msagraph::SetStartStopFreq(float startF, float stopF)
 }
 void msagraph::gDrawMarkers()        //Draw all listed markers
 {
-qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+//qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
 
 
   //For the moment, use the grid color and font
@@ -5616,7 +5626,7 @@ QString msagraph::gRestoreTraceContext(QString &s, int &startPos, int isValidati
     //by spaces, tabs or commas. Text items are delimited by the double character
     //contained in sep$, because they may contain spaces or commas. If this is just
     //a validation run, we do not enter any of the retrieved data into our variables.
-    float v1, v2, v3;
+    double v1, v2, v3;
     if (tag == "DOHIST")
     {
       isErr=util.uExtractNumericItems(1, tLine,nonTextDelims, v1, v2, v3);
@@ -5726,7 +5736,7 @@ QString msagraph::RestoreTraceContext(QString s, int &startPos, int isValidation
     }
     else if (tag == "TRACEMODES")
     {
-      float v1, v2, v3;
+      double v1, v2, v3;
       isErr=util.uExtractNumericItems(2, tLine, nonTextDelims, v1, v2, v3);
       if (isValidation==0 && isErr==0) vars->Y1DisplayMode=v1; vars->Y2DisplayMode=v2;
     }
@@ -5904,7 +5914,7 @@ QString msagraph::gRestoreGridContext(QString &s, int &startPos, int isValidatio
   QString nonTextDelims=" ,\t";    //space, comma and tab are delimiters
   //Get next line and increment startPos to start of the following line
   QString tLine=util.uGetLine(s, startPos);
-  float v1, v2, v3;
+  double v1, v2, v3;
   QString t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13;
   while (tLine != "")
   {
@@ -6187,9 +6197,9 @@ int msagraph::GraphDataContextAsTextArray()
    //We save frequency plus two data per point even if we only have one trace.
    QString aSpace=" ";
    int pMin, pMax;
-   gGetMinMaxPointNum(pMin, pMax);    //ver114-6d
+   gGetMinMaxPointNum(pMin, pMax);
    int minStep=pMin-1 ; int maxStep=pMax-1;
-   for (int i=minStep; i < maxStep;i++)    //ver114-6d
+   for (int i=minStep; i <= maxStep;i++)
    {
      int f, y1, y2;
      gGetPointVal(i+1, f, y1, y2);    //point num is one more than step num.
@@ -6926,14 +6936,14 @@ void msagraph::PlotDataToScreen()
     //Comment out all but one; two choices allowed for testing
     gDynamicComboDrawPoint(thispointy1,thispointy2);     //This is the full-blown drawing procedure
   }
-  if (vars->steps>=1000)
-  {
+//  if (vars->steps>=1000)
+//  {
     //Discard at least every 1000 points to avoid a slowdown.
     //oneThousandthThisStep=vars->thisstep/1000;
     //if (int(oneThousandthThisStep)==oneThousandthThisStep) then #graphBox$, "discard"
-  }
+//  }
   //ver114-4e deleted drawing of point values at start, center and end
-  if (vars->thisstep == vars->sweepEndStep) //just processed final point of a sweep //ver114-4k
+  if (vars->thisstep == vars->sweepEndStep) //just processed final point of a sweep
   {
     //If autoscale is on for either axis then calculate the scale and redraw from raw values
     //We only do this for the first scan. ver114-7a added this autoscale material
@@ -6995,7 +7005,7 @@ void msagraph::PlotDataToScreen()
       gridappearance->gSetTraceColors(gridappearance->cycleColorsAxis1[vars->cycleNumber], gridappearance->cycleColorsAxis2[vars->cycleNumber]);  //ver116-4s
     }
     firstScan=0;  //scan has ended; next point is not in first scan since restart
-    vars->doSpecialRandom=(rand() % 100) / 100.0;  //Random number for doSpecialGraph ver115-1b
+    vars->doSpecialRandom=(rand() % 100) / 100.0;  //Random number for doSpecialGraph
   }
 
   updatevar(vars->thisstep); //moved here from [ProcessAndPrint]
@@ -7323,31 +7333,43 @@ void msagraph::mDeleteMarker(QString markID)
   {
     return;
   }
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  markNum=mMarkerNum(markID$) :
-if markNum<1 then notice "Invalid Marker Number" : exit sub
-   call gUpdateMarkerPointNum markNum,-1
-       //Update the flags indicating whether we have the special markers
-   select case markID$
-       case "L"
-           hasMarkL=0
-       case "R"
-           hasMarkR=0
-       case "P+"
-           hasMarkPeakPos=0
-       case "P-"
-           hasMarkPeakNeg=0
-       case "1", "2","3","4","5", "6", "Halt"  //ver114-4c
-           //valid markers but nothing special to do
-       case else
-           exit sub    //Not valid marker ID
-   end select
-   if gValidMarkerCount>0 then hasAnyMark=1 else hasAnyMark=0
-   if markID$=selMarkerID$ then
-       call mMarkSelect ""  //ver114-5L
-   end if
-      */
+
+  int markNum = mMarkerNum(markID) ;
+  if (markNum<1)
+  {
+    QMessageBox::about(0, "Notice", "Invalid Marker Number");
+    return;
+  }
+   gUpdateMarkerPointNum(markNum,-1);
+   //Update the flags indicating whether we have the special markers
+  if (markID == "L")
+    hasMarkL=0;
+  else if (markID == "R")
+    hasMarkR=0;
+  else if (markID == "P+")
+    hasMarkPeakPos=0;
+  else if (markID == "P-")
+    hasMarkPeakNeg=0;
+  else if (markID == "1"
+           || markID == "2"
+           || markID == "3"
+           || markID == "4"
+           || markID == "5"
+           || markID == "6"
+           || markID == "Halt")
+  {
+    //valid markers but nothing special to do
+  }
+  else
+    return; //Not valid marker ID
+ if (gValidMarkerCount() > 0)
+   hasAnyMark=1;
+ else
+   hasAnyMark=0;
+ if (markID==selMarkerID)
+ {
+   mMarkSelect("");
+ }
 }
 void msagraph::mAddMarker(QString markID, int pointNum, QString trace)
 {
@@ -7447,8 +7469,22 @@ void msagraph::mClearMarkers()
   hasMarkPeakNeg=0;
   hasAnyMark=0;
   gClearMarkers();
-  gDrawMarkerInfo();    //to clear info area ver114-7n
-  // fix me mMarkSelect("");  //ver114-5L
+  gDrawMarkerInfo();    //to clear info area
+  mMarkSelect("");
+}
+
+void msagraph::gUpdateMarkerPointNum(int markNum, int pointNum)
+{
+  //Change point number for an existing marker
+  if (markNum<1 || markNum > gNumMarkers)
+  {
+    QMessageBox::warning(0, "Notice", "Invalid marker number");
+    return;   //for debugging
+  }
+  gMarkerPoints[markNum][0]=pointNum;
+  //Note -1 indicates non-existent marker
+  if (pointNum>0)
+    gMarkerPoints[markNum][1] = gGetPointXVal(pointNum); //Copy current x value (freq)
 }
 
 void msagraph::mUserMarkSelect(QString btn)
@@ -7456,17 +7492,26 @@ void msagraph::mUserMarkSelect(QString btn)
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
   //Marker was selected in combobox.
-      if twoPortWinHndl$="" then #handle.selMark, "selection? selMarkerID$"  _
-                      else #twoPortWin.selMark, "selection? selMarkerID$" //ver116-2a
-      if selMarkerID$="None" then selMarkerID$=""
-          //Show marker editing info; ver114-4a revised
-      call mUpdateMarkerEditButtons    //Enable/disable proper buttons
-      call mDisplaySelectedMarker  //Display numeric info
-          //Update Smith chart. But if sweep is in progress don't, because we may have
-          //been called by program action. If sweeping, it will be updated at refresh time.
-      if haltsweep=0 and smithGraphHndl$()<>"" then call smithRefreshMarkerInfo   //ver115-2c
-  end sub
-*/
+  if (vars->twoPortWinHndl == "")
+  {
+    //then #handle.selMark, "selection? selMarkerID$"  ;
+  }
+  else
+  {
+    //#twoPortWin.selMark, "selection? selMarkerID$" //ver116-2a
+  }
+  if (selMarkerID=="None")
+  {
+    selMarkerID="";
+  }
+  //Show marker editing info; ver114-4a revised
+  mUpdateMarkerEditButtons();    //Enable/disable proper buttons
+  mDisplaySelectedMarker();  //Display numeric info
+  //Update Smith chart. But if sweep is in progress don't, because we may have
+  //been called by program action. If sweeping, it will be updated at refresh time.
+  if (haltsweep==0 && smithGraphHndl$()<>"")
+    smithRefreshMarkerInfo();
+  */
 }
 void msagraph::mEnterMarker(QString btn)
 {
@@ -7935,7 +7980,7 @@ QString msagraph::gRestoreSweepContext(QString &s, int &startPos, int isValidati
   QString tag;
   while (tLine!="")
   {
-    float v1, v2, v3;
+    double v1, v2, v3;
     QString origLine=tLine;
     if (tLine.left(10).toUpper() == "ENDCONTEXT")
     {

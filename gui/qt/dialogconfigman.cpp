@@ -1389,7 +1389,7 @@ QString dialogConfigMan::configRestoreHardwareContext(QString &s, int startPos, 
             break;
           }
           QString filtName=util.uExtractTextItem(v,",").trimmed();    //name is text up to comma
-          float v1, v2, v3;
+          double v1, v2, v3;
           int isErr = util.uExtractNumericItems(2, v, ",", v1, v2, v3);    //get cap values returns 1 if error
           if (filtName!="" &&filtName!="Wide" && filtName!="Mid"
               && filtName!= "Narrow" && filtName!= "XNarrow") isErr = true;
@@ -1401,7 +1401,7 @@ QString dialogConfigMan::configRestoreHardwareContext(QString &s, int startPos, 
       }
       else if (tag =="SWITCHES") //Automated switches ver116-1b
       {
-        float v1, v2, v3, v4, v5, v6;
+        double v1, v2, v3, v4, v5, v6;
         isErr=util.uExtractNumericItems(3,item, ",",v1, v2, v3); //get first 3
         if (isErr==0) isErr=util.uExtractNumericItems(2,item, ",",v4, v5, v6); //get final 2
         if (isErr==0)

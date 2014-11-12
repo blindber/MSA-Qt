@@ -2,6 +2,7 @@
 #include "ui_dialogFreqAxisPreference.h"
 
 #include <QMessageBox>
+#include "dialogrlc.h"
 
 sweepStruct::sweepStruct()
 {
@@ -913,34 +914,49 @@ void dialogFreqAxisPreference::axisXFinished()
   if (cfg->doSpecialGraph==5 && cfg->msaMode!=modeSA)
   {
     /*
-       *fix me
-        //Simultated RLC/Transmission line data--give user chance to change
-        int parseErr=util.uParseRLC(doSpecialRLCSpec, DialogRLCConnect, DialogRValue, DialogLValue,
-                            DialogCValue, DialogQLValue, DialogQCValue, dumD, DialogCoaxSpecs);
-        if parseErr then
-            doSpecialRLCSpec$="RLC[S,R0,L0,C";constMaxValue;",QL10000,QC10000]"    //ver115-4b
-            DialogRLCConnect$="S" : DialogRValue=0 : DialogLValue=0
-            DialogQLValue=10000 : DialogQCValue=10000
-            DialogCValue=constMaxValue
-            DialogCoaxSpecs$=""  //ver115-4a
-        end if
-        DialogCoaxName$=doSpecialCoaxName$  //ver115-4b
-        close #axis : #handle, "disable"   //ver116-4k
-        call RLCDialog  //Get desired circuit values
-        #handle, "enable"   //ver116-4k
-        //Assemble the values into a spec string
-                //Get the new values; assemble them into spec
-        doSpecialCoaxName$=DialogCoaxName$  //ver115-4b
-        form$="3,3,4//UseMultiplier"
-        resForm$="3,3,4//UseMultiplier//SuppressMilli" 
-        QForm$="######.###"   //ver115-5f
-        R$=uFormatted$(DialogRValue, resForm$)
-        L$=uFormatted$(DialogLValue, form$)
-        C$=uFormatted$(DialogCValue, form$)
-        QL$=uFormatted$(DialogQLValue, QForm$) //ver115-4b
-        QC$=uFormatted$(DialogQCValue, QForm$) //ver115-4b
-        doSpecialRLCSpec$="RLC[";DialogRLCConnect$;",R";uCompact$(R$);",L";uCompact$(L$); ",C";uCompact$(C$); _
-                        ",QL";uCompact$(QL$);",QC";uCompact$(QC$); "], Coax[";DialogCoaxSpecs$;"]"
+    dialogRLC myDialogRLC(this);
+    dialogRLCStruct settings;
+
+    //Simultated RLC/Transmission line data--give user chance to change
+    double dumD;
+    int parseErr=util.uParseRLC(vars->doSpecialRLCSpec, settings.dialogRLCConnect, settings.dialogRValue, settings.dialogLValue,
+                        settings.dialogCValue, settings.dialogQLValue, settings.dialogQCValue, dumD, settings.dialogCoaxSpecs);
+    if (parseErr)
+    {
+        vars->doSpecialRLCSpec="RLC[S,R0,L0,C1e12,QL10000,QC10000]";
+        settings.dialogRLCConnect="S";
+        settings.dialogRValue=0;
+        settings.dialogLValue=0;
+        settings.dialogQLValue=10000;
+        settings.dialogQCValue=10000;
+        settings.dialogCValue=constMaxValue;
+        settings.dialogCoaxSpecs="";
+    }
+    DialogCoaxName=doSpecialCoaxName;
+    settings.S21JigAttach = vnaCal.S21JigAttach;
+    settings.S21JigR0 = vnaCal.S21JigR0;
+    settings.dialogCoaxName = vars->doSpecialCoaxName;
+    settings.msaMode = vars->msaMode;
+    myDialogRLC.setSettings(settings);
+    //close #axis : #handle, "disable"
+    myDialogRLC.exec();  //Get desired circuit values
+
+    if (myDialogRLC.Rejected)
+      return;
+
+    //Assemble the values into a spec string
+            //Get the new values; assemble them into spec
+    doSpecialCoaxName$=DialogCoaxName$  //ver115-4b
+    form$="3,3,4//UseMultiplier"
+    resForm$="3,3,4//UseMultiplier//SuppressMilli"
+    QForm$="######.###"   //ver115-5f
+    R$=uFormatted$(DialogRValue, resForm$)
+    L$=uFormatted$(DialogLValue, form$)
+    C$=uFormatted$(DialogCValue, form$)
+    QL$=uFormatted$(DialogQLValue, QForm$) //ver115-4b
+    QC$=uFormatted$(DialogQCValue, QForm$) //ver115-4b
+    doSpecialRLCSpec$="RLC[";DialogRLCConnect$;",R";uCompact$(R$);",L";uCompact$(L$); ",C";uCompact$(C$); _
+                    ",QL";uCompact$(QL$);",QC";uCompact$(QC$); "], Coax[";DialogCoaxSpecs$;"]"
             */
   }
 

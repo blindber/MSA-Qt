@@ -9,7 +9,6 @@
 #include "usbfunctions.h"
 #include "touchstone.h"
 #include "dialogcalmanager.h"
-#include "coaxanalysis.h"
 #include "dialogvnacal.h"
 #include "dialogoslcal.h"
 #include "interpolation.h"
@@ -59,7 +58,7 @@ public:
   usbFunc *usb;
   touchStone touch;
   dialogCalManager *calMan;
-  coaxAnalysis coax;
+//  coaxAnalysis coax;
   dialogOSLCal oslCal;
 
   void RecalcPlaneExtendAndR0AndRedraw();

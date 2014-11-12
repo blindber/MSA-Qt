@@ -44,6 +44,7 @@
 #include "dialogshowvars.h"
 #include "smithdialog.h"
 #include "dialogdatawindow.h"
+#include "dialogrlc.h"
 
 
 namespace Ui {
@@ -121,7 +122,6 @@ private:
   void StartingLimits();
 
   void mUpdateMarkerEditButtons();
-  void mMarkSelect(QString markID);
   void mBtnMarkClear(QString markID);
   void mBtnMarkEdit(QString markID);
   void mBtnMarkDelete(QString markID);
@@ -132,6 +132,8 @@ private:
   void HaltAtEnd();
   void Continue();
   void FocusKeyBox();
+
+  void showDialogRLC();
 
 //=====================Start Routines to Save/Copy Image===========================
   void SaveImage();
@@ -161,7 +163,6 @@ private:
   // see the global file for the variables
 
   void gChangeTextSpecs(QString btn, QString &newTxt);
-  bool CoaxCreateFile();
   void smithFinished(QString );
   void multiscanCloseAll();
   QString smithGraphHndl();
@@ -190,6 +191,11 @@ private:
   void MagnitudePhaseMSAinput();
   QString AlignedReflectData(int currStep);
 
+  QVector<QPushButton *> fKeys;
+
+  void createFbuttons();
+
+  dialogRLC *ggg;
 
 //=========================== Smith Graphing Module=====================================
   void smithCopyParams();
@@ -198,6 +204,7 @@ protected:
   void resizeEvent(QResizeEvent *event);
   virtual void showEvent ( QShowEvent * event );
   virtual bool eventFilter(QObject *obj, QEvent *event);
+
 private slots:
 
   void on_actionMultiscan_Help_triggered();
@@ -282,6 +289,8 @@ private slots:
 
   void on_actionOSL_Info_triggered();
 
+  void on_btnMarkDelete_clicked();
+
 public slots:
   void updateView();
   void DisplayButtonsForHalted();
@@ -308,6 +317,8 @@ public slots:
   void smithRefreshMain(int doRef);
   void gGetMinMaxPointNum(int &min, int &max);
   void RecalcPlaneExtendAndR0AndRedraw();
+  void mMarkSelect(QString markID);
+
 
 };
 

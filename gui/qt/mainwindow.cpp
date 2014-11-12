@@ -22,6 +22,8 @@
 #include "dialogFreqAxisPreference.h"
 #include <qwaitcondition.h>
 
+
+
 QStateMachine wew;
 
 enum
@@ -31,7 +33,6 @@ enum
   doRestart,
   doNothing
 };
-
 
 MainWindow::MainWindow(QWidget *parent) :
   QMainWindow(parent),
@@ -43,6 +44,9 @@ MainWindow::MainWindow(QWidget *parent) :
   dataWindow = NULL;
   ui->setupUi(this);
   qApp->installEventFilter(this);
+
+
+
 
   QDesktopWidget *desktop = QApplication::desktop();
   if ( 1==desktop->screenCount()  )
@@ -113,11 +117,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
 
   CreateGraphWindow();
+  createFbuttons();
 
   smith = new smithDialog(this);
   smith->setGlobalVars(vars);
 
-  QTimer::singleShot(0, this, SLOT(delayedStart()));
+
+  QTimer::singleShot(1000, this, SLOT(delayedStart()));
 }
 
 MainWindow::~MainWindow()
@@ -829,16 +835,16 @@ void MainWindow::RestartReflectionMode()
   //settings that were last in effect for the new mode. This special treatment is done for menu-driven change
   //or by certain internally generated changes that call [ToggleTransmissionReflection], but not for changes
   //resulting from loading of preference files.
-  if (vars->menuMode==modeVectorTrans && vars->refLastSteps!=0)
+  if (vars->menuMode == modeVectorTrans && vars->refLastSteps != 0)
   {
     setCursor(Qt::WaitCursor);
     graph->ToggleTransmissionReflection();
     setCursor(Qt::ArrowCursor);
     return;
   }
-  vars->msaMode=modeReflection;
+  vars->msaMode = modeReflection;
   graph->SetDefaultGraphData();    //clears autoscale, sets Y1 and Y2 data types and range, and sets Y2DisplayMode and Y1DisplayMode ver115-3b
-  vnaCal.S11JigType="Reflect";   //Start using bridge ver115-5a
+  vnaCal.S11JigType = "Reflect";   //Start using bridge ver115-5a
   ChangeMode();
   QTimer::singleShot(0, this, SLOT(Restart()));
 }
@@ -1138,18 +1144,23 @@ void MainWindow::mMarkSelect(QString markID)
 {
   QString s;
   //Program selection specified marker in combo box
-  if (markID=="") s="None"; else s=markID;
+  if (markID=="")
+    s="None";
+  else s=markID;
+
   if (vars->twoPortWinHndl=="")
   {
-   // #handle.selMark, "select ";s$
-    if (vars->multiscanInProgress==0)   //don't do if window is hidden due to multiscan ver115-8d
+    ui->comboBoxMarker->setCurrentIndex(ui->comboBoxMarker->findText(s));
+    if (vars->multiscanInProgress==0)   //don't do if window is hidden due to multiscan
     {
-//        #handle.selMark, "setfocus" //ver116-2a
-//        #handle.Restart, "!setfocus"    //take focus off combobox
+      //take focus off combobox
+      ui->btnRestart->setFocus();
     }
   }
   else
   {
+    qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+    //ui->comboBoxMarker->setCurrentIndex(ui->comboBoxMarker->findText(s));
     //#twoPortWin.selMark, "select ";s$ //ver116-2a
     if (vars->multiscanInProgress==0)   //don't do if window is hidden due to multiscan ver115-8d
     {
@@ -1162,106 +1173,104 @@ void MainWindow::mMarkSelect(QString markID)
 
 void MainWindow::mBtnMarkClear(QString markID)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub mBtnMarkClear btn$   'Button to clear all markers was clicked
-    call mClearMarkers
-    'call HideMarkerEdit 'delver114-4a
-    if twoPortWinHndl$="" then  'ver116-4a
-        if doGraphMarkers=1 then call RefreshGraph 0    'ver115-1b
-    else
-        call TwoPortDrawGraph 0   'ver116-4a
-    end if
-end sub
-*/
+  //Button to clear all markers was clicked
+  graph->mClearMarkers();
+  if (vars->twoPortWinHndl =="")
+  {
+    if (graph->doGraphMarkers==1)
+      graph->RefreshGraph(0);
+  }
+  else
+  {
+    qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+    //TwoPortDrawGraph(0);
+  }
 }
 
 void MainWindow::mBtnMarkEdit(QString markID)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub mBtnMarkEdit btn$    'Button to edit selected marker was clicked
-    'call ShowMarkerEdit  'delver114-4a
-    call mUpdateMarkerEditButtons
-end sub
-*/
+  //  Button to edit selected marker was clicked
+  mUpdateMarkerEditButtons();
 }
 
 void MainWindow::mBtnMarkDelete(QString markID)
-{/*
-sub mBtnMarkDelete btn$      'Button to delete selected marker was clicked
-    call mDeleteMarker selMarkerID$
-    'call HideMarkerEdit  'delver114-4a
-    if twoPortWinHndl$="" then  'ver116-2a
-        if doGraphMarkers=1 then call RefreshGraph 0 else call mDrawMarkerInfo 'ver114-7d
+{
+//Button to delete selected marker was clicked
+  graph->mDeleteMarker(markID);
+  if (vars->twoPortWinHndl == "")
+  {
+    if (graph->doGraphMarkers==1)
+      graph->RefreshGraph(0);
     else
-        call TwoPortDrawGraph 0   'ver116-2a
-    end if
-end sub
-*/
+      graph->mDrawMarkerInfo();
+  }
+  else
+  {
+    qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
+    //TwoPortDrawGraph(0);
+  }
 }
 
 void MainWindow::btnIncPoint()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[btnIncPoint]   'added by ver115-1a
-    if haltsweep=1 then gosub [FinishSweeping]
-    call IncDecPoint "markInc"
-    if varwindow = 1 then gosub [preupdatevar] 'will update variables window.
-    wait
-*/
+  if (graph->haltsweep==1)
+    FinishSweeping();
+  IncDecPoint("markInc");
+  if (showVars)
+    preupdatevar(); //will update variables window.
 }
 
 void MainWindow::btnDecPoint()
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-[btnDecPoint]   'added by ver115-1a
-    if haltsweep=1 then gosub [FinishSweeping]
-    call IncDecPoint "markDec"
-    if varwindow = 1 then gosub [preupdatevar] 'will update variables window.
-    wait
-*/
+  if (graph->haltsweep==1)
+    FinishSweeping();
+  IncDecPoint("markDec");
+  if (showVars)
+    preupdatevar(); //will update variables window.
 }
 
 void MainWindow::IncDecPoint(QString btn)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-sub IncDecPoint btn$   'Button to increment or decrement frequency was clicked
-    'The button handlers call us with btn$="markInc" or "markDec"
-    'Change frequency, and redraw
-    'to update pointer on screen. But if markers are hidden, just refresh the marker info.
-    if selMarkerID$="" then exit sub    'No marker selected, so can't modify   ver114-4a
-    'We go back to the marker point number rather than trying to derive it from the current frequency,
-    'because of issues with zero-width scans or very narrow scans.
-    markPoint=gMarkerPointNum(mMarkerNum(selMarkerID$))
-    'Note: the idea of equating a frequency to a point number (possibly with fractional part) does not work perfectly
-    'because of rounding of frequencies to the nearest Hz. If we set a marker to an integral point number, that
-    'might in theory be a frequency with fractional Hz, so when the freq is rounded and converted to a point number,
-    'it may be point 5.997, even though we specified it as point 5.
-    if btn$="markDec" then
-        'Decrease markPoint to an integral value. If its fractional part is less than 0.1, it will become
-        'the integer next lower than its integral part; otherwise it becomes its integral part.
-        markPoint=int(markPoint-0.1)  'ver116-4f
-    else    'Increment
-        'Increase markPoint to an integral value. If its fractional part is more than 0.9, it will become
-        'the integer two larger than its integral part; otherwise it becomes one greater than its integral part.
-        markPoint=int(markPoint+1.1)  'ver116-4f
-    end if
+/*
+  //Button to increment or decrement frequency was clicked
+  //The button handlers call us with btn$="markInc" or "markDec"
+  //Change frequency, and redraw
+  //to update pointer on screen. But if markers are hidden, just refresh the marker info.
+  QString selMarkerID = ui->comboBoxMarker->currentText();
+  if (selMarkerID == "None")  //No marker selected, so can't modify
+    return;
+  //We go back to the marker point number rather than trying to derive it from the current frequency,
+  //because of issues with zero-width scans or very narrow scans.
+  int markPoint = graph->gMarkerPointNum(mMarkerNum(selMarkerID));
+  //Note: the idea of equating a frequency to a point number (possibly with fractional part) does not work perfectly
+  //because of rounding of frequencies to the nearest Hz. If we set a marker to an integral point number, that
+  //might in theory be a frequency with fractional Hz, so when the freq is rounded and converted to a point number,
+  //it may be point 5.997, even though we specified it as point 5.
+  if (btn=="markDec")
+  {
+    //Decrease markPoint to an integral value. If its fractional part is less than 0.1, it will become
+    //the integer next lower than its integral part; otherwise it becomes its integral part.
+    markPoint=int(markPoint-0.1);
+  }
+  else    //Increment
+  {
+    //Increase markPoint to an integral value. If its fractional part is more than 0.9, it will become
+    //the integer two larger than its integral part; otherwise it becomes one greater than its integral part.
+    markPoint=int(markPoint+1.1);
+  }
     if markPoint<1 then markPoint=1 else if markPoint>gPointCount() then markPoint=gPointCount()
     markFreq=gGetPointXVal(markPoint)
     if twoPortWinHndl$="" then print #handle.markFreq, using("####.######", markFreq) _
-                    else #twoPortWin.markFreq, using("####.######", markFreq) ' Enter new frequency into boxver116-2a
+                    else #twoPortWin.markFreq, using("####.######", markFreq) // Enter new frequency into boxver116-2a
     call gUpdateMarkerPointNum mMarkerNum(selMarkerID$), markPoint
-    if twoPortWinHndl$="" then  'ver116-2a
-        if doGraphMarkers=1 then call RefreshGraph 0 else call mDrawMarkerInfo 'ver114-7d
+    if twoPortWinHndl$="" then  //ver116-2a
+        if doGraphMarkers=1 then call RefreshGraph 0 else call mDrawMarkerInfo //ver114-7d
     else
-        call TwoPortDrawGraph 0   'ver116-2a
+        call TwoPortDrawGraph 0   //ver116-2a
     end if
 
-    leftstep=markPoint-1     'Make leftstep a step number, not point number, for [preupdatevar] ver115-1a
+    leftstep=markPoint-1     //Make leftstep a step number, not point number, for [preupdatevar] ver115-1a
 end sub
 */
 }
@@ -1323,6 +1332,69 @@ void MainWindow::FocusKeyBox()
     hwdIf->scanResumed=1;
   }
   QTimer::singleShot(0, this, SLOT(StartSweep()));
+}
+
+void MainWindow::showDialogRLC()
+{
+  dialogRLC myDialogRLC(this);
+
+  //Simultated RLC/Transmission line data--give user chance to change
+  dialogRLCStruct settings;
+
+  double dumD;
+  int parseErr=util.uParseRLC(vars->doSpecialRLCSpec, settings.dialogRLCConnect
+                              , settings.dialogRValue, settings.dialogLValue
+                              , settings.dialogCValue, settings.dialogQLValue
+                              , settings.dialogQCValue, dumD, settings.dialogCoaxSpecs);
+  if (parseErr)
+  {
+    vars->doSpecialRLCSpec="RLC[S,R0,L0,C1e12,QL10000,QC10000]";
+    settings.dialogRLCConnect = "S";
+    settings.dialogRValue = 0;
+    settings.dialogLValue = 0;
+    settings.dialogQLValue = 10000;
+    settings.dialogQCValue = 10000;
+    settings.dialogCValue = constMaxValue;
+    settings.dialogCoaxSpecs = "";
+  }
+  settings.S21JigAttach = vnaCal.S21JigAttach;
+  settings.S21JigR0 = vnaCal.S21JigR0;
+  settings.dialogCoaxName = vars->doSpecialCoaxName;
+  settings.msaMode = vars->msaMode;
+
+  myDialogRLC.setSettings(settings);
+  //close #axis : #handle, "disable"
+  myDialogRLC.exec();  //Get desired circuit values
+
+  if (myDialogRLC.Rejected)
+    return;
+
+  myDialogRLC.getSettings(settings);
+
+  vnaCal.S21JigAttach = settings.S21JigAttach;
+  vnaCal.S21JigR0 = settings.S21JigR0;
+  vars->doSpecialCoaxName = settings.dialogCoaxName;
+
+  //Assemble the values into a spec string
+  //Get the new values; assemble them into spec
+  vars->doSpecialCoaxName = settings.dialogCoaxName;
+  QString form="3,3,4//UseMultiplier";
+  QString resForm="3,3,4//UseMultiplier//SuppressMilli";
+  QString QForm="######.###";
+  QString R=util.uFormatted(settings.dialogRValue, resForm);
+  QString L=util.uFormatted(settings.dialogLValue, form);
+  QString C=util.uFormatted(settings.dialogCValue, form);
+  QString QL=util.uFormatted(settings.dialogQLValue, QForm);
+  QString QC=util.uFormatted(settings.dialogQCValue, QForm);
+  vars->doSpecialRLCSpec = "RLC["
+      + settings.dialogRLCConnect
+      + ",R" + util.uCompact(R)
+      + ",L" + util.uCompact(L)
+      + ",C" + util.uCompact(C)
+      + ",QL" + util.uCompact(QL)
+      + ",QC" + util.uCompact(QC)
+      + "], Coax[" + settings.dialogCoaxSpecs
+      + "]";
 }
 
 
@@ -1408,11 +1480,27 @@ void MainWindow::HideButtonsOnGraph()
 {
   //Hide buttons on the graph box so image can be copied
   //ver114-7b deleted the scale arrow buttons so there is nothing at the moment to hide
+  QPushButton *btn;
+  QVectorIterator<QPushButton *> i(fKeys);
+  while (i.hasNext())
+  {
+    btn = i.next();
+    btn->setVisible(false);
+  }
 }
 void MainWindow::ShowButtonsOnGraph()
 {
   //Show buttons that lie on the graph box
   //ver114-7b deleted the scale arrow buttons so there is nothing at the moment to hide
+  QPushButton *btn;
+  QVectorIterator<QPushButton *> i(fKeys);
+  while (i.hasNext())
+  {
+    btn = i.next();
+    btn->setVisible(true);
+  }
+
+  showDialogRLC();
 }
 void MainWindow::menuRLCAnalysis()
 {
@@ -2304,6 +2392,8 @@ void MainWindow::CloseSpecial(int returnflag)
 
 void MainWindow::resizeEvent(QResizeEvent *event)
 {
+  ui->graphicsView->fitInView(graph->getScene()->sceneRect(),Qt::KeepAspectRatio);
+return;
   static bool inHere = false;
 
   if (inHere)
@@ -2324,6 +2414,7 @@ void MainWindow::resizeEvent(QResizeEvent *event)
     graph->ResizeGraphHandler();
   }
   inHere = false;
+
 }
 
 void MainWindow::showEvent(QShowEvent *event)
@@ -2366,8 +2457,32 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
   {
     mouseDown = false;
   }
+  else  if (event->type() == QEvent::KeyPress)
+  {
+    QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+    bool used = false;
+    //qDebug() << "Ate key press " << keyEvent->key();
+    switch (keyEvent->key())
+    {
+      case Qt::Key_F1:
+        fKeys[0]->setChecked(!fKeys[0]->isChecked());
+        used = true;
+        break;
+      case Qt::Key_F2:
+        HideButtonsOnGraph();
+        used = true;
+        break;
+      case Qt::Key_F3:
+        ShowButtonsOnGraph();
+        used = true;
+        break;
+    }
+    if (used)
+      return true;
+  }
   return false;
 }
+
 void MainWindow::gMouseQuery(float x, float y) //Display info at mouse location
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
@@ -2697,7 +2812,7 @@ void MainWindow::on_btnTestSetup_clicked()
     QTextStream textStream(&textFile);
     while (true)
     {
-      QString fullLine;
+      //QString fullLine;
       QString line = textStream.readLine().trimmed();
       if (line.isNull())
           break;
@@ -3445,7 +3560,7 @@ void MainWindow::SkipHardwareInitialization()    //Skips to here if there is no 
   //13.Calculate the command information for first step through last step of the sweep and put in arrays
 
   //ver116-4s changed this so datatable  and phaarray are set up here whether or not suppresshardware=1.
-  for (int i=0; i < vars->steps;i++)
+  for (int i=0; i <= vars->steps;i++)
   {
     float thisfreq=graph->gGetPointXVal(i+1);    //Point number is 1 greater than step number SEWgraph
     if (vars->msaMode!=modeSA)   //Store actual signal freq in VNA arrays
@@ -4221,7 +4336,7 @@ void MainWindow::RestoreSweepContext()
     {
       //In Version A there was a different format for graph data, so we will
       //just use default values.
-      float v1, v2, v3;
+      double v1, v2, v3;
       if (contextVersion=="A")
       {
         float v1=0,  v2=0;
@@ -4264,7 +4379,7 @@ void MainWindow::RestoreSweepContext()
     }
     else if (tag == "AUTOSCALE")
     {
-      float v1, v2, v3;
+      double v1, v2, v3;
       if (vars->restoreIsValidation==0)
       {
         isErr=util.uExtractNumericItems(2, tLine, " ", v1, v2, v3);
@@ -4281,7 +4396,7 @@ void MainWindow::RestoreSweepContext()
     }
     else if (tag == "S21JIG")
     {
-      float v1, v2, v3;
+      double v1, v2, v3;
       if (vars->restoreIsValidation==0)
       {
         QString w = util.uExtractTextItem(tLine," ");
@@ -4307,7 +4422,7 @@ void MainWindow::RestoreSweepContext()
     }
     else if (tag == "S11BRIDGE")
     {
-      float v1, v2, v3;
+      double v1, v2, v3;
       if (vars->restoreIsValidation==0)
       {
         isErr=util.uExtractNumericItems(2,tLine, " ", v1, v2, v3);  //Extract three items and leave the third, a text item
@@ -4988,6 +5103,10 @@ void MainWindow::on_actionSweep_triggered()
     {
       multiscanSaveContexts(0); //zero means main graph  ver115-8d
     }*/
+    if (vars->doSpecialGraph == 5 && vars->msaMode != modeSA)
+    {
+      showDialogRLC();
+    }
   }
 }
 //-----------------------------------------------------------------------------
@@ -5009,7 +5128,7 @@ void MainWindow::on_actionInput_Data_triggered()
   dataWindow->addLine(" Step           Calc Mag  Mag AtoD Freq Cal");
   dataWindow->addLine(" Num   Freq(MHz)  Input   Bit Val   Factor");
   int validSteps = graph->gPointCount()-1;  //Number of completed steps
-  for (int i = 0; i < validSteps; i++)
+  for (int i = 0; i <= validSteps; i++)
   {
       QString freq = util.usingF("####.######",graph->gGetPointXVal(i+1));   //freq in MHz
       QString data1 = util.usingF("####.###", vars->datatable[i][2]);    //calculated mag input
@@ -5028,9 +5147,9 @@ void MainWindow::on_actionInput_Data_triggered()
 void MainWindow::on_actionGraph_Data_triggered()
 {
   OpenDataWindow();
-  dataWindow->addLine("1" + graph->gGetTitleLine(1));   //ver115-6a put title in header
-  dataWindow->addLine("1" + graph->gGetTitleLine(2));
-  dataWindow->addLine("1" + graph->gGetTitleLine(3));
+  dataWindow->addLine("!" + graph->gGetTitleLine(1));   //ver115-6a put title in header
+  dataWindow->addLine("!" + graph->gGetTitleLine(2));
+  dataWindow->addLine("!" + graph->gGetTitleLine(3));
   dataWindow->addLine("!Graph Data");
   QString s="! Freq(MHZ)";
   QString y1AxisLabel, y2AxisLabel, dum, dum1 , dum3;
@@ -5049,7 +5168,7 @@ void MainWindow::on_actionGraph_Data_triggered()
     s=s+"        "+y2AxisLabel;
   }
   int validSteps = graph->gPointCount()-1;  //Number of completed steps
-  for (int i = 0; i < validSteps; i++)
+  for (int i = 0; i <= validSteps; i++)
   {
     freq = util.usingF("####.######", graph->gGetPointXVal(i+1));
     double y1Val, y2Val;
@@ -5119,7 +5238,7 @@ void MainWindow::on_actionS21_Parameters_triggered()
   dataWindow->addLine( "# MHZ S DB R "+ QString::number(vnaCal.S21JigR0));
   dataWindow->addLine( "!  MHz       S21_Mag   S21_Ang");
   int validSteps=graph->gPointCount()-1;  //Number of completed steps  //ver116-1b
-  for (int i = 0; i < validSteps; i++)
+  for (int i = 0; i <= validSteps; i++)
   {
     QString freq = util.usingF("####.######",vars->S21DataArray[i][0]);
     QString data1 = util.usingF("####.#####",vars->S21DataArray[i][1]);
@@ -5141,7 +5260,7 @@ void MainWindow::on_actionInstalled_Line_Cal_triggered()
   else
     dataWindow->addLine("!Line Calibration");
   dataWindow->addLine( "! Freq(MHz)   Cal_Mag Cal_Ang");
-  for (int i = 0; i < vars->steps; i++)
+  for (int i = 0; i <= vars->steps; i++)
   {
     QString freq=util.usingF("####.######",graph->gGetPointXVal(i+1));
     QString data1=util.usingF("####.###",vars->lineCalArray[i][1]);
@@ -5162,7 +5281,7 @@ void MainWindow::on_actionS11_Parameters_triggered()
   dataWindow->addLine( "# MHZ S DB R " + QString::number(vars->S11GraphR0));
   dataWindow->addLine( "! MHz       S11_Mag   S11_Ang");
   int validSteps=graph->gPointCount()-1;  //Number of completed steps
-  for (int i = 0; i < validSteps; i++)
+  for (int i = 0; i <= validSteps; i++)
   {
     QString freq= util.usingF("####.######",vars->ReflectArray[i][0]);
     QString data1=util.usingF("####.#####",vars->ReflectArray[i][1]);
@@ -5179,7 +5298,7 @@ void MainWindow::on_actionS11_Derived_Data_triggered()
   OpenDataWindow();
   dataWindow->addLine("   Freq      S11_DB   S11_Ang  Rho    Z_Mag   Z_Ang     Rs       Xs       Cs       Ls      Rp       Xp      Lp      Cp     VSWR     RL    %RefPwr    Q");
   int validSteps = graph->gPointCount()-1;  //Number of completed steps
-  for (int i = 0; i < validSteps; i++)
+  for (int i = 0; i <= validSteps; i++)
   {
     dataWindow->addLine( AlignedReflectData(i));
   }
@@ -5198,7 +5317,7 @@ void MainWindow::on_actionOSL_Info_triggered()
 
   QString Or, Oi, Sr, Si, Lr, Li, Ar, Ai, Br, Bi, Cr, Ci;
   //OSL calibration standards and coefficients
-  for (int i = 0; i < vars->steps; i++)
+  for (int i = 0; i <= vars->steps; i++)
   {
     QString freq = util.usingF("####.######", graph->gGetPointXVal(i+1));
     double OSLdataMin=1e-7;
@@ -5318,4 +5437,29 @@ QString MainWindow::AlignedReflectData(int currStep)
            + util.uAlignDecimalInString(RefPow,8,4)
            + util.uAlignDecimalInString(Q,7,5));
 
+}
+
+void MainWindow::createFbuttons()
+{
+  fKeys.clear();
+  // only show 6 F key buttons
+  for (int ii = 0; ii < 6; ii++)
+  {
+    QPushButton *pushButton = new QPushButton(ui->graphicsView);
+    pushButton->setText(QString("F%1").arg(ii+1));
+    int left = ui->graphicsView->width() - 60;
+    pushButton->setGeometry(QRect(2, 100 + ii * 60, 60, 60));
+    pushButton->setCheckable(true);
+    /*if (ii >= 6)
+    {
+      pushButton->setVisible(false);
+    }*/
+    pushButton->setVisible(false);
+    fKeys.append(pushButton);
+  }
+}
+
+void MainWindow::on_btnMarkDelete_clicked()
+{
+  mBtnMarkDelete(ui->comboBoxMarker->currentText());
 }

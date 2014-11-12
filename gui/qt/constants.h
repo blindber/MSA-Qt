@@ -119,4 +119,10 @@ enum hardwareTypes
   hwdUsbV1 = 3
 };
 
+enum randomConsts
+{
+  //1e12
+  constMaxValue = 1000000000000
+};
+
 #endif // CONSTANTS_H

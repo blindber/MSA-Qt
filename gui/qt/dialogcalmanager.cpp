@@ -1749,7 +1749,7 @@ QString dialogCalManager::calReadFile(QFile *calFile, QPlainTextEdit *editor, in
             //be at least two numbers; for mag calibration of VNA there may also be phase.
              //Numbers are separated by comma, tab or space
             QString delims=" ,\t";    //space, comma and tab are delimiters
-            float data1, data2, data3, data4, data5;
+            double data1, data2, data3, data4, data5;
             int isErr=util.uExtractNumericItems(2, tLine, delims,data1, data2, data3);
                 //If not numeric, signal error
             if (isErr==1) { retVal =p+"Line "+QString::number(fileLine); return retVal; }

@@ -19,7 +19,7 @@
 #include <QFile>
 #include "mainwindow.h"
 
-#define DEBUG_QT_ASSERT
+//#define DEBUG_QT_ASSERT
 
 #ifdef DEBUG_QT_ASSERT
 void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QString &msg)

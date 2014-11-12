@@ -367,7 +367,7 @@ void smithDialog::smithDrawReflectArray()
   smithSetPointS11DB(vars->ReflectArray[startStep][constGraphS11DB], vars->ReflectArray[startStep][constGraphS11Ang], lineWidth);     //Set first point
   lineWidth = smithTraceWidth;
 
-  for (int i=startStep+1; i < endStep; i++)  //step startStep is already done; draw the remaining lines
+  for (int i=startStep+1; i <= endStep; i++)  //step startStep is already done; draw the remaining lines
   {
     smithDrawLineS11DB(vars->ReflectArray[i][constGraphS11DB], vars->ReflectArray[i][constGraphS11Ang], lineWidth);    //Draw to next point
 

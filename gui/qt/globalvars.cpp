@@ -17,6 +17,11 @@
 #include "globalvars.h"
 #include "constants.h"
 
+namespace mSAconfig
+{
+  coaxAnalysis coax;
+}
+
 globalVars::globalVars()
 {
   zeroVars();
@@ -141,7 +146,7 @@ void globalVars::zeroVars()
   RefRLCLastNumPoints = 0;
   analyzeQLastNumPoints = 0;
   GDLastNumPoints = 0;
-  doingInitialization = 0;
+  //doingInitialization = 0;
   Y1DisplayMode = 0;
   Y2DisplayMode = 0;
   isStickMode = 0;

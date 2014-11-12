@@ -19,6 +19,8 @@
 #include <QtCore>
 #include <QApplication>
 #include <math.h>
+#include "vectortypes.h"
+#include "complexmaths.h"
 
 class msaUtilities
 {
@@ -27,67 +29,67 @@ public:
   QString uGetLine(QString inStr, int &startPos);
   QString Word(QString strExp, int n);
   QString uExtractTextItem(QString &data, QString delim);
-  int uExtractNumericItems(int nItems, QString &data, QString delims, float &val1, float &val2, float &val3);
+  int uExtractNumericItems(int nItems, QString &data, QString delims, double &val1, double &val2, double &val3);
   QString uExtractDataItem(QString &data, QString delims);
   int uIsNumeric(QString data);
   QString ToHex(int value);
   void beep();
   QString time(QString t);
-  QString usingF(QString form, float v);
+  QString usingF(QString form, double v);
   QString readLine(QFile *fHndl, char delm);
   QString Space(int N);
 
-  float uSinh(float x);
-  float uCosh(float x);       //sinh of real number
-  float uTanh(float x);       //sinh of real number
-  float uValWithMult(QString data);   //Return value of number which end with a multipler (e.g. K, M,...);
+  double uSinh(double x);
+  double uCosh(double x);       //sinh of real number
+  double uTanh(double x);       //sinh of real number
+  double uValWithMult(QString data);   //Return value of number which end with a multipler (e.g. K, M,...);
   QString uRepeat(QString s, int n);
   QString  uGetParamText(QString s,QString key, QString delim); //Return parameter text following the text in key$, to but not including the delim$ char
-  QString uFormatByDig(float v, int maxWhole, int maxDec, int maxSig);
+  QString uFormatByDig(double v, int maxWhole, int maxDec, int maxSig);
   QString uFormatted(double v, QString form);
   QString uCompact(QString str);
   void uScaleWithMultiplier(double  &v, QString &mult);
   double uMultiplierValue(QString mult);    //Return value of specified multiplier
   QString uPrompt(QString caption, QString msg, int doYesNo, int allowCancel);   //Post message and return user response
 
-  float uRadsPerDegree();
-  float uDegreesPerRad();
-  float uPi();
-  float uNatLog10();
-  float uE();
-  float uSafeLog10(float aVal);
-  float uLog10(float aVal);
-  int uRoundDown(float x);
-  int uRoundUp(float x);
-  int uRoundUpToMultiple(float X, int mult);
-  int uRoundDownToMultiple(float X, int mult);
-  float uRoundUpToPower(float X, float base);
-  float uRoundDownToPower(float x, float base);
+  double uRadsPerDegree();
+  double uDegreesPerRad();
+  double uPi();
+  double uNatLog10();
+  double uE();
+  double uSafeLog10(double aVal);
+  double uLog10(double aVal);
+  int uRoundDown(double x);
+  int uRoundUp(double x);
+  int uRoundUpToMultiple(double X, int mult);
+  int uRoundDownToMultiple(double X, int mult);
+  double uRoundUpToPower(double X, double base);
+  double uRoundDownToPower(double x, double base);
   double uTenPower(double pow);
-  float uPower(float x, float pow);
-  float uATan2(double r, double i);
-  float uNormalizeDegrees(float deg);
+  double uPower(double x, double pow);
+  double uATan2(double r, double i);
+  double uNormalizeDegrees(double deg);
 
   QString uAlignDecimalInString(QString v, int lenInDigits, int nLeft);
-  QString uScientificNotation(float v, int nDec, int padZero);
-  void uCrystalParameters(float Fs, float Fp, float PeakS21DB, float Fdb3A, float Fdb3B, float &Rm, float &Cm, float &Lm, float &Cp, float &Qu, float &QL);
-  void uParallelRLCFromScalarS21(float Fp, float PeakS21DB, float Fdb3A, float Fdb3B, float &parR, float &L, float &C, float &Qu, float &QL, float &serR);
-  void uRLCFromTwoImpedances(QString connectType, float F1, float R1, float X1, float F2, float R2, float X2, float &R, float &L, float &C);
-  void uShuntJigImpedance(float R0, float S21DB, float S21Deg, float delay, float freq, float *Res, float &React);
-  void uAdjustS21ForConnectorDelay(float freq, float &S21DB, float &S21Ang);
-  void uSeriesJigImpedance(float R0, float S21DB, float S21Deg, float &Res, float &React);
-  void uS11DBToImpedance(float R0, float S11DB, float S11Deg, float &Res, float &React);
+  QString uScientificNotation(double v, int nDec, int padZero);
+  void uCrystalParameters(double Fs, double Fp, double PeakS21DB, double Fdb3A, double Fdb3B, double &Rm, double &Cm, double &Lm, double &Cp, double &Qu, double &QL);
+  void uParallelRLCFromScalarS21(double Fp, double PeakS21DB, double Fdb3A, double Fdb3B, double &parR, double &L, double &C, double &Qu, double &QL, double &serR);
+  void uRLCFromTwoImpedances(QString connectType, double F1, double R1, double X1, double F2, double R2, double X2, double &R, double &L, double &C);
+  void uShuntJigImpedance(double R0, double S21DB, double S21Deg, double delay, double freq, double *Res, double &React);
+  void uAdjustS21ForConnectorDelay(double freq, double &S21DB, double &S21Ang);
+  void uSeriesJigImpedance(double R0, double S21DB, double S21Deg, double &Res, double &React);
+  void uS11DBToImpedance(double R0, double S11DB, double S11Deg, double &Res, double &React);
   void uRefcoToImpedance(double R0, double rho, double theta, double &Res, double &React);
-  void uImpedanceToRefco(float R0, float R, float I, float &rho, float &theta);
-  void uImpedanceToRefcoRI(float R0, float R, float I, float &GR, float &GI);
-  void uSeriesImpedanceToS21DB(float R0, float R, float I, float &db, float &deg);
-  void uShuntImpedanceToS21DB(float R0, float R, float I, float delay, float freq, float &db, float &deg);
-  void uRefcoToSeriesS21DB(float rho, float theta, float &db, float &deg);
-  void uRefcoToShuntS21DB(float rho, float theta, float &db, float &deg);
-  int uParseRLC(QString spec, QString &connect, float &R, float &L, float &C, float &QL, float &QC, float &D, QString &coaxSpecs);
-  void uComboImpedance(QString connect, float R, float L, float C, float QL, float QC, float freq, float &Zr, float &Zi);
-  int uRLCComboResponse(QString spec, float Z0, QString jig);
-  void uPhaseShiftImpedance(float R0, float theta, float &Zr, float &Zi);
+  void uImpedanceToRefco(double R0, double R, double I, double &rho, double &theta);
+  void uImpedanceToRefcoRI(double R0, double R, double I, double &GR, double &GI);
+  void uSeriesImpedanceToS21DB(double R0, double R, double I, double &db, double &deg);
+  void uShuntImpedanceToS21DB(double R0, double R, double I, double delay, double freq, double &db, double &deg);
+  void uRefcoToSeriesS21DB(double rho, double theta, double &db, double &deg);
+  void uRefcoToShuntS21DB(double rho, double theta, double &db, double &deg);
+  int uParseRLC(QString spec, QString &connect, double &R, double &L, double &C, double &QL, double &QC, double &D, QString &coaxSpecs);
+  void uComboImpedance(QString connect, double R, double L, double C, double QL, double QC, double freq, double &Zr, double &Zi);
+  int uRLCComboResponse(QString spec, double Z0, QString jig, int uWorkNumPoints, Q2DfloatVector &uWorkArray);
+  void uPhaseShiftImpedance(double R0, double theta, double &Zr, double &Zi);
   void uHideCommandItem(int hParent, int itemID);
   void uHideSubMenu(int hParent, int position);
   void uShowMenuItem(int hParent, int itemID, int hMenu, QString caption, int precedeNum);
@@ -114,7 +116,7 @@ public:
   void uEquivSeriesLC(double freq, double serR, double serReact,  double &serL, double &serC);
   void uEquivParallelImped(double sR, double sX, double &pR, double &pX);
 
-  float NormalizePhase(float p);
+  double NormalizePhase(double p);
 
   int uWorkArrayFromTextArray(int nLines, int nPerLine);
   int  uArrayFromFile(QFile *fHndl, int nPerLine);   //get points from file into uWorkArray();
@@ -131,19 +133,21 @@ public:
   QString uOpenFileDialog(QWidget *parent, QString filter, QString defaultExt, QString initialDir, QString initialFile, QString windTitle);
   bool uVerifyDLL(QString dllName);
   QString uExtractFontColor(QString font);  //Return the color from a font specification
-  void uSeriesRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C);   //From Z at two points, calculate series RLC components
-  void uParallelRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C);   //From Z at two points, calculate parallel RLC components
+  void uSeriesRLCFromPoints(double Z1r, double Z1i, double f1, double Z2r, double Z2i, double f2, double &R, double &L, double &C);   //From Z at two points, calculate series RLC components
+  void uParallelRLCFromPoints(double Z1r, double Z1i, double f1, double Z2r, double Z2i, double f2, double &R, double &L, double &C);   //From Z at two points, calculate parallel RLC components
 
 
   QString fixColor(QString col);
   QColor fixColor1(QString col);
 
 private:
-  float uKRadsPerDegree;
-  float uKDegreesPerRad;
-  float uKPi;
-  float uKE;
-  float uKNatLog10;
+  double uKRadsPerDegree;
+  double uKDegreesPerRad;
+  double uKPi;
+  double uKE;
+  double uKNatLog10;
+
+  ComplexMaths complexMaths;
 
 
 };

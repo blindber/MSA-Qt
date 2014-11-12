@@ -28,22 +28,33 @@ public:
   void CoaxLoadDataFile(QString path);
   bool CoaxCreateFile(QString path);
   void setFilePath(QString path);
+  QStringList coaxNames;  //Coax names; 0 entry not used
+  float coaxData[101][5]; //Coax data: R0(,1), VF(,2), K1(,3), K2(,4)
+  int getTest() {return test;}
+  void setTest(int t) { test = t; }
+  void CoaxS21FromSpecs(double sysZ0real, double sysZ0imag, QString coaxSpecs, double fMHz, double &S21dB, double &S21ang);
+  QString CoaxSpecs(float R0, float VF, float K1, float K2, float lenFeet);
+  int CoaxParseSpecs(QString coaxSpecs, double &R0, double &VF, double &K1, double &K2, double &lenFeet);
+  void CoaxGetData(QString coaxName, float &R0, float &VF, float &K1, float &K2);
+  void CoaxTerminatedZFromSpecs( QString coaxSpecs, double fMHz, double ZtReal, double ZtImag, double &ZReal, double &ZImag);
+
 
 private:
   msaUtilities util;
 
+  int test;
+
   QFile *CoaxOpenDataFile(bool isInput);
   void CoaxSaveDataFile();
-  void CoaxGetData(QString coaxName, float &R0, float &VF, float &K1, float &K2);
 
 
 
 
-  QStringList coaxNames;  //Coax names; 0 entry not used
-  float coaxData[101][5]; //Coax data: R0(,1), VF(,2), K1(,3), K2(,4)
   QString RLCDialogCoaxTypes[111];  //For RLC specification dialog ver115-4a
   int maxCoaxEntries, numCoaxEntries;   //Maximum and actual number of entries in coax data arrays
   QString DefaultDir;
 };
+
+
 
 #endif // COAXANALYSIS_H

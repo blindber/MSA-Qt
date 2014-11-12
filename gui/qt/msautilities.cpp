@@ -18,6 +18,9 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <math.h>
+#include "globalvars.h"
+#include "constants.h"
+
 //==========================UTILITIES MODULE===========================================
 
 msaUtilities::msaUtilities()
@@ -129,7 +132,7 @@ QString msaUtilities::uExtractTextItem(QString &data, QString delim)
   }
 }
 
-int msaUtilities::uExtractNumericItems(int nItems, QString &data, QString delims, float &val1, float &val2, float &val3)
+int msaUtilities::uExtractNumericItems(int nItems, QString &data, QString delims, double &val1, double &val2, double &val3)
 {
   //function uExtractNumericItems(nItems, byref data$, delims$, byRef val1, byref val2, byref val3)
   //Removes first nItems (1-3) delimited items per uExtractDataItem$
@@ -148,7 +151,7 @@ int msaUtilities::uExtractNumericItems(int nItems, QString &data, QString delims
   {
     return 1;
   }
-  val1=item1.toFloat();
+  val1=item1.toDouble();
   if (nItems==1)
   {
     return retVal;
@@ -158,7 +161,7 @@ int msaUtilities::uExtractNumericItems(int nItems, QString &data, QString delims
   {
     return 1;
   }
-  val2=item2.toFloat();
+  val2=item2.toDouble();
   if (nItems==2)
   {
     return retVal;
@@ -168,7 +171,7 @@ int msaUtilities::uExtractNumericItems(int nItems, QString &data, QString delims
   {
     retVal=1;
   }
-  val3=item3.toFloat();
+  val3=item3.toDouble();
   return retVal;
 
 }
@@ -257,7 +260,7 @@ QString msaUtilities::time(QString t)
   return retStr;
 }
 
-QString msaUtilities::usingF(QString form, float v)
+QString msaUtilities::usingF(QString form, double v)
 {
   // fix me, this may need more work to be more like the BASIC version
   QString str;
@@ -297,36 +300,39 @@ QString msaUtilities::Space(int N)
   QString retVal;
   return retVal.fill(' ', N);
 }
-float msaUtilities::uSinh(float x)
+double msaUtilities::uSinh(double x)
 { //sinh of real number
     return 0.5*(exp(x)-exp(0-x));
 }
 
-float msaUtilities::uCosh(float x)       //sinh of real number
+double msaUtilities::uCosh(double x)       //sinh of real number
 {
   return 0.5*(exp(x)+exp(0-x));
 }
 
-float msaUtilities::uTanh(float x)       //sinh of real number
+double msaUtilities::uTanh(double x)       //sinh of real number
 {
   return uSinh(x)/uCosh(x);  //Note denominator is never zero
 }
 
-float msaUtilities::uValWithMult(QString data)   //Return value of number which end with a multipler (e.g. K, M,...)
+double msaUtilities::uValWithMult(QString data)   //Return value of number which end with a multipler (e.g. K, M,...)
 {
   data=uCompact(data);    //Remove all blanks
   int dataLen = data.length();
   QString multChar="";
-  for (int i=1; i<= dataLen; i++)  //Find first char that can//t be part of the number
+  int i;
+  for (i=0; i<= dataLen; i++)  //Find first char that can't be part of the number
   {
-      QString thisChar=data.mid(i,1);
-      if ((QString("0123456789+-.eE").indexOf(thisChar) == -1))
-          multChar=thisChar;
-          break;
+    QString thisChar=data.mid(i,1);
+    if ((QString("0123456789+-.eE").indexOf(thisChar) == -1))
+    {
+      multChar=thisChar;
+      break;
+    }
   }
       //Note val will calculate value up to any non-numeric data
-  float baseVal=data.toFloat();
-  float multVal=uMultiplierValue(multChar);
+  double baseVal=data.left(i).toDouble();
+  double multVal=uMultiplierValue(multChar);
   return baseVal*multVal;  //base val times multiplier factor
 }
 
@@ -351,7 +357,7 @@ QString msaUtilities::uGetParamText(QString s,QString key, QString delim) //Retu
   return s.mid(paramPos, delimPos-paramPos); //after key$ and befor delim$
 }
 
-QString msaUtilities::uFormatByDig(float v, int maxWhole, int maxDec, int maxSig)
+QString msaUtilities::uFormatByDig(double v, int maxWhole, int maxDec, int maxSig)
 {
   QString retVal = "";
 
@@ -374,7 +380,7 @@ QString msaUtilities::uFormatByDig(float v, int maxWhole, int maxDec, int maxSig
   int nWhole=(int)(uSafeLog10(v));
   if (v>1) nWhole=nWhole+1;
     //It is possible to be off by one due to rounding, so check it
-  float shiftv= v * pow(0.1,nWhole); //This should make value: 0.1<=value<1
+  double shiftv= v * pow(0.1,nWhole); //This should make value: 0.1<=value<1
   if (shiftv>=1) { nWhole=nWhole+1; shiftv=shiftv/10;}
   if (shiftv<0.1) { nWhole=nWhole-1; shiftv=shiftv*10;}
     //We have now established nWhole
@@ -407,7 +413,7 @@ QString msaUtilities::uFormatByDig(float v, int maxWhole, int maxDec, int maxSig
   //messes up our previous calculations. For such numbers, shiftv is of the
   //form 0.99999d. So if we round this off and get 1, we know we have a problem number, but we
   //also know it rounds to an exact power of 10, so we can construct its string representation.
-  float roundFactor=0.5*pow(0.1,(nWhole+maxDec));
+  double roundFactor=0.5*pow(0.1,(nWhole+maxDec));
   if (roundFactor>=1)
   {
     //This occurs only if the rounding factor would be added to a fractional v which doesn//t
@@ -415,7 +421,7 @@ QString msaUtilities::uFormatByDig(float v, int maxWhole, int maxDec, int maxSig
     //know it will produce zero even after rounding
     retVal = "0"; return retVal;
   }
-  float roundedShiftv=shiftv+roundFactor;
+  double roundedShiftv=shiftv+roundFactor;
   if (roundedShiftv>=1)    //SEWcal2 fixed this and the comment above regarding 0.99999d
   {
     //The value we need to represent is +/- 10^nWhole.
@@ -452,55 +458,60 @@ QString msaUtilities::uFormatByDig(float v, int maxWhole, int maxDec, int maxSig
 QString msaUtilities::uFormatted(double v, QString form)
 {
 
-//Return formatted string for v, based on form$
-    //form$ is a formatting string, which can be the usual ##.## style string
-    //for the using() function, or can be a series of three numbers separated
-    //by spaces or commas. The first is the max number of whole digits allowed, the second is the max number
-    //of decimal digits. The third is the max number of significant digits, which is used
-    //only to restrict the actual number of decimal places.
-    //Following the format specifier there may be additional info, in which case each
-    //item of info is separated from that before it by "//". Allowed info:
-    //Prefix=xxx   Text to be prepended to formatted value
-    //Suffix=yyy   Text to be appended to formatted value
-    //UseMultiplier    This tag is present to use P,T,G,M,k,m,u,n,p or f to scale the number
-    //SuppressMilli    Used with UseMultiplier to suppress the use of "m"; instead do 0.xxx
-    //Scale=ddd  value is multiplied by this scale value before formatting
-    //TrimUsing      This tag signals to trim leading blanks and trailing decimal zeroes left by "using" function
-    //DoCompact  Causes final value (before suffix or prefix is added to have any inner blanks removed by uCompact$()
+  //Return formatted string for v, based on form$
+  //form$ is a formatting string, which can be the usual ##.## style string
+  //for the using() function, or can be a series of three numbers separated
+  //by spaces or commas. The first is the max number of whole digits allowed, the second is the max number
+  //of decimal digits. The third is the max number of significant digits, which is used
+  //only to restrict the actual number of decimal places.
+  //Following the format specifier there may be additional info, in which case each
+  //item of info is separated from that before it by "//". Allowed info:
+  //Prefix=xxx   Text to be prepended to formatted value
+  //Suffix=yyy   Text to be appended to formatted value
+  //UseMultiplier    This tag is present to use P,T,G,M,k,m,u,n,p or f to scale the number
+  //SuppressMilli    Used with UseMultiplier to suppress the use of "m"; instead do 0.xxx
+  //Scale=ddd  value is multiplied by this scale value before formatting
+  //TrimUsing      This tag signals to trim leading blanks and trailing decimal zeroes left by "using" function
+  //DoCompact  Causes final value (before suffix or prefix is added to have any inner blanks removed by uCompact$()
 
   int doUsing=1;   //default; may change
   QString upperForm = form.toUpper(); //Upper case is used to search for tags
-        //See if we need to scale the number
+  //See if we need to scale the number
   int pos = upperForm.indexOf("SCALE=");
   if (pos>-1)
   {
     QString f2 = form.mid(pos+6);   //Everything right of equal sign
     QString scale = uExtractTextItem(f2,"//");
-    int scaleFactor = scale.toInt(); if (scaleFactor==0) scaleFactor=1;
+    int scaleFactor = scale.toInt();
+    if (scaleFactor==0)
+      scaleFactor=1;
+
     v=v*scaleFactor;
   }
   QString mult = "";
   double origV=v;     //save before scaling by multiplier ver115-3b
-      //See if we need to use a multiplier character
+  //See if we need to use a multiplier character
 
   int useMult = upperForm.indexOf("USEMULTIPLIER");    //check for UseMultiplier    ver115-2d
-  if (useMult == -1) useMult = 0;
-  if (useMult)     //  ver115-2d
+  if (useMult == -1)
+    useMult = 0;
+  if (useMult)
   {
     uScaleWithMultiplier(v, mult);    //Returns multiplier and scales v
     mult=" "+mult;   //prepend space to multiplier character, even if there is none
-    if ((upperForm.indexOf("SUPPRESSMILLI")>-1) && mult==" m")    
+    if ((upperForm.indexOf("SUPPRESSMILLI")>-1) && mult==" m")
     {
-          //If SuppressMilli, we don't want to use the "m" prefix, but instead print in the
-          //format 0.xxx, with however many decimal places are allowed
-        v=v/1000 ; mult=" ";    //all mult$ have a leading blank.
+      //If SuppressMilli, we don't want to use the "m" prefix, but instead print in the
+      //format 0.xxx, with however many decimal places are allowed
+      v=v/1000;
+      mult=" ";    //all mult have a leading blank.
     }
   }
   QString f;
-  float maxWhole, maxDec, maxSig;
+  double maxWhole, maxDec, maxSig;
   if (form=="")
   {
-      f="";    //No format provide so we will use str$()
+    f="";    //No format provide so we will use str$()
   }
   else
   {
@@ -512,89 +523,101 @@ QString msaUtilities::uFormatted(double v, QString form)
     }
     else
     {
-    //Here the format must be a series of 3 numbers separated by spaces or commas.
+      //Here the format must be a series of 3 numbers separated by spaces or commas.
       doUsing=0;   //we won//t use the using() function
       QString formText=uExtractTextItem(form, "//");
       int isErr=uExtractNumericItems(3, formText, " ,", maxWhole, maxDec, maxSig);
-      if (isErr) {doUsing=1; f="";}  //Use str() if format is invalid
+      if (isErr)
+      {
+        doUsing=1;
+        f="";
+      }  //Use str() if format is invalid
     }
     upperForm=form.toUpper(); //Used to search for tags
   }
 
-    QString s;
-    if (doUsing==1)
+  QString s;
+  if (doUsing==1)
+  {
+    //format with the using() function or str$() function
+    if (f=="")
+      s=QString::number(v);
+    else
+      s=usingF(f, v);
+    if (upperForm.indexOf("TRIMUSING")>-1)  //check for TrimUsing
     {
-        //format with the using() function or str$() function
+      //trim leading blanks and trailing decimal zeroes
+      s=s.trimmed();
+      int sLen=s.length();
+      int decPos=s.indexOf(".");
+      if (decPos>-1)
+      {
+        //If we have a decimal we have to trim trailing zeroes, and maybe the decimal
+        for (int j=sLen; j > 1;j--)  //iterate back from end of string
+        {
+          QString thisChar=s.mid(j, 1);
+          if (thisChar!="0")    //keep going as long as we have zeroes
+          {
+            //j is now the position before the zeroes needing deletion
+            if (thisChar==".")
+              j=j-1;  //Make j the position before the decimal
+            s=s.left(j);  //Keep everything through the jth position
+            break;    //ver115-2d
+          }
+        }
+      }
+    }
+  }
+  else
+  {
+    s=uFormatByDig(v, maxWhole, maxDec, maxSig);
+  }
+  //The number itself is now formatted
+  if (useMult) //ver115-2d
+  {
+    //It is possible that the multiplier was obtained with a number that starts with 9's, and that
+    //formatting rounded it to 10.... If that caused the scaled value to become 1000, then we need
+    //to redo with a different multiplier.
+    if (s=="1000" || s=="1e3")
+    {
+      double v1=2*origV;
+      uScaleWithMultiplier(v1, mult);    //Get multiplier for slightly larger v
+      mult=" "+mult;   //prepend space to multiplier character, even if there is none
+      //with the larger multiplier, we know the value should be 1 or possibly 1.0...
+      v=1;
+      if (doUsing && upperForm.indexOf("TRIMUSING")==-1)
+      {
         if (f=="")
           s=QString::number(v);
         else
-          s=usingF(f, v);
-        if (upperForm.indexOf("TRIMUSING")>-1)  //check for TrimUsing
-        {
-            //trim leading blanks and trailing decimal zeroes
-            s=s.trimmed(); int sLen=s.length();
-            int decPos=s.indexOf(".");
-            if (decPos>-1)
-            {
-                //If we have a decimal we have to trim trailing zeroes, and maybe the decimal
-                for (int j=sLen; j > 1;j--)  //iterate back from end of string
-                {
-                    QString thisChar=s.mid(j, 1);
-                    if (thisChar!="0")    //keep going as long as we have zeroes
-                    {
-                        //j is now the position before the zeroes needing deletion
-                        if (thisChar==".") j=j-1;  //Make j the position before the decimal
-                        s=s.left(j);  //Keep everything through the jth position
-                        break;    //ver115-2d
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        s=uFormatByDig(v, maxWhole, maxDec, maxSig);
-    }
-    //The number itself is now formatted
-    if (useMult) //ver115-2d
-    {
-        //It is possible that the multiplier was obtained with a number that starts with 9//s, and that
-        //formatting rounded it to 10.... If that caused the scaled value to become 1000, then we need
-        //to redo with a different multiplier.
-        if (s=="1000")
-        {
-            double v1=2*origV;
-            uScaleWithMultiplier(v1, mult);    //Get multiplier for slightly larger v //ver115-3b
-            mult=" "+mult;   //prepend space to multiplier character, even if there is none
-            //with the larger multiplier, we know the value should be 1 or possibly 1.0...
-            v=1;
-            if (doUsing && upperForm.indexOf("TRIMUSING")==-1)
-                if (f=="") s=QString::number(v); else s=usingF(f, v);   //To get trailing zeroes
-            else
-                s="1";
+          s=usingF(f, v);   //To get trailing zeroes
+      }
+      else
+        s="1";
 
-        }
     }
-    s=s+mult;     //Add the multiplier, if any  ver114-6f
-    if (upperForm.indexOf("DOCOMPACT")>-1)   //ver114-6f
-    {
-      s=uCompact(s);    //Remove inner blanks (such as between value and multiplier)
-    }
-     //Now see if a suffix or prefix is specified
-    QString pre=""; QString suf="";
-    pos=upperForm.indexOf("PREFIX=");
-    if (pos>-1)
-    {
-        QString f2=form.mid(pos+7);   //Everything right of equal sign
-        pre=uExtractTextItem(f2,"//");
-    }
-    pos=upperForm.indexOf("SUFFIX=");
-    if (pos>-1)
-    {
-        QString f2=form.mid(pos+7);   //Everything right of equal sign
-        suf=uExtractTextItem(f2,"//");
-    }
-    return pre+s+suf;    //Put it all together ver114-6f
+  }
+  s=s+mult;     //Add the multiplier, if any  ver114-6f
+  if (upperForm.indexOf("DOCOMPACT")>-1)   //ver114-6f
+  {
+    s=uCompact(s);    //Remove inner blanks (such as between value and multiplier)
+  }
+  //Now see if a suffix or prefix is specified
+  QString pre="";
+  QString suf="";
+  pos=upperForm.indexOf("PREFIX=");
+  if (pos>-1)
+  {
+    QString f2=form.mid(pos+7);   //Everything right of equal sign
+    pre=uExtractTextItem(f2,"//");
+  }
+  pos=upperForm.indexOf("SUFFIX=");
+  if (pos>-1)
+  {
+    QString f2=form.mid(pos+7);   //Everything right of equal sign
+    suf=uExtractTextItem(f2,"//");
+  }
+  return pre+s+suf;    //Put it all together ver114-6f
 }
 
 QString msaUtilities::uCompact(QString str)
@@ -603,14 +626,6 @@ QString msaUtilities::uCompact(QString str)
       //This is useful before using the val() function on user supplied data,
       //because a space between a negative sign and the number causes val to produce zero.
   return str.replace(" ", "");
-  /*
-s2$="" : sLen=len(s$)
-for i=1 to sLen
-   thisChar$=Mid$(s$,i, 1)
-   if thisChar$<>" " then s2$=s2$+thisChar$ //copy all but spaces
-next
-uCompact$=s2$
-*/
 }
 
 
@@ -619,27 +634,77 @@ void msaUtilities::uScaleWithMultiplier(double  &v, QString &mult)
   double absV;
   //sub uScaleWithMultiplier byref v, byref mult$     //Return appropriate multiplier and scale v
   //For example, this converts 2000 to 2 K.
-  if (v==0) { mult=""; return;}
+  if (v==0)
+  {
+    mult="";
+    return;
+  }
 
-  if (v>=0) absV=v; else absV=0-v;
+  if (v>=0)
+    absV=v;
+  else
+    absV=0-v;
 
   if (absV>=1)     //SEWcal2 changed >1 to >=1 and made other changes  {
   {
-    if (absV<1000) mult="";// : exit sub
-    else if (absV<1000000) {mult="k"; v=v/1000;}// : exit sub    //ver115-2d
-    else if (absV<1000000000) {mult="M"; v=v/1000000;}// : exit sub
-    else if (absV<Q_UINT64_C(1000000000000)) {mult="G"; v=v/1000000000;}// : exit sub   //ver115-1e
-    else if (absV< Q_UINT64_C(1000000000000000)) {mult="T"; v=v/Q_UINT64_C(1000000000000);}// : exit sub   //ver115-1e
-    else { mult="P"; v=v/pow((double)100000,3);}
-
+    if (absV<1000)
+    {
+      mult="";
+      return;
+    }
+    else if (absV<1000000)
+    {
+      mult="k";
+      v=v/1000;
+    }
+    else if (absV<1000000000)
+    {
+      mult="M";
+      v=v/1000000;
+    }
+    else if (absV<Q_UINT64_C(1000000000000))
+    {
+      mult="G";
+      v=v/1000000000;
+    }
+    else if (absV< Q_UINT64_C(1000000000000000))
+    {
+      mult="T";
+      v=v/Q_UINT64_C(1000000000000);
+    }
+    else
+    {
+      mult="P";
+      v=v/pow((double)100000,3);
+    }
   }
   else
   {
-    if (absV>=0.001) { mult="m"; v=v*1000;}// : exit sub
-    else if (absV>=0.000001) { mult="u";  v=v*1000000;}// : exit sub
-    else if (absV>=0.000000001) { mult="n"; v=(v*1000000)*1000;}// : exit sub
-    else if (absV>=0.000000000001) {mult="p"; v=(v*1000000)*1000000;}// : exit sub
-    else {mult="f"; v=v*pow((double)100000,3);}// : exit sub
+    if (absV>=0.001)
+    {
+      mult="m";
+      v=v*1000;
+    }
+    else if (absV>=0.000001)
+    {
+      mult="u";
+      v=v*1000000;
+    }
+    else if (absV>=0.000000001)
+    {
+      mult="n";
+      v=(v*1000000)*1000;
+    }
+    else if (absV>=0.000000000001)
+    {
+      mult="p";
+      v=(v*1000000)*1000000;
+    }
+    else
+    {
+      mult="f";
+      v=v*pow((double)100000,3);
+    }
   }
 }
 
@@ -647,11 +712,12 @@ void msaUtilities::uScaleWithMultiplier(double  &v, QString &mult)
 double msaUtilities::uMultiplierValue(QString mult)    //Return value of specified multiplier
 {
   //For example, this converts "k" to 1000
-  if (mult=="") return 1;
+  if (mult=="")
+    return 1;
   if (mult=="P")
       return (double)100000*(double)1000000*(double)1000000;
   if (mult=="T")
-      return (double)1000000*(double)1000000;
+      return 1e12;  //(double)1000000*(double)1000000;
   if (mult=="G")
       return (double)100000*(double)1000000;
   if (mult=="M")
@@ -723,32 +789,32 @@ QString msaUtilities::uPrompt(QString caption, QString msg, int doYesNo, int all
   }
   return "WTF";
 }
-float msaUtilities::uRadsPerDegree()
+double msaUtilities::uRadsPerDegree()
 {
   //Return radians per degree
   return uKRadsPerDegree;
 }
-float msaUtilities::uDegreesPerRad()
+double msaUtilities::uDegreesPerRad()
 {
   //Return degrees per radan
   return uKDegreesPerRad;
 }
-float msaUtilities::uPi()
+double msaUtilities::uPi()
 {
   //Return Pi
   return uKPi;
 }
-float msaUtilities::uNatLog10()
+double msaUtilities::uNatLog10()
 {
   //Return natural log of 10
   return uKNatLog10;
 }
-float msaUtilities::uE()
+double msaUtilities::uE()
 {
   //Return e, the base of nat log system
   return uKE;
 }
-float msaUtilities::uSafeLog10(float aVal)
+double msaUtilities::uSafeLog10(double aVal)
 {
   //Return base 10 log of aVal; special rule for small and non-positive arguments
   if (aVal<=pow(0.00001,4))    //Might be negative due to rounding; avoid crazy values
@@ -756,7 +822,7 @@ float msaUtilities::uSafeLog10(float aVal)
   else
     return log(aVal)/uKNatLog10;   //Nat log divided by nat log of 10
 }
-float msaUtilities::uLog10(float aVal)
+double msaUtilities::uLog10(double aVal)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -769,17 +835,20 @@ float msaUtilities::uLog10(float aVal)
     */
   return -1;
 }
-int msaUtilities::uRoundDown(float x)
+int msaUtilities::uRoundDown(double x)
 {
   //Round to integer<= x. -2.1 rounds to -3
   if (x>=0)
     return (int)(x);
   else
   {
-    if ((int)(x)==x) return x; else return (int)(x-1);
+    if ((int)(x)==x)
+      return x;
+    else
+      return (int)(x-1);
   }
 }
-int msaUtilities::uRoundUp(float x)
+int msaUtilities::uRoundUp(double x)
 {
   //Round to integer>= x. -2.1 rounds to -2
   if (x>=0)
@@ -794,7 +863,7 @@ int msaUtilities::uRoundUp(float x)
     return (int)x;
   }
 }
-int msaUtilities::uRoundUpToMultiple(float X, int mult)
+int msaUtilities::uRoundUpToMultiple(double X, int mult)
 {
   //   RoundUpToMultiple--Round up to next higher multiple of mult if value
   //    is not already a multiple of mult. E.g. if mult=5 then
@@ -802,7 +871,7 @@ int msaUtilities::uRoundUpToMultiple(float X, int mult)
   int div = uRoundUp(X / mult);            //3.2-->1  -3.2-->0
   return div * mult;     //3.2-->5  -3.2-->0
 }
-int msaUtilities::uRoundDownToMultiple(float X, int mult)
+int msaUtilities::uRoundDownToMultiple(double X, int mult)
 {
   //   uRoundDownToMultiple--Round down to next lower multiple of mult if value
   //    is not already a multiple of mult. E.g. if mult=5 then
@@ -812,59 +881,70 @@ int msaUtilities::uRoundDownToMultiple(float X, int mult)
   return div * mult;                //3.2-->0  -3.2-->-5
 
 }
-float msaUtilities::uRoundUpToPower(float X, float base)
+double msaUtilities::uRoundUpToPower(double X, double base)
 {
-//   uRoundUpToPower--Round up to next higher integral(+/-) power of base if value
-//    is not already a power of base.  Negative numbers are rounded to an algebraically
-//    larger number
-//    E.g. if base is 10 then
-//    50-->100  -50-->-10  0.5-->1   0.005-->0.01
-//Round up to power of positive integral base mod ver116-4k
+  //   uRoundUpToPower--Round up to next higher integral(+/-) power of base if value
+  //    is not already a power of base.  Negative numbers are rounded to an algebraically
+  //    larger number
+  //    E.g. if base is 10 then
+  //    50-->100  -50-->-10  0.5-->1   0.005-->0.01
+  //Round up to power of positive integral base mod ver116-4k
 
-  if (X == 0) return 0;
-  if (base <= 0) return X;
-  if (X<0) return 0-uRoundDownToPower(0-X, base);
-  float powf = log(X) / log(base); //power=log of X, using base of "base"
+  if (X == 0)
+    return 0;
+  if (base <= 0)
+    return X;
+  if (X<0)
+    return 0-uRoundDownToPower(0-X, base);
+  double powf = log(X) / log(base); //power=log of X, using base of "base"
   int trunc = (int)(powf); //can reduce positive pow or increase negative pow
   if (trunc != powf && powf > 0) trunc = trunc + 1;
   //It is possible for trunc to be off by one due to rounding errors
   //in the log calculation. So we adjust if necessary
-  float ceil = pow(base,trunc); //Should be >= X but <= X*base
+  double ceil = pow(base,trunc); //Should be >= X but <= X*base
   if (ceil < X)
-      trunc = trunc + 1;
+    trunc = trunc + 1;
   else
-      if (ceil / base >= X) trunc = trunc - 1;
-
+  {
+    if (ceil / base >= X)
+      trunc = trunc - 1;
+  }
   return pow(base, trunc);
 }
-float msaUtilities::uRoundDownToPower(float X, float base)
+double msaUtilities::uRoundDownToPower(double X, double base)
 {
   //   uRoundDownToPower--Round down to next lower integral(+/-) power of of positive integral base if value
   //    is not already a power of base.  Negative numbers are rounded to an algebraically smaller number.
   //    E.g. if base is 10 then
   //    50-->10  -50-->-100  0.5-->0.1   0.005-->0.001
   //Round down to power of base    //modified by ver115-8b for negative numbers
-  if (X == 0) return 0;
-  if (base <= 0) return X;
-  if (X < 0) return 0-uRoundUpToPower(0-X,base);
-  float powf = log(X) / log(base); //power=log of X, using base of "base"
+  if (X == 0)
+    return 0;
+  if (base <= 0)
+    return X;
+  if (X < 0)
+    return 0-uRoundUpToPower(0-X,base);
+  double powf = log(X) / log(base); //power=log of X, using base of "base"
   int trunc = (int)(powf); //can reduce positive pow or increase negative pow
-  if (trunc != powf && powf < 0) trunc = trunc-1;
+  if (trunc != powf && powf < 0)
+    trunc = trunc-1;
   //It is possible for trunc to be off by one due to rounding errors
   //in the log calculation. So we adjust if necessary
-  float flr = pow(base,trunc); //Should be <= X but >= X/base
+  double flr = pow(base,trunc); //Should be <= X but >= X/base
   if (flr > X)
-      trunc = trunc - 1;
+    trunc = trunc - 1;
   else
-      if (flr * base <= X) trunc = trunc + 1;
-
+  {
+    if (flr * base <= X)
+      trunc = trunc + 1;
+  }
   return pow(base,trunc);
 }
 double msaUtilities::uTenPower(double pow1)
 {
   //Raise 10 to power pow; avoid hangup if pow is large integer
   //LB does not seem to use divide and conquer for large integral powers,
-  //so we force use of floating point math
+  //so we force use of doubleing point math
   double absPow;
   if (pow1>=0)
     absPow=pow1;
@@ -883,19 +963,25 @@ double msaUtilities::uTenPower(double pow1)
   else
     return res; //Pos integer power has integer result
 }
-float msaUtilities::uPower(float x, float fpow)
+double msaUtilities::uPower(double x, double fpow)
 {
 
   //Raise x to power pow; avoid hangup if pow is large integer
   //LB does not seem to use divide and conquer for large integral powers,
-  //so we force use of floating point math
-  float absPow;
-  if (fpow>=0) absPow=fpow; else absPow=0-fpow; //ver114-6k
-  if (absPow<5) return pow(x,fpow); //this covers most cases
-  if ((int)(fpow)!=fpow) return pow(x,fpow);
-  return pow(x,(fpow-(float)0.1))*pow(x,(float)0.1);
+  //so we force use of doubleing point math
+  double absPow;
+  if (fpow>=0)
+    absPow=fpow;
+  else
+    absPow=0-fpow;
+  if (absPow<5)
+    return pow(x,fpow); //this covers most cases
+  if ((int)(fpow)!=fpow)
+    return pow(x,fpow);
+
+  return pow(x,(fpow-(double)0.1))*pow(x,(double)0.1);
 }
-float msaUtilities::uATan2(double r, double i)
+double msaUtilities::uATan2(double r, double i)
 {
   double ang;
   //Return angle (degrees) of r+j*i whose tangent is i/r
@@ -915,12 +1001,14 @@ float msaUtilities::uATan2(double r, double i)
   }
   else
   {
-    ang = uKDegreesPerRad*atan(i/r);   //Gives angle betwee        if r < 0 then
-    if (i < 0)
-      ang = ang - 180;
-    else
-      ang = ang + 180;
-
+    ang = uKDegreesPerRad*atan(i/r);   //Gives angle betwee
+    if (r < 0)
+    {
+      if (i < 0)
+        ang = ang - 180;
+      else
+        ang = ang + 180;
+    }
     //Put angle within bounds; rounding may have put it outside
     if (ang>180)
       ang=ang-360;
@@ -931,11 +1019,17 @@ float msaUtilities::uATan2(double r, double i)
   return ang;
 
 }
-float msaUtilities::uNormalizeDegrees(float deg)
+double msaUtilities::uNormalizeDegrees(double deg)
 {
   //Put deg in range -180<deg<=180    'ver116-4n
-  while (deg<=-180)  { deg=deg+360; }
-  while (deg>180) { deg=deg-360; }
+  while (deg<=-180)
+  {
+    deg=deg+360;
+  }
+  while (deg>180)
+  {
+    deg=deg-360;
+  }
   return deg;
 }
 QString msaUtilities::uAlignDecimalInString(QString v, int lenInDigits, int nLeft)
@@ -981,7 +1075,7 @@ QString msaUtilities::uAlignDecimalInString(QString v, int lenInDigits, int nLef
     rightPadLen=0;
   return Space(leftPadLen) + whole + dec + fract + Space(rightPadLen);
 }
-QString msaUtilities::uScientificNotation(float v, int nDec, int padZero)
+QString msaUtilities::uScientificNotation(double v, int nDec, int padZero)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1020,7 +1114,7 @@ QString msaUtilities::uScientificNotation(float v, int nDec, int padZero)
     */
   return "fix me 8";
 }
-void msaUtilities::uCrystalParameters(float Fs, float Fp, float PeakS21DB, float Fdb3A, float Fdb3B, float &Rm, float &Cm, float &Lm, float &Cp, float &Qu, float &QL)
+void msaUtilities::uCrystalParameters(double Fs, double Fp, double PeakS21DB, double Fdb3A, double Fdb3B, double &Rm, double &Cm, double &Lm, double &Cp, double &Qu, double &QL)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1069,7 +1163,7 @@ void msaUtilities::uCrystalParameters(float Fs, float Fp, float PeakS21DB, float
     Qu=QL*Reff/Rm   'Unloaded Q is L reactance divided by series resistance.
     */
 }
-void msaUtilities::uParallelRLCFromScalarS21(float Fp, float PeakS21DB, float Fdb3A, float Fdb3B, float &parR, float &L, float &C, float &Qu, float &QL, float &serR)
+void msaUtilities::uParallelRLCFromScalarS21(double Fp, double PeakS21DB, double Fdb3A, double Fdb3B, double &parR, double &L, double &C, double &Qu, double &QL, double &serR)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1115,7 +1209,7 @@ void msaUtilities::uParallelRLCFromScalarS21(float Fp, float PeakS21DB, float Fd
     if C<1e-15 then C=0 'Force to 0 if less than 1 fF.
     */
 }
-void msaUtilities::uRLCFromTwoImpedances(QString connectType, float F1, float R1, float X1, float F2, float R2, float X2, float &R, float &L, float &C)
+void msaUtilities::uRLCFromTwoImpedances(QString connectType, double F1, double R1, double X1, double F2, double R2, double X2, double &R, double &L, double &C)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1147,7 +1241,7 @@ void msaUtilities::uRLCFromTwoImpedances(QString connectType, float F1, float R1
     if C<1e-15 then C=0 'Force to 0 if less than 1 fF.
 */
 }
-void msaUtilities::uShuntJigImpedance(float R0, float S21DB, float S21Deg, float delay, float freq, float *Res, float &React)
+void msaUtilities::uShuntJigImpedance(double R0, double S21DB, double S21Deg, double delay, double freq, double *Res, double &React)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1203,7 +1297,7 @@ void msaUtilities::uShuntJigImpedance(float R0, float S21DB, float S21Deg, float
     if React>-0.001 and React<0.001 then React=0 'avoids printing tiny values
     */
 }
-void msaUtilities::uAdjustS21ForConnectorDelay(float freq, float &S21DB, float &S21Ang)
+void msaUtilities::uAdjustS21ForConnectorDelay(double freq, double &S21DB, double &S21Ang)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1222,7 +1316,7 @@ void msaUtilities::uAdjustS21ForConnectorDelay(float freq, float &S21DB, float &
     call uShuntImpedanceToS21DB S21JigR0,Res, React, 0, freq, S21DB, S21Ang
     */
 }
-void msaUtilities::uSeriesJigImpedance(float R0, float S21DB, float S21Deg, float &Res, float &React)
+void msaUtilities::uSeriesJigImpedance(double R0, double S21DB, double S21Deg, double &Res, double &React)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1260,7 +1354,7 @@ void msaUtilities::uSeriesJigImpedance(float R0, float S21DB, float S21Deg, floa
     if React>-0.001 and React<0.001 then React=0 'avoids printing tiny values
     */
 }
-void msaUtilities::uS11DBToImpedance(float R0, float S11DB, float S11Deg, float &Res, float &React)
+void msaUtilities::uS11DBToImpedance(double R0, double S11DB, double S11Deg, double &Res, double &React)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1283,7 +1377,7 @@ void msaUtilities::uRefcoToImpedance(double R0, double rho, double theta, double
   //a near +1 means rho is near 1 and theta is near zero. We treat these as large resistances
   if (0.999999<a)
   {
-    Res=1e12;//constMaxValue;
+    Res=constMaxValue;//constMaxValue;
     React=0;
     return;
   }
@@ -1306,7 +1400,7 @@ void msaUtilities::uRefcoToImpedance(double R0, double rho, double theta, double
   double D=pow(Rden,2)+pow(Iden,2);
   if (D<0.0000000001)
   {
-    Res=1e12;//constMaxValue;
+    Res=constMaxValue;//constMaxValue;
     React=0;
     return;    //a near 1 and b near 0 ver115-1e
   }
@@ -1320,7 +1414,7 @@ void msaUtilities::uRefcoToImpedance(double R0, double rho, double theta, double
   if (React>-0.001 && React<0.001)
     React=0; //avoids printing tiny values
 }
-void msaUtilities::uImpedanceToRefco(float R0, float R, float I, float &rho, float &theta)
+void msaUtilities::uImpedanceToRefco(double R0, double R, double I, double &rho, double &theta)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1341,7 +1435,7 @@ void msaUtilities::uImpedanceToRefco(float R0, float R, float I, float &rho, flo
     theta=uATan2(refR, refI)
     */
 }
-void msaUtilities::uImpedanceToRefcoRI(float R0, float R, float I, float &GR, float &GI)
+void msaUtilities::uImpedanceToRefcoRI(double R0, double R, double I, double &GR, double &GI)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1359,20 +1453,20 @@ void msaUtilities::uImpedanceToRefcoRI(float R0, float R, float I, float &GR, fl
     GI=Rnum*Iinv+Inum*Rinv
     */
 }
-void msaUtilities::uSeriesImpedanceToS21DB(float R0, float R, float I, float &db, float &deg)
+void msaUtilities::uSeriesImpedanceToS21DB(double R0, double R, double I, double &db, double &deg)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'Calc S21 as db, degrees for series impedance when source,load=R0
-    'S21(Series)=2*R0/(2*R0+Z)=1/(1+Z/(2*R0)) this is in complex number format
-    if R<0 then R=0 'error, but could happen from noise/rounding ver115-1e
-    doubleR0=2*R0
-    call cxInvert 1+R/doubleR0, I/doubleR0, Rres, Ires
-    deg=uATan2(Rres, Ires)   'phase in degrees
-    db=10*uSafeLog10(Rres^2+Ires^2)       'magnitude in db; mult by 10 not 20, because magnitude is squared
-    */
+  //Calc S21 as db, degrees for series impedance when source,load=R0
+  //S21(Series)=2*R0/(2*R0+Z)=1/(1+Z/(2*R0)) this is in complex number format
+  if (R < 0)
+    R = 0; //error, but could happen from noise/rounding ver115-1e
+  double doubleR0 = 2 * R0;
+  double Rres, Ires;
+
+  complexMaths.cxInvert(1+R/doubleR0, I/doubleR0, Rres, Ires);
+  deg = uATan2(Rres, Ires);   //phase in degrees
+  db = 10 * uSafeLog10(pow(Rres,2)+pow(Ires,2));       //magnitude in db; mult by 10 not 20, because magnitude is squared
 }
-void msaUtilities::uShuntImpedanceToS21DB(float R0, float R, float I, float delay, float freq, float &db, float &deg)
+void msaUtilities::uShuntImpedanceToS21DB(double R0, double R, double I, double delay, double freq, double &db, double &deg)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1393,7 +1487,7 @@ void msaUtilities::uShuntImpedanceToS21DB(float R0, float R, float I, float dela
     db=10*uSafeLog10(Rres^2+Ires^2)       'magnitude in db; mult by 10 not 20, because magnitude is squared
     */
 }
-void msaUtilities::uRefcoToSeriesS21DB(float rho, float theta, float &db, float &deg)
+void msaUtilities::uRefcoToSeriesS21DB(double rho, double theta, double &db, double &deg)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1413,7 +1507,7 @@ void msaUtilities::uRefcoToSeriesS21DB(float rho, float theta, float &db, float 
     if db<-199 then db=-199
     */
 }
-void msaUtilities::uRefcoToShuntS21DB(float rho, float theta, float &db, float &deg)
+void msaUtilities::uRefcoToShuntS21DB(double rho, double theta, double &db, double &deg)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -1436,217 +1530,343 @@ void msaUtilities::uRefcoToShuntS21DB(float rho, float theta, float &db, float &
     if db<-199 then db=-199
     */
 }
-int  msaUtilities::uParseRLC(QString spec, QString &connect, float &R, float &L, float &C, float &QL, float &QC, float &D, QString &coaxSpecs)
+int  msaUtilities::uParseRLC(QString spec, QString &connect, double &R, double &L, double &C, double &QL, double &QC, double &D, QString &coaxSpecs)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'Parse spec for parallel or series RLC; return 1 if error
-    'spec$ describes a series or parallel combo of R, L and C, possibly at the end of a transmission
-    'line described per CoaxParseSpecs or by the delay factor D. It is in this form:    'ver116-4i added delay D
-    'RLC[S, R25, L10n, C200p,QL10,QC10,D2], Coax[xxx,xxx...]
-    'First item is S for series or P for parallel, referring to the RLC combination
-    'Remaining items are optional; one R,L,C QL, QC, and D are allowed; remaining items are data for coax cable.
-    'Coax data is returned as a string, without the "Coax" or brackets, in coaxSpecs$
-    'R, L, C and D are in ohms, Henries, Farads and seconds. Multiplier characters (k, u, n, etc.) are allowed.
-    'QL and QC are the Q values for the L and C
-    'D is the delay in seconds (one-way) prior to the terminating components. It can be used only if there are
-    'no coax specs and is forced to 0 if there are.
-    'We return the specified values, and return a function value of 0 for no error, 1 for error
-    tagPos=instr(spec$, "RLC")  'find RLC tag
-    if tagPos=0 then
-        RLC$=""
-    else
-        openBracket=instr(spec$, "[", tagPos)   'find open bracket after RLC
-        closeBracket=instr(spec$, "]", tagPos)  'find close bracket after RLC
-        if closeBracket=0 or closeBracket=0 or openBracket>=closeBracket then uParseRLC=1 : exit function
-        RLC$=Mid$(spec$, openBracket+1, closeBracket-openBracket-1) 'Get data in brackets
-    end if
+  QString RLC;
+  //Parse spec for parallel or series RLC; return 1 if error
+  //spec$ describes a series or parallel combo of R, L and C, possibly at the end of a transmission
+  //line described per CoaxParseSpecs or by the delay factor D. It is in this form:    //ver116-4i added delay D
+  //RLC[S, R25, L10n, C200p,QL10,QC10,D2], Coax[xxx,xxx...]
+  //First item is S for series or P for parallel, referring to the RLC combination
+  //Remaining items are optional; one R,L,C QL, QC, and D are allowed; remaining items are data for coax cable.
+  //Coax data is returned as a string, without the "Coax" or brackets, in coaxSpecs$
+  //R, L, C and D are in ohms, Henries, Farads and seconds. Multiplier characters (k, u, n, etc.) are allowed.
+  //QL and QC are the Q values for the L and C
+  //D is the delay in seconds (one-way) prior to the terminating components. It can be used only if there are
+  //no coax specs and is forced to 0 if there are.
+  //We return the specified values, and return a function value of 0 for no error, 1 for error
+  int tagPos=spec.indexOf("RLC");  //find RLC tag
+  if (tagPos==-1)
+  {
+    RLC="";
+  }
+  else
+  {
+    int openBracket=spec.indexOf("[", tagPos);   //find open bracket after RLC
+    int closeBracket=spec.indexOf("]", tagPos);  //find close bracket after RLC
+    if (closeBracket==-1 || closeBracket==-1 || openBracket>=closeBracket)
+    {
+      return 1;
+    }
+    RLC=spec.mid(openBracket+1, closeBracket-openBracket-1); //Get data in brackets
+  }
 
-    tagPos=instr(spec$, "Coax")  'find Coax tag
-    if tagPos=0 then
-        coaxSpecs$=""
-    else
-        openBracket=instr(spec$, "[", tagPos)   'find open bracket after Coax
-        closeBracket=instr(spec$, "]", tagPos)  'find close bracket after Coax
-        if closeBracket=0 or closeBracket=0 or openBracket>closeBracket-1 then uParseRLC=1 : exit function
-        coaxSpecs$=Mid$(spec$, openBracket+1, closeBracket-openBracket-1) 'Get data in brackets
-    end if
-     'ver116-4i changed the defaults for backward compatibility with old method to specify OSL standards
-    connect$="P" : R=constMaxValue : L=constMaxValue : C=0 : D=0  'default is series RLC with high impedance and no delay
-    QL=100000 : QC=100000 'ver116-4i
-    commaPos=0
-    if RLC$<>"" then
-        specLen=len(RLC$)
-        isErr=0
-        while commaPos<specLen
-            oldCommaPos=commaPos
-            commaPos=instr(RLC$,",", commaPos+1)
-            if commaPos=0 then commaPos=specLen+1     'Pretend comma follows the string
-            compon$=Trim$(Mid$(RLC$,oldCommaPos+1, commaPos-oldCommaPos-1))   'get this component spec
-            if compon$="" then exit while  'get next word; done if there is none
-            firstChar$=Left$(compon$,1)   'data tag, single character
-            if firstChar$="Q" then
-                tag$=Left$(compon$,2)   'QL or QC is two characters
-                data$=Mid$(compon$,3)   'From third character to end
-                if data$<>"" then v=uValWithMult(data$)   'Value of everything after first char
-            else
-                tag$=firstChar$
-                data$=Mid$(compon$,2)   'From second character to end
-                if data$<>"" then v=uValWithMult(data$)   'Value of everything after first char
-            end if
-            select tag$   'Assign value to proper variable
-                case "S"
-                    connect$="S"
-                    R=0 : L=0 : C=constMaxValue 'Defaults in case any components are not specified
-                case "P"
-                    connect$="P"
-                    R=constMaxValue : L=constMaxValue : C=0 'Defaults in case any components are not specified
-                case "R"
-                    R=v : if R<0 then isErr=1
-                case "L"
-                    L=v
-                case "C"
-                    C=v
-                case "QL"  'ver151-4b
-                    QL=v : if QL<=0 then isErr=1
-                case "QC"   'ver151-4b
-                    QC=v : if QC<=0 then isErr=1
-                case "D"   'ver16-4i
-                    if coaxSpecs$="" then D=v   'Record D only if no coax specs
-                case else   'Invalid component spec
-                    isErr=1
-            end select
-            if connect$="" or isErr then uParseRLC=1 : exit function
-        wend
-    end if  'end RLC
-    uParseRLC=0
-    */
-  return 1;
+  tagPos=spec.indexOf("Coax");  //find Coax tag
+  if (tagPos==-1)
+  {
+    coaxSpecs="";
+  }
+  else
+  {
+    int openBracket=spec.indexOf("[", tagPos);   //find open bracket after Coax
+    int closeBracket=spec.indexOf("]", tagPos);  //find close bracket after Coax
+    if (closeBracket==-1 || closeBracket==-1 || openBracket>closeBracket-1)
+    {
+      return 1;
+    }
+    coaxSpecs=spec.mid(openBracket+1, closeBracket-openBracket-1); //Get data in brackets
+  }
+  //ver116-4i changed the defaults for backward compatibility with old method to specify OSL standards
+  connect="P";
+  R=constMaxValue;
+  L=constMaxValue;
+  C=0;
+  D=0;  //default is series RLC with high impedance and no delay
+  QL=100000;
+  QC=100000;
+
+  if (RLC!="")
+  {
+
+    int isErr=0;
+    QStringList list;
+    list = RLC.split(",");
+
+    QStringListIterator i(list);
+    while (i.hasNext())
+    {
+      QString compon = i.next().trimmed();
+      if (compon=="")
+      {
+        break;  //then exit while  //get next word; done if there is none
+      }
+      QString tag;
+      QString firstChar=compon.left(1);   //data tag, single character
+      double v;
+      if (firstChar=="Q")
+      {
+        tag=compon.left(2);   //QL or QC is two characters
+        QString data=compon.mid(2);   //From third character to end
+        if (data!="")
+          v=uValWithMult(data);   //Value of everything after first char
+      }
+      else
+      {
+        tag=firstChar;
+        QString data=compon.mid(1);   //From second character to end
+        if (data!="")
+          v=uValWithMult(data);   //Value of everything after first char
+      }
+      //Assign value to proper variable
+      if (tag == "S")
+      {
+        connect="S";
+        R=0;
+        L=0;
+        C=constMaxValue; //Defaults in case any components are not specified
+      }
+      else if (tag == "P")
+      {
+        connect="P";
+        R=constMaxValue;
+        L=constMaxValue;
+        C=0; //Defaults in case any components are not specified
+      }
+      else if (tag == "R")
+      {
+        R=v;
+        if (R<0)
+          isErr=1;
+      }
+      else if (tag == "L")
+        L=v;
+      else if (tag == "C")
+        C=v;
+      else if (tag == "QL")
+      {
+        QL=v;
+        if (QL<=0)
+          isErr=1;
+      }
+      else if (tag == "QC")
+      {
+        QC=v;
+        if (QC<=0)
+          isErr=1;
+      }
+      else if (tag == "D")
+      {
+        if (coaxSpecs=="")
+          D=v;   //Record D only if no coax specs
+      }
+      else   //Invalid component spec
+      {
+        isErr=1;
+      }
+      if (connect=="" || isErr)
+      {
+        return 1;
+      }
+    }//wend
+  } //end RLC
+  return 0;
 }
-void msaUtilities::uComboImpedance(QString connect, float R, float L, float C, float QL, float QC, float freq, float &Zr, float &Zi)
+void msaUtilities::uComboImpedance(QString connect, double R, double L, double C, double QL, double QC, double freq, double &Zr, double &Zi)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-'Calc impedance Zr+j*Zi for RLC combo
-    'connect$=P for parallel, S for series. R, L and C are connected in series or parallel.
-    'For Series circuit, C>=constMaxvalue means treat C as a short--there is no C in the circuit
-    'For Parallel circuit, L>=constMaxValue means treat L as open--there is no L in the circuit
-    'Units are ohms, Henries, Farads, Hz. Same results are achieved with ohms, uh, uf and MHz.
-    'QL is Q of inductor; QC is Q of capacitor (Q=reactance/resistance)
-    twoPiF=2*uPi()*freq
-    if QC<=0 then QC=0.000001   'avoids problems below
-    if QL<=0 then QC=0.000001
-    if freq<>0 and abs(L)<constMaxValue then 'If freq=0, we already have Ai=0; also, ignore huge parallel L
-        ZLi=twoPiF*L :ZLr=ZLi/QL     'Inductor impedance, imag and real, with Q
+  //Calc impedance Zr+j*Zi for RLC combo
+  //connect$=P for parallel, S for series. R, L and C are connected in series or parallel.
+  //For Series circuit, C>=constMaxvalue means treat C as a short--there is no C in the circuit
+  //For Parallel circuit, L>=constMaxValue means treat L as open--there is no L in the circuit
+  //Units are ohms, Henries, Farads, Hz. Same results are achieved with ohms, uh, uf and MHz.
+  //QL is Q of inductor; QC is Q of capacitor (Q=reactance/resistance)
+  double twoPiF=2*uPi()*freq;
+  if (QC<=0)
+    QC=0.000001;   //avoids problems below
+  if (QL<=0)
+    QC=0.000001;
+  double ZLi, ZLr;
+  double ZCi, ZCr;
+  if (freq!=0 && fabs(L) < constMaxValue)  //If freq=0, we already have Ai=0; also, ignore huge parallel L
+  {
+    ZLi=twoPiF*L;
+    ZLr=ZLi/QL;     //Inductor impedance, imag and real, with Q
+  }
+  else
+  {
+    ZLi=constMaxValue;
+    ZLr=0;
+  }
+  if (freq!=0 && C!=0)    //Ignore C if freq or C is zero, because huge reactance in parallel is irrelevant
+  {
+    ZCi=-1/(twoPiF*C);
+    ZCr=abs(ZCi)/QC;     //Capacitor impedance, imag and real, with Q
+  }
+  else    //zero freq or C; note that series connection ignores these
+  {
+    ZCi=0-constMaxValue;
+    ZCr=0;
+  }
+
+  if (connect=="S")
+  {
+    Zr=R+ZLr;
+    Zi=ZLi;
+    if (C==0 || freq==0)
+    {
+      Zi=0-constMaxValue;
+    }
     else
-        ZLi=constMaxValue : ZLr=0
-    end if
-    if freq<>0 and C<>0 then    'Ignore C if freq or C is zero, because huge reactance in parallel is irrelevant
-        ZCi=-1/(twoPiF*C) :ZCr=abs(ZCi)/QC     'Capacitor impedance, imag and real, with Q
-    else    'zero freq or C; note that series connection ignores these
-        ZCi=0-constMaxValue : ZCr=0
-    end if
+    {
+      if (fabs(C)<constMaxValue)
+      {
+        Zi=Zi+ZCi;
+        Zr=Zr+ZCr;
+      }
+    }
+  }
+  else //this section modver115-1a
+  {
+    if (R==0 || L==0 || fabs(C)>=constMaxValue)  //parallel with a zero-ohm component
+    {
+      Zr=0;
+      Zi=0;
+    }
+    else
+    {
+      //Parallel Add admittances and then invert
+      double Ar=1/R;
+      double Ai;
+      double YLr, YLi;
+      double YCr, YCi;
+      if (freq==0 || fabs(L) >= constMaxValue)
+      {
+        Ai=0;        //Parallel inductance is huge so C will determine the reactance
+      }
+      else
+      {
+        complexMaths.cxInvert(ZLr, ZLi, YLr, YLi); //convert to admittance
+        Ar=Ar+YLr;
+        Ai=YLi;      //Add to resistor admittance
+      }
+      if (C==0)
+      {
+        YCr=0;
+        YCi =0;  //causes cap to be ignored
+      }
+      else
+      {
+        complexMaths.cxInvert(ZCr, ZCi, YCr, YCi); //convert to admittance
+      }
+      Ar=Ar+YCr;
+      Ai=Ai+YCi;      //Add to resistor plus inductor admittance
 
-    if connect$="S" then
-        Zr=R+ZLr
-        Zi=ZLi
-        if C=0 or freq=0 then
-            Zi=0-constMaxValue
-        else
-            if abs(C)<constMaxValue then Zi=Zi+ZCi : Zr=Zr+ZCr
-        end if
-    else 'this section modver115-1a
-        if R=0 or L=0 or abs(C)>=constMaxValue then  'parallel with a zero-ohm component
-            Zr=0 : Zi=0
-        else
-            'Parallel Add admittances and then invert
-            Ar=1/R
-            if freq=0 or abs(L)>=constMaxValue then
-                Ai=0        'Parallel inductance is huge so C will determine the reactance
-            else
-                call cxInvert ZLr, ZLi, YLr, YLi 'convert to admittance
-                Ar=Ar+YLr : Ai=YLi      'Add to resistor admittance
-            end if
-            if C=0 then
-                YCr=0 : YCi =0  'causes cap to be ignored
-            else
-                call cxInvert ZCr, ZCi, YCr, YCi 'convert to admittance
-            end if
-            Ar=Ar+YCr : Ai=Ai+YCi      'Add to resistor plus inductor admittance
-
-            call cxInvert Ar, Ai, Zr, Zi     'Invert admittance to get impedance of combined circuit
-        end if
-    end if
-    if Zi>constMaxValue then Zi=constMaxValue       'ver115-4h imposed limits
-    if Zi<0-constMaxValue then Zi=0-constMaxValue
-    if Zr>constMaxValue then Zr=constMaxValue
-    if Zr<0 then Zr=0
-    */
+      complexMaths.cxInvert(Ar, Ai, Zr, Zi);     //Invert admittance to get impedance of combined circuit
+    }
+  }
+  if (Zi>constMaxValue)
+    Zi=constMaxValue;       //ver115-4h imposed limits
+  if (Zi<0-constMaxValue)
+    Zi=0-constMaxValue;
+  if (Zr>constMaxValue)
+    Zr=constMaxValue;
+  if (Zr<0)
+    Zr=0;
 }
-int msaUtilities::uRLCComboResponse(QString spec, float Z0, QString jig)
+int msaUtilities::uRLCComboResponse(QString spec, double Z0, QString jig, int uWorkNumPoints, Q2DfloatVector &uWorkArray)
 {
-  qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
-  /*
-  'Calc S21 or S11 response of RLC combo; return 1 if error
-    'spec$ describes the RLC combo, per uParseRLC
-    'We use the frequencies in uWorkArray (MHz) and calculate S11 or S21 (db/degrees) for the specified RLC combo
-    'We store the resulting db in uWorkArray(N, 1) and degrees in uWorkArray(N,2)
-    'uWorkArray has uWorkNumPoints valid frequency points.
-    'RLC combo connected per connect$ is tested at ref resistance R0 for S21 or S11
-    'If jig$="S11" we do S11; if "S21Shunt" we do S21 for shunt connection; otherwise we do S21 for series connection.
-    'We calculate the actual S21 or S11 response that would have been produced by the combination after a theoretical
-    'perfect calibration is applied. Thus, we do not include the effect of S21JigShuntDelay, because that effect would be
-    'removed by calibration.
-    isErr=uParseRLC(spec$, connect$, R, L, C, QL,QC, D, coaxSpecs$)
-    if isErr=0 then isErr=CoaxParseSpecs(coaxSpecs$, R0, VF, K1, K2, lenFeet) 'ver115-5d
-    if isErr or Z0<=0 or R0<=0 then uRLCComboResponse=1 : exit function 'ver115-4a
-    twoPi=2*uPi()
-    'Note R0 is the impedance of any transmission line in the RLC combo; Z0 is the reference impedance for
-    'calculating S11 or S21. Both are pure resistances.
-    for i=1 to uWorkNumPoints       'uWorkNumPoints contains the number of frequency points in uWorkArray
-        freq=uWorkArray(i,0)*1000000
-        'if freq<0 then freq=0-freq  'Make frequencies positive delver115-1a
-        call uComboImpedance connect$, R, L, C, QL,QC,freq, RLCZr, RLCZi  'ver115-4b
-        if coaxSpecs$="" and D=0 then   'Simple case--no coax and no delay factor
-            ZReal=RLCZr : ZImag=RLCZi
-        else 'Get impedance of coax terminated by the RLC
-            if jig$="S11" or jig$="S21Shunt" then
-                if coaxSpecs$<>"" then  'Presence of coax overrides the delay factor
-                    call CoaxTerminatedZFromSpecs coaxSpecs$, uWorkArray(i,0), RLCZr, RLCZi, ZReal, ZImag
-                else    'Here apply delay factor D (sec) instead of a coax delay ver116-4i
-                    call uImpedanceToRefco R0, RLCZr, RLCZi, rho, theta       'convert to refco
-                    phaseDelay=D*360*freq         'phase delay (deg)=delay(sec)*degrees/cycle*cycles/sec
-                    theta=theta-2*phaseDelay      'Delay reflection by twice phaseDelay, for round trip.
-                    call uRefcoToImpedance R0, rho, theta, ZReal, ZImag
-                end if
-            else
-                'Series S21. Any terminating impedance is deemed to be in series, but if the transmission
-                'line specs are not blank the termination is ignored and the coax is used by itself
-                if coaxSpecs$<>"" then call CoaxS21FromSpecs Z0, 0, coaxSpecs$, uWorkArray(i,0), db, theta 'ver115-4e
-            end if
-        end if
-        if jig$="S11" then
-            call uImpedanceToRefco Z0, ZReal, ZImag, rho, theta   'Impedance to reflection coefficient
-            db=20*uSafeLog10(rho)   'rho to db
-        else
-            if jig$="S21Shunt" then
-                call uShuntImpedanceToS21DB Z0, ZReal, ZImag, 0,freq, db, theta 'ver115-4h--Removed S21JigShuntDelay
-            else
-                'Series S21. If no coax, we use the RLC values in series. If coax,
-                'we ignore "termination" and just use the S21 (db, theta) calculated above
-                if coaxSpecs$="" then call uSeriesImpedanceToS21DB Z0, ZReal, ZImag, db, theta 'ver115-1e
-            end if
-        end if
-        theta=theta mod 360
-        if theta<=-180 then theta=theta+360  'Put angle in bounds
-        if theta>180 then theta=theta-360
-        uWorkArray(i, 1)=db : uWorkArray(i,2)=theta 'Store db, degrees in uWorkArray
-    next i
-    uRLCComboResponse=0  'no error
-    */
-  return 1;
+  //Calc S21 or S11 response of RLC combo; return 1 if error
+  //spec$ describes the RLC combo, per uParseRLC
+  //We use the frequencies in uWorkArray (MHz) and calculate S11 or S21 (db/degrees) for the specified RLC combo
+  //We store the resulting db in uWorkArray(N, 1) and degrees in uWorkArray(N,2)
+  //uWorkArray has uWorkNumPoints valid frequency points.
+  //RLC combo connected per connect$ is tested at ref resistance R0 for S21 or S11
+  //If jig$="S11" we do S11; if "S21Shunt" we do S21 for shunt connection; otherwise we do S21 for series connection.
+  //We calculate the actual S21 or S11 response that would have been produced by the combination after a theoretical
+  //perfect calibration is applied. Thus, we do not include the effect of S21JigShuntDelay, because that effect would be
+  //removed by calibration.
+  QString connect;
+  double R, L, C, QL, QC, D;
+  QString coaxSpecs;
+  double R0, VF, K1, K2, lenFeet;
+  double db;
+  int isErr = uParseRLC(spec, connect, R, L, C, QL, QC, D, coaxSpecs);
+  if (isErr==0)
+  {
+    isErr= mSAconfig::coax.CoaxParseSpecs(coaxSpecs, R0, VF, K1, K2, lenFeet);
+  }
+  if (isErr || Z0<=0 || R0<=0)
+  {
+    return 1;
+  }
+  double twoPi=2*uPi();
+  //Note R0 is the impedance of any transmission line in the RLC combo; Z0 is the reference impedance for
+  //calculating S11 or S21. Both are pure resistances.
+
+  for (int i=1; i<= uWorkNumPoints; i++)       //uWorkNumPoints contains the number of frequency points in uWorkArray
+  {
+    double freq = uWorkArray[i][0] * 1000000;
+    //if freq<0 then freq=0-freq  //Make frequencies positive delver115-1a
+    double RLCZr, RLCZi, ZReal, ZImag, rho, theta;
+    uComboImpedance(connect, R, L, C, QL,QC,freq, RLCZr, RLCZi);
+    if (coaxSpecs=="" && D==0)  //Simple case--no coax and no delay factor
+    {
+      ZReal=RLCZr;
+      ZImag=RLCZi;
+    }
+    else //Get impedance of coax terminated by the RLC
+    {
+      if (jig=="S11" || jig=="S21Shunt")
+      {
+        if (coaxSpecs!="")  //Presence of coax overrides the delay factor
+        {
+          mSAconfig::coax.CoaxTerminatedZFromSpecs(coaxSpecs, uWorkArray[i][0], RLCZr, RLCZi, ZReal, ZImag);
+        }
+        else    //Here apply delay factor D (sec) instead of a coax delay
+        {
+          uImpedanceToRefco(R0, RLCZr, RLCZi, rho, theta);       //convert to refco
+          double phaseDelay=D*360*freq;         //phase delay (deg)=delay(sec)*degrees/cycle*cycles/sec
+          theta=theta-2*phaseDelay;      //Delay reflection by twice phaseDelay, for round trip.
+          uRefcoToImpedance(R0, rho, theta, ZReal, ZImag);
+        }
+      }
+      else
+      {
+        //Series S21. Any terminating impedance is deemed to be in series, but if the transmission
+        //line specs are not blank the termination is ignored and the coax is used by itself
+        if (coaxSpecs!="")
+          mSAconfig::coax.CoaxS21FromSpecs(Z0, 0, coaxSpecs, uWorkArray[i][0], db, theta);
+      }
+    }
+    if (jig=="S11")
+    {
+      uImpedanceToRefco(Z0, ZReal, ZImag, rho, theta);   //Impedance to reflection coefficient
+      db=20*uSafeLog10(rho);   //rho to db
+    }
+    else
+    {
+      if (jig=="S21Shunt")
+      {
+        uShuntImpedanceToS21DB(Z0, ZReal, ZImag, 0,freq, db, theta); //ver115-4h--Removed S21JigShuntDelay
+      }
+      else
+      {
+        //Series S21. If no coax, we use the RLC values in series. If coax,
+        //we ignore "termination" and just use the S21 (db, theta) calculated above
+        if (coaxSpecs=="")
+          uSeriesImpedanceToS21DB(Z0, ZReal, ZImag, db, theta);
+      }
+    }
+    theta = fmod(theta, 360);
+    if (theta<=-180)
+      theta=theta+360;  //Put angle in bounds
+    if (theta>180)
+      theta=theta-360;
+    uWorkArray[i][1]=db;
+    uWorkArray[i][2]=theta; //Store db, degrees in uWorkArray
+  }
+  return 0;
 }
-void msaUtilities::uPhaseShiftImpedance(float R0, float theta, float &Zr, float &Zi)
+void msaUtilities::uPhaseShiftImpedance(double R0, double theta, double &Zr, double &Zi)
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*
@@ -2031,11 +2251,11 @@ void msaUtilities::uExtendCalPlane(float freq, float &phase, float extend, int i
     //For reflection with series jig, plane extension makes no sense.
 
   //For transmission mode we rotate the phase by the phase delay of the extension
-  float rotate = .001 * extend * freq;    //decimal number of rotations; 0.001 is net of extend in ns and freq in MHz
+  double rotate = .001 * extend * freq;    //decimal number of rotations; 0.001 is net of extend in ns and freq in MHz
     //For reflection mode, the rotation is twice that.
   if (isReflect) rotate=2*rotate;
     //drop whole number of rotations and change to degrees (0 to 360)
-  float adddegrees = 360*(rotate - (int)(rotate)); //+360 to 0 degrees. ver115-2d eliminated rounding
+  double adddegrees = 360*(rotate - (int)(rotate)); //+360 to 0 degrees. ver115-2d eliminated rounding
   phase = phase + adddegrees;  //extension advances the phase
   while (phase>180) {phase=phase-360;}   //ver116-4s
   while (phase<=-180) {phase=phase+360;} //ver116-4s
@@ -2112,16 +2332,16 @@ void msaUtilities::uEquivSeriesLC(double freq, double serR, double serReact,  do
   if (freq==0)
   {
     serL=0;
-    serC=1e12;//constMaxValue     //Set for min impedance
+    serC=constMaxValue;//constMaxValue     //Set for min impedance
     return;
   }
   double twoPiF = 2.0*uPi() * freq;
-  if (serReact>=1e12)//constMaxValue
-    serL=1e12;//constMaxValue
+  if (serReact>=constMaxValue)//constMaxValue
+    serL=constMaxValue;//constMaxValue
   else
     serL = serReact/twoPiF;
   if (serReact==0)
-    serC=1e12;//constMaxValue
+    serC=constMaxValue;//constMaxValue
   else
     serC = -1.0/(twoPiF * serReact);
 
@@ -2138,11 +2358,11 @@ void msaUtilities::uEquivParallelImped(double sR, double sX, double &pR, double 
     if (sX==0)
     {
       pR=0;
-      pX=1e12;//constMaxValue //target imped is zero; do small R and large X
+      pX=constMaxValue;//constMaxValue //target imped is zero; do small R and large X
       return;
     }
     else
-      pR=1e12;//constMaxValue  //target resistance is 0 but react is not; we need no parallel resistor
+      pR=constMaxValue;//constMaxValue  //target resistance is 0 but react is not; we need no parallel resistor
 
   }
   else
@@ -2150,13 +2370,13 @@ void msaUtilities::uEquivParallelImped(double sR, double sX, double &pR, double 
     pR=magSquared/sR;    //Nothing is zero so parallel res is simple formula
   }
   if (sX==0)
-    pX=1e12;//constMaxValue;
+    pX=constMaxValue;//constMaxValue;
   else
     pX=magSquared/sX;
 
 }
 
-float msaUtilities::NormalizePhase(float p)
+double msaUtilities::NormalizePhase(double p)
 {
   //Return phase in range -180<phase<=180
   while (p>180) { p=p-360; }
@@ -2399,7 +2619,7 @@ QString msaUtilities::uExtractFontColor(QString font)  //Return the color from a
   return "fix me";
 }
 
-void msaUtilities::uSeriesRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C)   //From Z at two points, calculate series RLC components
+void msaUtilities::uSeriesRLCFromPoints(double Z1r, double Z1i, double f1, double Z2r, double Z2i, double f2, double &R, double &L, double &C)   //From Z at two points, calculate series RLC components
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*     //The Z's are real and imaginary impedance at points 1 and 2; f1 and f2 are frequency in MHz
@@ -2431,7 +2651,7 @@ void msaUtilities::uSeriesRLCFromPoints(float Z1r, float Z1i, float f1, float Z2
 */
 }
 
-void msaUtilities::uParallelRLCFromPoints(float Z1r, float Z1i, float f1, float Z2r, float Z2i, float f2, float &R, float &L, float &C)   //From Z at two points, calculate parallel RLC components
+void msaUtilities::uParallelRLCFromPoints(double Z1r, double Z1i, double f1, double Z2r, double Z2i, double f2, double &R, double &L, double &C)   //From Z at two points, calculate parallel RLC components
 {
   qDebug() << "Unconverted code called" << __FILE__ << " " << __FUNCTION__;
   /*     //The Z's are real and imaginary impedance at points 1 and 2; f1 and f2 are frequency in MHz

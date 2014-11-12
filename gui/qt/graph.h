@@ -70,6 +70,7 @@ public:
   void mAddMarkerAndRedraw(QString markID, int ptNum, int traceNum);
   void mAddMarkerFromKeyboard();
   void mClearMarkers();
+  void gUpdateMarkerPointNum(int markNum, int pointNum);
 
   void DetectChanges();
   void DetectChanges(int doRestart);
@@ -480,6 +481,7 @@ signals:
   void RequireRestart();
   void updatevar(int);
   void smithRefreshMain(int);
+  void mMarkSelect(QString);
 
 };
 
